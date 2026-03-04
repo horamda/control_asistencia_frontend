@@ -31,7 +31,10 @@ class SplashPage extends StatelessWidget {
                   const SizedBox(height: 8),
                   _line('API Base URL', cfg.apiBaseUrl),
                   _line('Flavor', cfg.flavorLabel),
-                  _line('Contrato', 'v1 /api/v1/mobile'),
+                  _line(
+                    'Contrato',
+                    'v${cfg.mobileContractVersion} ${cfg.mobileApiPrefix}',
+                  ),
                 ],
               ),
             ),

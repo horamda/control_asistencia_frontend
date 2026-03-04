@@ -8,10 +8,20 @@ class LoginPage extends StatefulWidget {
     super.key,
     required this.apiClient,
     required this.onLoginSuccess,
+    this.onBiometricLogin,
+    this.biometricAvailable = false,
+    this.hasStoredSession = false,
+    this.biometricLoading = false,
+    this.biometricError,
   });
 
   final MobileApiClient apiClient;
-  final ValueChanged<LoginResponse> onLoginSuccess;
+  final Future<void> Function(LoginResponse session) onLoginSuccess;
+  final Future<void> Function()? onBiometricLogin;
+  final bool biometricAvailable;
+  final bool hasStoredSession;
+  final bool biometricLoading;
+  final String? biometricError;
 
   @override
   State<LoginPage> createState() => _LoginPageState();
@@ -54,7 +64,7 @@ class _LoginPageState extends State<LoginPage> {
       if (!mounted) {
         return;
       }
-      widget.onLoginSuccess(session);
+      await widget.onLoginSuccess(session);
     } on ApiException catch (e) {
       if (!mounted) {
         return;
@@ -168,6 +178,15 @@ class _LoginPageState extends State<LoginPage> {
                         ),
                         const SizedBox(height: 12),
                       ],
+                      if (widget.biometricError != null) ...[
+                        Text(
+                          widget.biometricError!,
+                          style: TextStyle(
+                            color: Theme.of(context).colorScheme.error,
+                          ),
+                        ),
+                        const SizedBox(height: 12),
+                      ],
                       SizedBox(
                         height: 48,
                         child: FilledButton(
@@ -181,6 +200,37 @@ class _LoginPageState extends State<LoginPage> {
                               : const Text('Ingresar'),
                         ),
                       ),
+                      const SizedBox(height: 10),
+                      SizedBox(
+                        height: 48,
+                        child: OutlinedButton.icon(
+                          onPressed:
+                              widget.onBiometricLogin != null &&
+                                  !_loading &&
+                                  !widget.biometricLoading
+                              ? () => widget.onBiometricLogin!.call()
+                              : null,
+                          icon: widget.biometricLoading
+                              ? const SizedBox(
+                                  width: 20,
+                                  height: 20,
+                                  child: CircularProgressIndicator(
+                                    strokeWidth: 2,
+                                  ),
+                                )
+                              : const Icon(Icons.fingerprint),
+                          label: Text(
+                            widget.biometricLoading
+                                ? 'Validando huella...'
+                                : 'Ingresar con huella',
+                          ),
+                        ),
+                      ),
+                      const SizedBox(height: 8),
+                      Text(
+                        _biometricStatusText(),
+                        style: Theme.of(context).textTheme.bodySmall,
+                      ),
                     ],
                   ),
                 ),
@@ -190,5 +240,18 @@ class _LoginPageState extends State<LoginPage> {
         ),
       ),
     );
+  }
+
+  String _biometricStatusText() {
+    if (!widget.biometricAvailable) {
+      return 'Huella no disponible en este dispositivo o sin configurar.';
+    }
+    if (!widget.hasStoredSession) {
+      return 'Ingresa con DNI y password una vez para habilitar huella.';
+    }
+    if (widget.onBiometricLogin == null) {
+      return 'Huella disponible.';
+    }
+    return 'Huella disponible para ingreso rapido.';
   }
 }

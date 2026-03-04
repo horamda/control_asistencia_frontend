@@ -45,6 +45,12 @@
 	<true/>
 	<key>NSCameraUsageDescription</key>
 	<string>Se usa la camara para leer codigos QR al fichar entrada y salida.</string>
+	<key>NSLocationWhenInUseUsageDescription</key>
+	<string>Se usa la ubicacion para validar que la fichada se realice dentro del rango permitido.</string>
+	<key>NSFaceIDUsageDescription</key>
+	<string>Se usa la biometria para validar tu ingreso a la app.</string>
+	<key>NSPhotoLibraryUsageDescription</key>
+	<string>Se necesita acceso para adjuntar la foto requerida por la empresa al fichar.</string>
 	<key>UIApplicationSupportsIndirectInputEvents</key>
 	<true/>
 </dict>
