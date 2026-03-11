@@ -18,6 +18,20 @@ class EmployeeAttendanceApp extends StatelessWidget {
           brightness: Brightness.light,
         ),
         scaffoldBackgroundColor: const Color(0xFFF2F5F8),
+        visualDensity: VisualDensity.adaptivePlatformDensity,
+        inputDecorationTheme: const InputDecorationTheme(
+          filled: true,
+          fillColor: Colors.white,
+          border: OutlineInputBorder(),
+        ),
+        cardTheme: const CardThemeData(
+          elevation: 1,
+          margin: EdgeInsets.zero,
+          clipBehavior: Clip.antiAlias,
+        ),
+        snackBarTheme: const SnackBarThemeData(
+          behavior: SnackBarBehavior.floating,
+        ),
         useMaterial3: true,
       ),
       home: const AuthGatePage(),

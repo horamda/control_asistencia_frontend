@@ -1,6 +1,7 @@
 import 'package:flutter/material.dart';
 
 import '../../core/network/mobile_api_client.dart';
+import '../../core/utils/date_formatter.dart';
 
 class MarksHistoryPage extends StatefulWidget {
   const MarksHistoryPage({
@@ -47,23 +48,16 @@ class _MarksHistoryPageState extends State<MarksHistoryPage> {
     return DateTime(now.year, now.month, now.day);
   }
 
-  String _fmtDate(DateTime date) {
-    final y = date.year.toString().padLeft(4, '0');
-    final m = date.month.toString().padLeft(2, '0');
-    final d = date.day.toString().padLeft(2, '0');
-    return '$y-$m-$d';
+  String _fmtDisplayDate(DateTime date) {
+    return DateFormatter.formatDisplayDate(date);
   }
 
-  DateTime? _parseIsoDate(String raw) {
-    final value = raw.trim();
-    if (value.isEmpty) {
-      return null;
-    }
-    final parsed = DateTime.tryParse(value);
-    if (parsed == null) {
-      return null;
-    }
-    return DateTime(parsed.year, parsed.month, parsed.day);
+  DateTime? _parseInputDate(String raw) {
+    return DateFormatter.parseFlexibleDate(raw);
+  }
+
+  String? _controllerDateToApi(TextEditingController controller) {
+    return DateFormatter.toApiDateOrNull(controller.text);
   }
 
   Future<void> _pickDate({required bool isDesde}) async {
@@ -71,7 +65,7 @@ class _MarksHistoryPageState extends State<MarksHistoryPage> {
     final first = DateTime(2000, 1, 1);
     final fromCtrl = isDesde ? _desdeController : _hastaController;
     final otherCtrl = isDesde ? _hastaController : _desdeController;
-    var current = _parseIsoDate(fromCtrl.text) ?? today;
+    var current = _parseInputDate(fromCtrl.text) ?? today;
     if (current.isAfter(today)) {
       current = today;
     } else if (current.isBefore(first)) {
@@ -91,14 +85,14 @@ class _MarksHistoryPageState extends State<MarksHistoryPage> {
 
     final pickedNorm = DateTime(picked.year, picked.month, picked.day);
     setState(() {
-      fromCtrl.text = _fmtDate(pickedNorm);
-      final other = _parseIsoDate(otherCtrl.text);
+      fromCtrl.text = _fmtDisplayDate(pickedNorm);
+      final other = _parseInputDate(otherCtrl.text);
       if (other != null) {
         if (isDesde && pickedNorm.isAfter(other)) {
-          otherCtrl.text = _fmtDate(pickedNorm);
+          otherCtrl.text = _fmtDisplayDate(pickedNorm);
         }
         if (!isDesde && pickedNorm.isBefore(other)) {
-          otherCtrl.text = _fmtDate(pickedNorm);
+          otherCtrl.text = _fmtDisplayDate(pickedNorm);
         }
       }
     });
@@ -120,8 +114,8 @@ class _MarksHistoryPageState extends State<MarksHistoryPage> {
         token: widget.token,
         page: page,
         per: _perPage,
-        desde: _desdeController.text,
-        hasta: _hastaController.text,
+        desde: _controllerDateToApi(_desdeController),
+        hasta: _controllerDateToApi(_hastaController),
       );
       if (!mounted) {
         return;
@@ -182,74 +176,120 @@ class _MarksHistoryPageState extends State<MarksHistoryPage> {
           ? const Center(child: CircularProgressIndicator())
           : RefreshIndicator(
               onRefresh: _refresh,
-              child: ListView(
-                physics: const AlwaysScrollableScrollPhysics(),
-                padding: const EdgeInsets.all(16),
-                children: [
-                  _FiltersCard(
-                    desdeController: _desdeController,
-                    hastaController: _hastaController,
-                    todayIso: _fmtDate(_todayDate()),
-                    onPickDesde: _loadingPage
-                        ? null
-                        : () => _pickDate(isDesde: true),
-                    onPickHasta: _loadingPage
-                        ? null
-                        : () => _pickDate(isDesde: false),
-                    onApply: _loadingPage ? null : _applyFilters,
-                    onClear: _loadingPage ? null : _clearFilters,
-                  ),
-                  const SizedBox(height: 10),
-                  Card(
-                    child: Padding(
-                      padding: const EdgeInsets.all(12),
-                      child: Text('Pagina $_page | Registros: $_total'),
-                    ),
-                  ),
-                  if (_error != null) ...[
-                    const SizedBox(height: 10),
-                    Card(
-                      color: const Color(0xFFFFF4E5),
-                      child: Padding(
-                        padding: const EdgeInsets.all(12),
-                        child: Text(_error!),
+              child: LayoutBuilder(
+                builder: (context, constraints) {
+                  final maxWidth = constraints.maxWidth >= 1200
+                      ? 1040.0
+                      : constraints.maxWidth >= 900
+                      ? 900.0
+                      : double.infinity;
+                  final horizontalPadding = constraints.maxWidth < 600
+                      ? 12.0
+                      : 16.0;
+                  return Center(
+                    child: ConstrainedBox(
+                      constraints: BoxConstraints(maxWidth: maxWidth),
+                      child: ListView(
+                        physics: const AlwaysScrollableScrollPhysics(),
+                        padding: EdgeInsets.all(horizontalPadding),
+                        children: [
+                          _FiltersCard(
+                            desdeController: _desdeController,
+                            hastaController: _hastaController,
+                            todayIso: _fmtDisplayDate(_todayDate()),
+                            onPickDesde: _loadingPage
+                                ? null
+                                : () => _pickDate(isDesde: true),
+                            onPickHasta: _loadingPage
+                                ? null
+                                : () => _pickDate(isDesde: false),
+                            onApply: _loadingPage ? null : _applyFilters,
+                            onClear: _loadingPage ? null : _clearFilters,
+                          ),
+                          const SizedBox(height: 10),
+                          Card(
+                            child: Padding(
+                              padding: const EdgeInsets.all(12),
+                              child: Text('Pagina $_page | Registros: $_total'),
+                            ),
+                          ),
+                          if (_error != null) ...[
+                            const SizedBox(height: 10),
+                            Card(
+                              color: const Color(0xFFFFF4E5),
+                              child: Padding(
+                                padding: const EdgeInsets.all(12),
+                                child: Text(_error!),
+                              ),
+                            ),
+                          ],
+                          const SizedBox(height: 10),
+                          if (_items.isEmpty)
+                            const Card(
+                              child: Padding(
+                                padding: EdgeInsets.all(16),
+                                child: Text('No hay marcas para mostrar.'),
+                              ),
+                            ),
+                          ..._items.map(_buildItemCard),
+                          const SizedBox(height: 12),
+                          LayoutBuilder(
+                            builder: (context, paginationConstraints) {
+                              final stacked =
+                                  paginationConstraints.maxWidth < 430;
+                              if (stacked) {
+                                return Column(
+                                  crossAxisAlignment:
+                                      CrossAxisAlignment.stretch,
+                                  children: [
+                                    OutlinedButton.icon(
+                                      onPressed: (!hasPrev || _loadingPage)
+                                          ? null
+                                          : () => _loadPage(page: _page - 1),
+                                      icon: const Icon(Icons.chevron_left),
+                                      label: const Text('Anterior'),
+                                    ),
+                                    const SizedBox(height: 8),
+                                    OutlinedButton.icon(
+                                      onPressed: (!hasNext || _loadingPage)
+                                          ? null
+                                          : () => _loadPage(page: _page + 1),
+                                      icon: const Icon(Icons.chevron_right),
+                                      label: const Text('Siguiente'),
+                                    ),
+                                  ],
+                                );
+                              }
+                              return Row(
+                                children: [
+                                  Expanded(
+                                    child: OutlinedButton.icon(
+                                      onPressed: (!hasPrev || _loadingPage)
+                                          ? null
+                                          : () => _loadPage(page: _page - 1),
+                                      icon: const Icon(Icons.chevron_left),
+                                      label: const Text('Anterior'),
+                                    ),
+                                  ),
+                                  const SizedBox(width: 12),
+                                  Expanded(
+                                    child: OutlinedButton.icon(
+                                      onPressed: (!hasNext || _loadingPage)
+                                          ? null
+                                          : () => _loadPage(page: _page + 1),
+                                      icon: const Icon(Icons.chevron_right),
+                                      label: const Text('Siguiente'),
+                                    ),
+                                  ),
+                                ],
+                              );
+                            },
+                          ),
+                        ],
                       ),
                     ),
-                  ],
-                  const SizedBox(height: 10),
-                  if (_items.isEmpty)
-                    const Card(
-                      child: Padding(
-                        padding: EdgeInsets.all(16),
-                        child: Text('No hay marcas para mostrar.'),
-                      ),
-                    ),
-                  ..._items.map(_buildItemCard),
-                  const SizedBox(height: 12),
-                  Row(
-                    children: [
-                      Expanded(
-                        child: OutlinedButton.icon(
-                          onPressed: (!hasPrev || _loadingPage)
-                              ? null
-                              : () => _loadPage(page: _page - 1),
-                          icon: const Icon(Icons.chevron_left),
-                          label: const Text('Anterior'),
-                        ),
-                      ),
-                      const SizedBox(width: 12),
-                      Expanded(
-                        child: OutlinedButton.icon(
-                          onPressed: (!hasNext || _loadingPage)
-                              ? null
-                              : () => _loadPage(page: _page + 1),
-                          icon: const Icon(Icons.chevron_right),
-                          label: const Text('Siguiente'),
-                        ),
-                      ),
-                    ],
-                  ),
-                ],
+                  );
+                },
               ),
             ),
     );
@@ -276,7 +316,9 @@ class _MarksHistoryPageState extends State<MarksHistoryPage> {
     return Card(
       margin: const EdgeInsets.only(bottom: 10),
       child: ListTile(
-        title: Text('Fecha: ${item.fecha ?? '-'}'),
+        title: Text(
+          'Fecha: ${DateFormatter.formatApiDateForDisplay(item.fecha)}',
+        ),
         subtitle: Text(details.isEmpty ? 'Sin detalle.' : details.join('\n')),
         trailing: Text('#${item.id}'),
         isThreeLine: true,
@@ -323,7 +365,7 @@ class _FiltersCard extends StatelessWidget {
               onTap: onPickDesde,
               decoration: InputDecoration(
                 labelText: 'Desde',
-                hintText: 'Seleccionar fecha',
+                hintText: 'dd/MM/yyyy',
                 border: const OutlineInputBorder(),
                 suffixIcon: IconButton(
                   onPressed: onPickDesde,
@@ -339,7 +381,7 @@ class _FiltersCard extends StatelessWidget {
               onTap: onPickHasta,
               decoration: InputDecoration(
                 labelText: 'Hasta',
-                hintText: 'Seleccionar fecha',
+                hintText: 'dd/MM/yyyy',
                 border: const OutlineInputBorder(),
                 suffixIcon: IconButton(
                   onPressed: onPickHasta,
@@ -349,22 +391,42 @@ class _FiltersCard extends StatelessWidget {
               ),
             ),
             const SizedBox(height: 10),
-            Row(
-              children: [
-                Expanded(
-                  child: FilledButton(
-                    onPressed: onApply,
-                    child: const Text('Aplicar'),
-                  ),
-                ),
-                const SizedBox(width: 8),
-                Expanded(
-                  child: OutlinedButton(
-                    onPressed: onClear,
-                    child: const Text('Limpiar'),
-                  ),
-                ),
-              ],
+            LayoutBuilder(
+              builder: (context, constraints) {
+                if (constraints.maxWidth < 360) {
+                  return Column(
+                    crossAxisAlignment: CrossAxisAlignment.stretch,
+                    children: [
+                      FilledButton(
+                        onPressed: onApply,
+                        child: const Text('Aplicar'),
+                      ),
+                      const SizedBox(height: 8),
+                      OutlinedButton(
+                        onPressed: onClear,
+                        child: const Text('Limpiar'),
+                      ),
+                    ],
+                  );
+                }
+                return Row(
+                  children: [
+                    Expanded(
+                      child: FilledButton(
+                        onPressed: onApply,
+                        child: const Text('Aplicar'),
+                      ),
+                    ),
+                    const SizedBox(width: 8),
+                    Expanded(
+                      child: OutlinedButton(
+                        onPressed: onClear,
+                        child: const Text('Limpiar'),
+                      ),
+                    ),
+                  ],
+                );
+              },
             ),
           ],
         ),

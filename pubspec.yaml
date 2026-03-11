@@ -1,5 +1,5 @@
-name: control_asistencia_mobile
-description: "A new Flutter project."
+name: ficharqr
+description: "Aplicacion movil FicharQR para control de asistencia."
 # The following line prevents the package from being accidentally published to
 # pub.dev using `flutter pub publish`. This is preferred for private packages.
 publish_to: 'none' # Remove this line if you wish to publish to pub.dev
@@ -39,8 +39,13 @@ dependencies:
   image_picker: ^1.1.2
   geolocator: ^12.0.0
   cached_network_image: ^3.4.1
+  flutter_cache_manager: ^3.4.1
   local_auth: ^2.3.0
+  local_auth_android: ^1.0.52
+  local_auth_darwin: ^1.6.0
   flutter_secure_storage: ^9.2.2
+  audioplayers: ^6.1.0
+  permission_handler: ^11.4.0
 
 dev_dependencies:
   flutter_test:
@@ -52,6 +57,7 @@ dev_dependencies:
   # package. See that file for information about deactivating specific lint
   # rules and activating additional ones.
   flutter_lints: ^5.0.0
+  flutter_launcher_icons: ^0.14.3
 
 # For information on the generic Dart part of this file, see the
 # following page: https://dart.dev/tools/pub/pubspec
@@ -63,6 +69,19 @@ flutter:
   # included with your application, so that you can use the icons in
   # the material Icons class.
   uses-material-design: true
+  assets:
+    - assets/sounds/
+
+flutter_launcher_icons:
+  android: true
+  ios: true
+  web:
+    generate: true
+  windows:
+    generate: true
+  macos:
+    generate: true
+  image_path: assets/branding/logo_dp.png
 
   # To add assets to your application, add an assets section, like this:
   # assets:

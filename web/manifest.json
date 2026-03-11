@@ -1,6 +1,6 @@
 {
-    "name": "control_asistencia_mobile",
-    "short_name": "control_asistencia_mobile",
+    "name": "FicharQR",
+    "short_name": "FicharQR",
     "start_url": ".",
     "display": "standalone",
     "background_color": "#0175C2",

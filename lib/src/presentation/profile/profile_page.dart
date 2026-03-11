@@ -1,11 +1,13 @@
-import 'dart:io';
+import 'dart:async';
 
-import 'package:cached_network_image/cached_network_image.dart';
 import 'package:flutter/material.dart';
 import 'package:image_picker/image_picker.dart';
 
 import '../../core/image/profile_photo_cache.dart';
 import '../../core/network/mobile_api_client.dart';
+import '../../core/permissions/device_permission_bootstrap.dart';
+import '../widgets/centered_snackbar.dart';
+import '../widgets/employee_photo_widget.dart';
 
 class ProfilePage extends StatefulWidget {
   const ProfilePage({super.key, required this.apiClient, required this.token});
@@ -23,6 +25,8 @@ class _ProfilePageState extends State<ProfilePage> {
   final _passwordActualController = TextEditingController();
   final _passwordNuevaController = TextEditingController();
   final ImagePicker _imagePicker = ImagePicker();
+  final DevicePermissionBootstrap _devicePermissionBootstrap =
+      DevicePermissionBootstrap();
 
   bool _loading = true;
   bool _savingProfile = false;
@@ -50,17 +54,16 @@ class _ProfilePageState extends State<ProfilePage> {
   }
 
   Future<void> _loadProfile() async {
-    final previousPhotoUrl = (_profile?.foto ?? '').trim();
+    final previousPhotoUrl = _photoUrlForProfile(_profile);
     setState(() {
       _loading = true;
       _error = null;
     });
     try {
       final profile = await widget.apiClient.getMe(token: widget.token);
-      final nextPhotoUrl = (profile.foto ?? '').trim();
+      final nextPhotoUrl = _photoUrlForProfile(profile);
       if (previousPhotoUrl != nextPhotoUrl) {
         await ProfilePhotoCache.evict(previousPhotoUrl);
-        ProfilePhotoCache.bump();
       }
       if (!mounted) {
         return;
@@ -135,6 +138,13 @@ class _ProfilePageState extends State<ProfilePage> {
   }
 
   Future<void> _pickPhoto(ImageSource source) async {
+    if (source == ImageSource.camera) {
+      final cameraGranted = await _devicePermissionBootstrap.isCameraGranted();
+      if (!cameraGranted) {
+        _showCameraSettingsMessage();
+        return;
+      }
+    }
     try {
       final picked = await _imagePicker.pickImage(
         source: source,
@@ -161,7 +171,7 @@ class _ProfilePageState extends State<ProfilePage> {
 
   Future<void> _uploadSelectedPhoto() async {
     final selected = _selectedPhoto;
-    final previousPhotoUrl = (_profile?.foto ?? '').trim();
+    final previousPhotoUrl = _photoUrlForProfile(_profile);
     if (selected == null) {
       _showMessage('Selecciona una foto antes de subir.', isError: true);
       return;
@@ -181,7 +191,6 @@ class _ProfilePageState extends State<ProfilePage> {
         direccion: _direccionController.text.trim(),
       );
       await ProfilePhotoCache.evict(previousPhotoUrl);
-      ProfilePhotoCache.bump();
       if (!mounted) {
         return;
       }
@@ -213,7 +222,7 @@ class _ProfilePageState extends State<ProfilePage> {
   }
 
   Future<void> _deletePhoto() async {
-    final previousPhotoUrl = (_profile?.foto ?? '').trim();
+    final previousPhotoUrl = _photoUrlForProfile(_profile);
     if (_deletingPhoto) {
       return;
     }
@@ -247,7 +256,6 @@ class _ProfilePageState extends State<ProfilePage> {
     try {
       await widget.apiClient.deleteFotoPerfil(token: widget.token);
       await ProfilePhotoCache.evict(previousPhotoUrl);
-      ProfilePhotoCache.bump();
       if (!mounted) {
         return;
       }
@@ -329,10 +337,25 @@ class _ProfilePageState extends State<ProfilePage> {
   }
 
   void _showMessage(String text, {bool isError = false}) {
-    ScaffoldMessenger.of(context).showSnackBar(
-      SnackBar(
-        content: Text(text),
-        backgroundColor: isError ? Colors.red.shade700 : Colors.green.shade700,
+    showCenteredSnackBar(
+      context,
+      text: text,
+      isError: isError,
+    );
+  }
+
+  void _showCameraSettingsMessage() {
+    showCenteredSnackBar(
+      context,
+      text: 'Debes habilitar la camara en Ajustes para actualizar la foto.',
+      isError: true,
+      duration: const Duration(seconds: 5),
+      action: SnackBarAction(
+        label: 'Ajustes',
+        textColor: Colors.white,
+        onPressed: () {
+          unawaited(_devicePermissionBootstrap.openAppSettings());
+        },
       ),
     );
   }
@@ -347,12 +370,24 @@ class _ProfilePageState extends State<ProfilePage> {
     return '${(value / 1024).toStringAsFixed(0)} KB';
   }
 
+  String _photoUrlForProfile(EmployeeProfile? profile) {
+    final effectiveProfile = profile;
+    if (effectiveProfile == null) {
+      return '';
+    }
+    return ProfilePhotoCache.resolve(
+      rawUrl: effectiveProfile.foto,
+      dni: effectiveProfile.dni,
+      version: effectiveProfile.imagenVersion,
+      fallbackBuilder: (valueDni, valueVersion) => widget.apiClient
+          .buildEmpleadoImagenUrl(dni: valueDni, version: valueVersion),
+    );
+  }
+
   @override
   Widget build(BuildContext context) {
     final profile = _profile;
-    final remoteFoto = ProfilePhotoCache.withRevision(
-      (profile?.foto ?? '').trim(),
-    );
+    final remoteFoto = _photoUrlForProfile(profile);
     final hasRemoteFoto = remoteFoto.isNotEmpty;
     final busyPhotoAction = _uploadingPhoto || _deletingPhoto;
 
@@ -362,10 +397,23 @@ class _ProfilePageState extends State<ProfilePage> {
           ? const Center(child: CircularProgressIndicator())
           : RefreshIndicator(
               onRefresh: _loadProfile,
-              child: ListView(
-                physics: const AlwaysScrollableScrollPhysics(),
-                padding: const EdgeInsets.all(16),
-                children: [
+              child: LayoutBuilder(
+                builder: (context, constraints) {
+                  final maxWidth = constraints.maxWidth >= 1200
+                      ? 1040.0
+                      : constraints.maxWidth >= 900
+                      ? 900.0
+                      : double.infinity;
+                  final horizontalPadding = constraints.maxWidth < 600
+                      ? 12.0
+                      : 16.0;
+                  return Center(
+                    child: ConstrainedBox(
+                      constraints: BoxConstraints(maxWidth: maxWidth),
+                      child: ListView(
+                        physics: const AlwaysScrollableScrollPhysics(),
+                        padding: EdgeInsets.all(horizontalPadding),
+                        children: [
                   if (_error != null)
                     Card(
                       color: const Color(0xFFFFF4E5),
@@ -411,33 +459,66 @@ class _ProfilePageState extends State<ProfilePage> {
                             child: _ProfilePhotoAvatar(
                               localPhotoPath: _selectedPhoto?.path,
                               remotePhotoUrl: remoteFoto,
+                              token: widget.token,
                             ),
                           ),
                           const SizedBox(height: 12),
-                          Row(
-                            children: [
-                              Expanded(
-                                child: OutlinedButton.icon(
-                                  onPressed: busyPhotoAction
-                                      ? null
-                                      : () => _pickPhoto(ImageSource.camera),
-                                  icon: const Icon(Icons.photo_camera_outlined),
-                                  label: const Text('Camara'),
-                                ),
-                              ),
-                              const SizedBox(width: 8),
-                              Expanded(
-                                child: OutlinedButton.icon(
-                                  onPressed: busyPhotoAction
-                                      ? null
-                                      : () => _pickPhoto(ImageSource.gallery),
-                                  icon: const Icon(
-                                    Icons.photo_library_outlined,
+                          LayoutBuilder(
+                            builder: (context, constraints) {
+                              if (constraints.maxWidth < 420) {
+                                return Column(
+                                  crossAxisAlignment: CrossAxisAlignment.stretch,
+                                  children: [
+                                    OutlinedButton.icon(
+                                      onPressed: busyPhotoAction
+                                          ? null
+                                          : () => _pickPhoto(ImageSource.camera),
+                                      icon: const Icon(
+                                        Icons.photo_camera_outlined,
+                                      ),
+                                      label: const Text('Camara'),
+                                    ),
+                                    const SizedBox(height: 8),
+                                    OutlinedButton.icon(
+                                      onPressed: busyPhotoAction
+                                          ? null
+                                          : () => _pickPhoto(ImageSource.gallery),
+                                      icon: const Icon(
+                                        Icons.photo_library_outlined,
+                                      ),
+                                      label: const Text('Galeria'),
+                                    ),
+                                  ],
+                                );
+                              }
+                              return Row(
+                                children: [
+                                  Expanded(
+                                    child: OutlinedButton.icon(
+                                      onPressed: busyPhotoAction
+                                          ? null
+                                          : () => _pickPhoto(ImageSource.camera),
+                                      icon: const Icon(
+                                        Icons.photo_camera_outlined,
+                                      ),
+                                      label: const Text('Camara'),
+                                    ),
                                   ),
-                                  label: const Text('Galeria'),
-                                ),
-                              ),
-                            ],
+                                  const SizedBox(width: 8),
+                                  Expanded(
+                                    child: OutlinedButton.icon(
+                                      onPressed: busyPhotoAction
+                                          ? null
+                                          : () => _pickPhoto(ImageSource.gallery),
+                                      icon: const Icon(
+                                        Icons.photo_library_outlined,
+                                      ),
+                                      label: const Text('Galeria'),
+                                    ),
+                                  ),
+                                ],
+                              );
+                            },
                           ),
                           if (_selectedPhoto != null) ...[
                             const SizedBox(height: 8),
@@ -446,36 +527,71 @@ class _ProfilePageState extends State<ProfilePage> {
                               style: Theme.of(context).textTheme.bodySmall,
                             ),
                             const SizedBox(height: 8),
-                            Row(
-                              children: [
-                                Expanded(
-                                  child: FilledButton.icon(
-                                    onPressed: busyPhotoAction
-                                        ? null
-                                        : _uploadSelectedPhoto,
-                                    icon: const Icon(Icons.upload_outlined),
-                                    label: Text(
-                                      _uploadingPhoto
-                                          ? 'Subiendo...'
-                                          : 'Subir foto',
+                            LayoutBuilder(
+                              builder: (context, constraints) {
+                                if (constraints.maxWidth < 420) {
+                                  return Column(
+                                    crossAxisAlignment:
+                                        CrossAxisAlignment.stretch,
+                                    children: [
+                                      FilledButton.icon(
+                                        onPressed: busyPhotoAction
+                                            ? null
+                                            : _uploadSelectedPhoto,
+                                        icon: const Icon(Icons.upload_outlined),
+                                        label: Text(
+                                          _uploadingPhoto
+                                              ? 'Subiendo...'
+                                              : 'Subir foto',
+                                        ),
+                                      ),
+                                      const SizedBox(height: 8),
+                                      OutlinedButton(
+                                        onPressed: busyPhotoAction
+                                            ? null
+                                            : () {
+                                                setState(() {
+                                                  _selectedPhoto = null;
+                                                  _selectedPhotoBytes = null;
+                                                });
+                                              },
+                                        child: const Text('Descartar'),
+                                      ),
+                                    ],
+                                  );
+                                }
+                                return Row(
+                                  children: [
+                                    Expanded(
+                                      child: FilledButton.icon(
+                                        onPressed: busyPhotoAction
+                                            ? null
+                                            : _uploadSelectedPhoto,
+                                        icon: const Icon(Icons.upload_outlined),
+                                        label: Text(
+                                          _uploadingPhoto
+                                              ? 'Subiendo...'
+                                              : 'Subir foto',
+                                        ),
+                                      ),
                                     ),
-                                  ),
-                                ),
-                                const SizedBox(width: 8),
-                                Expanded(
-                                  child: OutlinedButton(
-                                    onPressed: busyPhotoAction
-                                        ? null
-                                        : () {
-                                            setState(() {
-                                              _selectedPhoto = null;
-                                              _selectedPhotoBytes = null;
-                                            });
-                                          },
-                                    child: const Text('Descartar'),
-                                  ),
-                                ),
-                              ],
+                                    const SizedBox(width: 8),
+                                    Expanded(
+                                      child: OutlinedButton(
+                                        onPressed: busyPhotoAction
+                                            ? null
+                                            : () {
+                                                setState(() {
+                                                  _selectedPhoto = null;
+                                                  _selectedPhotoBytes = null;
+                                                });
+                                              },
+                                        child: const Text('Descartar'),
+                                      ),
+                                    ),
+                                  ],
+                                );
+                              },
                             ),
                           ] else ...[
                             const SizedBox(height: 8),
@@ -588,7 +704,11 @@ class _ProfilePageState extends State<ProfilePage> {
                       ),
                     ),
                   ),
-                ],
+                        ],
+                      ),
+                    ),
+                  );
+                },
               ),
             ),
     );
@@ -596,48 +716,25 @@ class _ProfilePageState extends State<ProfilePage> {
 }
 
 class _ProfilePhotoAvatar extends StatelessWidget {
-  const _ProfilePhotoAvatar({this.localPhotoPath, this.remotePhotoUrl});
+  const _ProfilePhotoAvatar({
+    this.localPhotoPath,
+    this.remotePhotoUrl,
+    this.token,
+  });
 
   final String? localPhotoPath;
   final String? remotePhotoUrl;
+  final String? token;
 
   @override
   Widget build(BuildContext context) {
-    final local = (localPhotoPath ?? '').trim();
-    final remote = (remotePhotoUrl ?? '').trim();
-
-    if (local.isNotEmpty) {
-      return CircleAvatar(
-        radius: 48,
-        backgroundColor: const Color(0xFFE5ECF3),
-        backgroundImage: FileImage(File(local)),
-      );
-    }
-    if (remote.isNotEmpty) {
-      return CircleAvatar(
-        radius: 48,
-        backgroundColor: const Color(0xFFE5ECF3),
-        child: ClipOval(
-          child: CachedNetworkImage(
-            imageUrl: remote,
-            width: 96,
-            height: 96,
-            fit: BoxFit.cover,
-            placeholder: (_, __) => const SizedBox(
-              width: 28,
-              height: 28,
-              child: CircularProgressIndicator(strokeWidth: 2),
-            ),
-            errorWidget: (_, __, ___) =>
-                const Icon(Icons.person_outline, size: 44),
-          ),
-        ),
-      );
-    }
-    return const CircleAvatar(
+    return EmployeePhotoWidget(
+      photoUrl: remotePhotoUrl,
+      localPhotoPath: localPhotoPath,
+      token: token,
       radius: 48,
-      backgroundColor: Color(0xFFE5ECF3),
-      child: Icon(Icons.person_outline, size: 44),
+      placeholderSize: 28,
+      iconSize: 44,
     );
   }
 }

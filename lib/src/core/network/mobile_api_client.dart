@@ -9,6 +9,19 @@ class MobileApiClient {
 
   final String baseUrl;
   final http.Client _httpClient;
+  String? Function()? _tokenProvider;
+  Future<String?> Function(String expiredToken)? _onUnauthorizedRefresh;
+  Future<void> Function()? _onUnauthorized;
+
+  void configureAuth({
+    String? Function()? tokenProvider,
+    Future<String?> Function(String expiredToken)? onUnauthorizedRefresh,
+    Future<void> Function()? onUnauthorized,
+  }) {
+    _tokenProvider = tokenProvider;
+    _onUnauthorizedRefresh = onUnauthorizedRefresh;
+    _onUnauthorized = onUnauthorized;
+  }
 
   Future<LoginResponse> login({
     required String dni,
@@ -19,6 +32,7 @@ class MobileApiClient {
       headers: _headers(),
       body: jsonEncode({'dni': dni, 'password': password}),
       actionLabel: 'iniciar sesion',
+      allowAuthRecovery: false,
     );
 
     if (response.statusCode != 200) {
@@ -91,6 +105,7 @@ class MobileApiClient {
       headers: _headers(token: token),
       body: jsonEncode(<String, dynamic>{}),
       actionLabel: 'renovar sesion',
+      allowAuthRecovery: false,
     );
 
     if (response.statusCode != 200) {
@@ -146,6 +161,23 @@ class MobileApiClient {
     }
 
     return EmployeeProfile.fromJson(_decodeObject(response.body));
+  }
+
+  String buildEmpleadoImagenUrl({required String dni, int? version}) {
+    final safeDni = dni.trim();
+    if (safeDni.isEmpty) {
+      return '';
+    }
+    final base = _rootUri('/empleados/imagen/${Uri.encodeComponent(safeDni)}');
+    final safeVersion = version;
+    if (safeVersion == null || safeVersion <= 0) {
+      return base.toString();
+    }
+    return base
+        .replace(
+          queryParameters: <String, String>{'v': safeVersion.toString()},
+        )
+        .toString();
   }
 
   Future<HorarioEsperadoResponse?> getHorarioEsperado({
@@ -371,19 +403,22 @@ class MobileApiClient {
     double? lat,
     double? lon,
     String? foto,
+    DateTime? eventAt,
   }) {
-    final now = DateTime.now();
+    if (lat == null || lon == null) {
+      throw ApiException(
+        message: 'Latitud y longitud son obligatorias para fichar por QR.',
+        statusCode: 400,
+      );
+    }
+    final now = eventAt ?? DateTime.now();
     final payload = <String, dynamic>{
       'fecha': _formatDate(now),
       'hora': _formatTime(now),
       'qr_token': qrToken,
+      'lat': lat,
+      'lon': lon,
     };
-    if (lat != null) {
-      payload['lat'] = lat;
-    }
-    if (lon != null) {
-      payload['lon'] = lon;
-    }
     if (foto != null && foto.trim().isNotEmpty) {
       payload['foto'] = foto;
     }
@@ -575,7 +610,10 @@ class MobileApiClient {
     String? direccion,
   }) async {
     final request = http.MultipartRequest('PUT', _uri('/me/perfil'));
-    request.headers['Authorization'] = 'Bearer $token';
+    final effectiveToken = _resolveToken(token);
+    if (effectiveToken.isNotEmpty) {
+      request.headers['Authorization'] = 'Bearer $effectiveToken';
+    }
 
     if (telefono != null) {
       request.fields['telefono'] = telefono;
@@ -611,9 +649,13 @@ class MobileApiClient {
   }
 
   Future<void> deleteFotoPerfil({required String token}) async {
+    final effectiveToken = _resolveToken(token);
     final response = await _safeDelete(
       _uri('/me/perfil/foto'),
-      headers: {if (token.trim().isNotEmpty) 'Authorization': 'Bearer $token'},
+      headers: {
+        if (effectiveToken.isNotEmpty)
+          'Authorization': 'Bearer $effectiveToken',
+      },
       actionLabel: 'eliminar foto de perfil',
     );
     if (response.statusCode != 200) {
@@ -711,10 +753,30 @@ class MobileApiClient {
     return Uri.parse('$normalizedBase/api/v1/mobile$path');
   }
 
+  Uri _rootUri(String path) {
+    final normalizedBase = baseUrl.endsWith('/')
+        ? baseUrl.substring(0, baseUrl.length - 1)
+        : baseUrl;
+    const mobilePrefix = '/api/v1/mobile';
+    final rootBase = normalizedBase.endsWith(mobilePrefix)
+        ? normalizedBase.substring(0, normalizedBase.length - mobilePrefix.length)
+        : normalizedBase;
+    return Uri.parse('$rootBase$path');
+  }
+
+  String _resolveToken(String? token) {
+    final provider = _tokenProvider;
+    if (provider != null) {
+      return provider.call()?.trim() ?? '';
+    }
+    return token?.trim() ?? '';
+  }
+
   Map<String, String> _headers({String? token}) {
+    final effectiveToken = _resolveToken(token);
     return {
       'Content-Type': 'application/json',
-      if (token != null) 'Authorization': 'Bearer $token',
+      if (effectiveToken.isNotEmpty) 'Authorization': 'Bearer $effectiveToken',
     };
   }
 
@@ -737,11 +799,19 @@ class MobileApiClient {
     required Map<String, String> headers,
     required String body,
     required String actionLabel,
+    bool allowAuthRecovery = true,
   }) async {
     try {
-      return await _httpClient
+      final response = await _httpClient
           .post(uri, headers: headers, body: body)
           .timeout(const Duration(seconds: 15));
+      return await _recoverUnauthorized(
+        response: response,
+        headers: headers,
+        allowAuthRecovery: allowAuthRecovery,
+        sender: (nextHeaders) =>
+            _httpClient.post(uri, headers: nextHeaders, body: body),
+      );
     } on TimeoutException {
       throw ApiException(
         message:
@@ -761,11 +831,18 @@ class MobileApiClient {
     Uri uri, {
     required Map<String, String> headers,
     required String actionLabel,
+    bool allowAuthRecovery = true,
   }) async {
     try {
-      return await _httpClient
+      final response = await _httpClient
           .get(uri, headers: headers)
           .timeout(const Duration(seconds: 15));
+      return await _recoverUnauthorized(
+        response: response,
+        headers: headers,
+        allowAuthRecovery: allowAuthRecovery,
+        sender: (nextHeaders) => _httpClient.get(uri, headers: nextHeaders),
+      );
     } on TimeoutException {
       throw ApiException(
         message:
@@ -786,11 +863,19 @@ class MobileApiClient {
     required Map<String, String> headers,
     required String body,
     required String actionLabel,
+    bool allowAuthRecovery = true,
   }) async {
     try {
-      return await _httpClient
+      final response = await _httpClient
           .put(uri, headers: headers, body: body)
           .timeout(const Duration(seconds: 15));
+      return await _recoverUnauthorized(
+        response: response,
+        headers: headers,
+        allowAuthRecovery: allowAuthRecovery,
+        sender: (nextHeaders) =>
+            _httpClient.put(uri, headers: nextHeaders, body: body),
+      );
     } on TimeoutException {
       throw ApiException(
         message:
@@ -810,11 +895,18 @@ class MobileApiClient {
     Uri uri, {
     required Map<String, String> headers,
     required String actionLabel,
+    bool allowAuthRecovery = true,
   }) async {
     try {
-      return await _httpClient
+      final response = await _httpClient
           .delete(uri, headers: headers)
           .timeout(const Duration(seconds: 15));
+      return await _recoverUnauthorized(
+        response: response,
+        headers: headers,
+        allowAuthRecovery: allowAuthRecovery,
+        sender: (nextHeaders) => _httpClient.delete(uri, headers: nextHeaders),
+      );
     } on TimeoutException {
       throw ApiException(
         message:
@@ -827,6 +919,56 @@ class MobileApiClient {
       );
     } catch (_) {
       throw ApiException(message: 'Error de conexion al $actionLabel.');
+    }
+  }
+
+  Future<http.Response> _recoverUnauthorized({
+    required http.Response response,
+    required Map<String, String> headers,
+    required bool allowAuthRecovery,
+    required Future<http.Response> Function(Map<String, String> headers) sender,
+  }) async {
+    if (!allowAuthRecovery ||
+        (response.statusCode != 401 && response.statusCode != 403)) {
+      return response;
+    }
+    final authHeader = headers['Authorization'] ?? '';
+    if (!authHeader.startsWith('Bearer ')) {
+      return response;
+    }
+    final expiredToken = authHeader.substring('Bearer '.length).trim();
+    if (expiredToken.isEmpty) {
+      return response;
+    }
+    final refreshHandler = _onUnauthorizedRefresh;
+    if (refreshHandler == null) {
+      final unauthorizedHandler = _onUnauthorized;
+      if (unauthorizedHandler != null) {
+        await unauthorizedHandler();
+      }
+      return response;
+    }
+    try {
+      final nextToken = await refreshHandler(expiredToken);
+      if (nextToken == null || nextToken.trim().isEmpty) {
+        final unauthorizedHandler = _onUnauthorized;
+        if (unauthorizedHandler != null) {
+          await unauthorizedHandler();
+        }
+        return response;
+      }
+      final nextHeaders = Map<String, String>.from(headers);
+      nextHeaders['Authorization'] = 'Bearer ${nextToken.trim()}';
+      final retried = await sender(
+        nextHeaders,
+      ).timeout(const Duration(seconds: 15));
+      if ((retried.statusCode == 401 || retried.statusCode == 403) &&
+          _onUnauthorized != null) {
+        await _onUnauthorized!.call();
+      }
+      return retried;
+    } catch (_) {
+      return response;
     }
   }
 
@@ -979,6 +1121,7 @@ class EmployeeSummary {
     required this.apellido,
     required this.empresaId,
     this.foto,
+    this.imagenVersion,
   });
 
   final int id;
@@ -987,6 +1130,7 @@ class EmployeeSummary {
   final String? apellido;
   final int? empresaId;
   final String? foto;
+  final int? imagenVersion;
 
   factory EmployeeSummary.fromJson(Map<String, dynamic> json) {
     return EmployeeSummary(
@@ -996,6 +1140,7 @@ class EmployeeSummary {
       apellido: json['apellido'] as String?,
       empresaId: (json['empresa_id'] as num?)?.toInt(),
       foto: _jsonString(json['foto']),
+      imagenVersion: _jsonImagenVersion(json),
     );
   }
 
@@ -1007,6 +1152,7 @@ class EmployeeSummary {
       'apellido': apellido,
       'empresa_id': empresaId,
       'foto': foto,
+      'imagen_version': imagenVersion,
     };
   }
 
@@ -1034,6 +1180,7 @@ class EmployeeProfile {
     this.telefono,
     this.direccion,
     this.foto,
+    this.imagenVersion,
     this.estado,
   });
 
@@ -1050,6 +1197,7 @@ class EmployeeProfile {
   final String? telefono;
   final String? direccion;
   final String? foto;
+  final int? imagenVersion;
   final String? estado;
 
   factory EmployeeProfile.fromJson(Map<String, dynamic> json) {
@@ -1067,6 +1215,7 @@ class EmployeeProfile {
       telefono: _jsonString(json['telefono']),
       direccion: _jsonString(json['direccion']),
       foto: _jsonString(json['foto']),
+      imagenVersion: _jsonImagenVersion(json),
       estado: _jsonString(json['estado']),
     );
   }
@@ -1560,12 +1709,14 @@ class ProfileUpdateResponse {
     this.telefono,
     this.direccion,
     this.foto,
+    this.imagenVersion,
   });
 
   final int id;
   final String? telefono;
   final String? direccion;
   final String? foto;
+  final int? imagenVersion;
 
   factory ProfileUpdateResponse.fromJson(Map<String, dynamic> json) {
     return ProfileUpdateResponse(
@@ -1573,6 +1724,7 @@ class ProfileUpdateResponse {
       telefono: _jsonString(json['telefono']),
       direccion: _jsonString(json['direccion']),
       foto: _jsonString(json['foto']),
+      imagenVersion: _jsonImagenVersion(json),
     );
   }
 }
@@ -1706,6 +1858,7 @@ class AttendanceConfig {
     required this.requiereGeo,
     required this.toleranciaGlobal,
     required this.cooldownScanSegundos,
+    required this.intervaloMinimoFichadasMinutos,
     required this.metodosHabilitados,
   });
 
@@ -1715,6 +1868,7 @@ class AttendanceConfig {
   final bool requiereGeo;
   final int? toleranciaGlobal;
   final int cooldownScanSegundos;
+  final int? intervaloMinimoFichadasMinutos;
   final List<String> metodosHabilitados;
 
   factory AttendanceConfig.fromJson(Map<String, dynamic> json) {
@@ -1770,6 +1924,9 @@ class AttendanceConfig {
       requiereGeo: parseBool(json['requiere_geo']),
       toleranciaGlobal: parseInt(json['tolerancia_global']),
       cooldownScanSegundos: parseInt(json['cooldown_scan_segundos']) ?? 0,
+      intervaloMinimoFichadasMinutos: parseInt(
+        json['intervalo_minimo_fichadas_minutos'],
+      ),
       metodosHabilitados: parsedMethods,
     );
   }
@@ -1996,6 +2153,12 @@ String? _jsonString(dynamic value) {
     return trimmed.isEmpty ? null : trimmed;
   }
   return null;
+}
+
+int? _jsonImagenVersion(Map<String, dynamic> json) {
+  return _jsonInt(json['imagen_version']) ??
+      _jsonInt(json['foto_version']) ??
+      _jsonInt(json['image_version']);
 }
 
 class _ApiErrorData {

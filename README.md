@@ -1,4 +1,4 @@
-# control_asistencia_mobile
+# FicharQR
 
 Frontend Flutter separado para empleados (fichar entrada/salida, ver perfil y asistencias).
 
@@ -15,6 +15,25 @@ Desde `frontend_flutter`:
 ```bash
 flutter pub get
 flutter run --dart-define=API_BASE_URL=http://10.0.2.2:5000 --dart-define=APP_FLAVOR=DEV
+```
+
+Configuracion de sesion (opcionales):
+- `SESSION_IDLE_TIMEOUT_MINUTES` (tiempo de inactividad antes de bloquear)
+- `SESSION_MAX_AGE_HOURS` (vida maxima de sesion antes de forzar login)
+- `SESSION_PROACTIVE_REFRESH_MINUTES` (intervalo de refresh proactivo)
+
+Defaults por ambiente:
+- `PROD`: idle `20m`, max age `10h`, refresh `8m`
+- `STAGE`: idle `25m`, max age `10h`, refresh `8m`
+- `DEV` (u otros): idle `30m`, max age `12h`, refresh `10m`
+
+Ejemplo:
+```bash
+flutter run \
+  --dart-define=APP_FLAVOR=STAGE \
+  --dart-define=SESSION_IDLE_TIMEOUT_MINUTES=20 \
+  --dart-define=SESSION_MAX_AGE_HOURS=8 \
+  --dart-define=SESSION_PROACTIVE_REFRESH_MINUTES=6
 ```
 
 Notas:

@@ -1,4 +1,4 @@
-package com.controlasistencia.control_asistencia_mobile
+package com.controlasistencia.ficharqr
 
 import io.flutter.embedding.android.FlutterFragmentActivity
 

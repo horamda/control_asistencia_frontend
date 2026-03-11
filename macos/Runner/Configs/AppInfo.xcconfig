@@ -5,10 +5,11 @@
 // 'flutter create' template.
 
 // The application's name. By default this is also the title of the Flutter window.
-PRODUCT_NAME = control_asistencia_mobile
+PRODUCT_NAME = FicharQR
 
 // The application's bundle identifier
-PRODUCT_BUNDLE_IDENTIFIER = com.controlasistencia.controlAsistenciaMobile
+PRODUCT_BUNDLE_IDENTIFIER = com.controlasistencia.ficharqr
 
 // The copyright displayed in application information
 PRODUCT_COPYRIGHT = Copyright © 2026 com.controlasistencia. All rights reserved.
+

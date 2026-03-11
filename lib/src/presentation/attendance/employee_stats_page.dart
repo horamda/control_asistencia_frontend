@@ -1,6 +1,7 @@
 import 'package:flutter/material.dart';
 
 import '../../core/network/mobile_api_client.dart';
+import '../../core/utils/date_formatter.dart';
 
 class EmployeeStatsPage extends StatefulWidget {
   const EmployeeStatsPage({
@@ -43,40 +44,30 @@ class _EmployeeStatsPageState extends State<EmployeeStatsPage> {
     return DateTime(now.year, now.month, now.day);
   }
 
-  String _fmtDate(DateTime date) {
-    final y = date.year.toString().padLeft(4, '0');
-    final m = date.month.toString().padLeft(2, '0');
-    final d = date.day.toString().padLeft(2, '0');
-    return '$y-$m-$d';
+  String _fmtDisplayDate(DateTime date) {
+    return DateFormatter.formatDisplayDate(date);
   }
 
-  DateTime? _parseIsoDate(String raw) {
-    final value = raw.trim();
-    if (value.isEmpty) {
-      return null;
-    }
-    if (!RegExp(r'^\d{4}-\d{2}-\d{2}$').hasMatch(value)) {
-      return null;
-    }
-    final parsed = DateTime.tryParse(value);
-    if (parsed == null) {
-      return null;
-    }
-    return DateTime(parsed.year, parsed.month, parsed.day);
+  DateTime? _parseInputDate(String raw) {
+    return DateFormatter.parseFlexibleDate(raw);
+  }
+
+  String? _controllerDateToApi(TextEditingController controller) {
+    return DateFormatter.toApiDateOrNull(controller.text);
   }
 
   String? _validateRangeInputs() {
     final desdeRaw = _desdeController.text.trim();
     final hastaRaw = _hastaController.text.trim();
-    final desde = _parseIsoDate(desdeRaw);
-    final hasta = _parseIsoDate(hastaRaw);
+    final desde = _parseInputDate(desdeRaw);
+    final hasta = _parseInputDate(hastaRaw);
     final today = _todayDate();
 
     if (desdeRaw.isNotEmpty && desde == null) {
-      return 'Fecha desde invalida. Use YYYY-MM-DD.';
+      return 'Fecha desde invalida. Use dd/MM/yyyy.';
     }
     if (hastaRaw.isNotEmpty && hasta == null) {
-      return 'Fecha hasta invalida. Use YYYY-MM-DD.';
+      return 'Fecha hasta invalida. Use dd/MM/yyyy.';
     }
     if (desde != null && desde.isAfter(today)) {
       return 'No se permiten fechas futuras en desde.';
@@ -101,7 +92,7 @@ class _EmployeeStatsPageState extends State<EmployeeStatsPage> {
     final first = DateTime(2000, 1, 1);
     final fromCtrl = isDesde ? _desdeController : _hastaController;
     final otherCtrl = isDesde ? _hastaController : _desdeController;
-    var current = _parseIsoDate(fromCtrl.text) ?? today;
+    var current = _parseInputDate(fromCtrl.text) ?? today;
     if (current.isAfter(today)) {
       current = today;
     } else if (current.isBefore(first)) {
@@ -121,14 +112,14 @@ class _EmployeeStatsPageState extends State<EmployeeStatsPage> {
 
     final pickedNorm = DateTime(picked.year, picked.month, picked.day);
     setState(() {
-      fromCtrl.text = _fmtDate(pickedNorm);
-      final other = _parseIsoDate(otherCtrl.text);
+      fromCtrl.text = _fmtDisplayDate(pickedNorm);
+      final other = _parseInputDate(otherCtrl.text);
       if (other != null) {
         if (isDesde && pickedNorm.isAfter(other)) {
-          otherCtrl.text = _fmtDate(pickedNorm);
+          otherCtrl.text = _fmtDisplayDate(pickedNorm);
         }
         if (!isDesde && pickedNorm.isBefore(other)) {
-          otherCtrl.text = _fmtDate(pickedNorm);
+          otherCtrl.text = _fmtDisplayDate(pickedNorm);
         }
       }
     });
@@ -152,8 +143,8 @@ class _EmployeeStatsPageState extends State<EmployeeStatsPage> {
     try {
       final stats = await widget.apiClient.getEstadisticas(
         token: widget.token,
-        desde: _desdeController.text,
-        hasta: _hastaController.text,
+        desde: _controllerDateToApi(_desdeController),
+        hasta: _controllerDateToApi(_hastaController),
       );
       if (!mounted) {
         return;
@@ -205,15 +196,17 @@ class _EmployeeStatsPageState extends State<EmployeeStatsPage> {
 
   void _setCurrentMonth() {
     final today = _todayDate();
-    _desdeController.text = _fmtDate(DateTime(today.year, today.month, 1));
-    _hastaController.text = _fmtDate(today);
+    _desdeController.text = _fmtDisplayDate(
+      DateTime(today.year, today.month, 1),
+    );
+    _hastaController.text = _fmtDisplayDate(today);
     _loadStats();
   }
 
   void _setCurrentYear() {
     final today = _todayDate();
-    _desdeController.text = _fmtDate(DateTime(today.year, 1, 1));
-    _hastaController.text = _fmtDate(today);
+    _desdeController.text = _fmtDisplayDate(DateTime(today.year, 1, 1));
+    _hastaController.text = _fmtDisplayDate(today);
     _loadStats();
   }
 
@@ -233,113 +226,141 @@ class _EmployeeStatsPageState extends State<EmployeeStatsPage> {
           ? const Center(child: CircularProgressIndicator())
           : RefreshIndicator(
               onRefresh: _loadStats,
-              child: ListView(
-                physics: const AlwaysScrollableScrollPhysics(),
-                padding: const EdgeInsets.all(16),
-                children: [
-                  _FiltersCard(
-                    desdeController: _desdeController,
-                    hastaController: _hastaController,
-                    todayIso: _fmtDate(_todayDate()),
-                    onPickDesde: _loadingData
-                        ? null
-                        : () => _pickDate(isDesde: true),
-                    onPickHasta: _loadingData
-                        ? null
-                        : () => _pickDate(isDesde: false),
-                    onApply: _loadingData ? null : _applyFilters,
-                    onClear: _loadingData ? null : _clearFilters,
-                    onPresetMonth: _loadingData ? null : _setCurrentMonth,
-                    onPresetYear: _loadingData ? null : _setCurrentYear,
-                  ),
-                  if (_error != null) ...[
-                    const SizedBox(height: 10),
-                    Card(
-                      color: const Color(0xFFFFF4E5),
-                      child: Padding(
-                        padding: const EdgeInsets.all(12),
-                        child: Text(_error!),
-                      ),
-                    ),
-                  ],
-                  if (stats != null) ...[
-                    const SizedBox(height: 10),
-                    Card(
-                      child: Padding(
-                        padding: const EdgeInsets.all(12),
-                        child: Text(
-                          'Periodo: ${stats.periodo.desde ?? '-'} a ${stats.periodo.hasta ?? '-'} (${stats.periodo.dias} dias)',
-                        ),
-                      ),
-                    ),
-                    const SizedBox(height: 10),
-                    _KpiGrid(stats: stats),
-                    const SizedBox(height: 10),
-                    _StatusCard(stats: stats),
-                    const SizedBox(height: 10),
-                    _DetailCard(stats: stats),
-                    const SizedBox(height: 10),
-                    Card(
-                      child: Padding(
-                        padding: const EdgeInsets.all(12),
-                        child: Column(
-                          crossAxisAlignment: CrossAxisAlignment.start,
-                          children: [
-                            const Text(
-                              'Tendencia diaria',
-                              style: TextStyle(
-                                fontSize: 16,
-                                fontWeight: FontWeight.w600,
+              child: LayoutBuilder(
+                builder: (context, constraints) {
+                  final maxWidth = constraints.maxWidth >= 1200
+                      ? 1040.0
+                      : constraints.maxWidth >= 900
+                      ? 900.0
+                      : double.infinity;
+                  final horizontalPadding = constraints.maxWidth < 600
+                      ? 12.0
+                      : 16.0;
+                  return Center(
+                    child: ConstrainedBox(
+                      constraints: BoxConstraints(maxWidth: maxWidth),
+                      child: ListView(
+                        physics: const AlwaysScrollableScrollPhysics(),
+                        padding: EdgeInsets.all(horizontalPadding),
+                        children: [
+                          _FiltersCard(
+                            desdeController: _desdeController,
+                            hastaController: _hastaController,
+                            todayIso: _fmtDisplayDate(_todayDate()),
+                            onPickDesde: _loadingData
+                                ? null
+                                : () => _pickDate(isDesde: true),
+                            onPickHasta: _loadingData
+                                ? null
+                                : () => _pickDate(isDesde: false),
+                            onApply: _loadingData ? null : _applyFilters,
+                            onClear: _loadingData ? null : _clearFilters,
+                            onPresetMonth: _loadingData ? null : _setCurrentMonth,
+                            onPresetYear: _loadingData ? null : _setCurrentYear,
+                          ),
+                          if (_error != null) ...[
+                            const SizedBox(height: 10),
+                            Card(
+                              color: const Color(0xFFFFF4E5),
+                              child: Padding(
+                                padding: const EdgeInsets.all(12),
+                                child: Text(_error!),
+                              ),
+                            ),
+                          ],
+                          if (stats != null) ...[
+                            const SizedBox(height: 10),
+                            Card(
+                              child: Padding(
+                                padding: const EdgeInsets.all(12),
+                                child: Text(
+                                  'Periodo: ${DateFormatter.formatApiDateForDisplay(stats.periodo.desde)} a '
+                                  '${DateFormatter.formatApiDateForDisplay(stats.periodo.hasta)} '
+                                  '(${stats.periodo.dias} dias)',
+                                ),
                               ),
                             ),
                             const SizedBox(height: 10),
-                            if (daily.isEmpty)
-                              const Text(
-                                'Sin datos diarios para el periodo seleccionado.',
-                              )
-                            else
-                              SingleChildScrollView(
-                                scrollDirection: Axis.horizontal,
-                                child: Row(
-                                  crossAxisAlignment: CrossAxisAlignment.end,
-                                  children: daily.map((d) {
-                                    final h = ((d.registros * 120.0) / maxDaily)
-                                        .clamp(8.0, 120.0);
-                                    final label = (d.fecha ?? '').length >= 10
-                                        ? d.fecha!.substring(5, 10)
-                                        : (d.fecha ?? '-');
-                                    return Padding(
-                                      padding: const EdgeInsets.only(right: 8),
-                                      child: Column(
-                                        children: [
-                                          Container(
-                                            width: 22,
-                                            height: h,
-                                            decoration: BoxDecoration(
-                                              color: const Color(0xFF0E5A8A),
-                                              borderRadius:
-                                                  BorderRadius.circular(5),
-                                            ),
-                                          ),
-                                          const SizedBox(height: 4),
-                                          Text(
-                                            label,
-                                            style: const TextStyle(
-                                              fontSize: 10,
-                                            ),
-                                          ),
-                                        ],
+                            _KpiGrid(stats: stats),
+                            const SizedBox(height: 10),
+                            _StatusCard(stats: stats),
+                            const SizedBox(height: 10),
+                            _DetailCard(stats: stats),
+                            const SizedBox(height: 10),
+                            Card(
+                              child: Padding(
+                                padding: const EdgeInsets.all(12),
+                                child: Column(
+                                  crossAxisAlignment: CrossAxisAlignment.start,
+                                  children: [
+                                    const Text(
+                                      'Tendencia diaria',
+                                      style: TextStyle(
+                                        fontSize: 16,
+                                        fontWeight: FontWeight.w600,
                                       ),
-                                    );
-                                  }).toList(),
+                                    ),
+                                    const SizedBox(height: 10),
+                                    if (daily.isEmpty)
+                                      const Text(
+                                        'Sin datos diarios para el periodo seleccionado.',
+                                      )
+                                    else
+                                      SingleChildScrollView(
+                                        scrollDirection: Axis.horizontal,
+                                        child: Row(
+                                          crossAxisAlignment:
+                                              CrossAxisAlignment.end,
+                                          children: daily.map((d) {
+                                            final h =
+                                                ((d.registros * 120.0) / maxDaily)
+                                                    .clamp(8.0, 120.0);
+                                            final label = DateFormatter
+                                                .formatApiDateForDisplayShort(
+                                                  d.fecha,
+                                                );
+                                            return Padding(
+                                              padding: const EdgeInsets.only(
+                                                right: 8,
+                                              ),
+                                              child: Column(
+                                                children: [
+                                                  Container(
+                                                    width: 22,
+                                                    height: h,
+                                                    decoration: BoxDecoration(
+                                                      color: const Color(
+                                                        0xFF0E5A8A,
+                                                      ),
+                                                      borderRadius:
+                                                          BorderRadius.circular(
+                                                            5,
+                                                          ),
+                                                    ),
+                                                  ),
+                                                  const SizedBox(height: 4),
+                                                  Text(
+                                                    label,
+                                                    style: const TextStyle(
+                                                      fontSize: 10,
+                                                    ),
+                                                  ),
+                                                ],
+                                              ),
+                                            );
+                                          }).toList(),
+                                        ),
+                                      ),
+                                  ],
                                 ),
                               ),
+                            ),
                           ],
-                        ),
+                        ],
                       ),
                     ),
-                  ],
-                ],
+                  );
+                },
               ),
             ),
     );
@@ -353,22 +374,38 @@ class _KpiGrid extends StatelessWidget {
 
   @override
   Widget build(BuildContext context) {
-    return GridView.count(
-      crossAxisCount: 2,
-      crossAxisSpacing: 8,
-      mainAxisSpacing: 8,
-      childAspectRatio: 1.8,
-      shrinkWrap: true,
-      physics: const NeverScrollableScrollPhysics(),
-      children: [
-        _kpi('Puntualidad', '${stats.kpis.puntualidadPct.toStringAsFixed(1)}%'),
-        _kpi('Ausentismo', '${stats.kpis.ausentismoPct.toStringAsFixed(1)}%'),
-        _kpi('No-show', '${stats.kpis.noShowPct.toStringAsFixed(1)}%'),
-        _kpi(
-          'Jornada completa',
-          '${stats.kpis.cumplimientoJornadaPct.toStringAsFixed(1)}%',
-        ),
-      ],
+    return LayoutBuilder(
+      builder: (context, constraints) {
+        final crossAxisCount = constraints.maxWidth >= 940
+            ? 4
+            : constraints.maxWidth >= 620
+            ? 2
+            : 1;
+        final aspectRatio = crossAxisCount == 1 ? 3.2 : 1.8;
+        return GridView.count(
+          crossAxisCount: crossAxisCount,
+          crossAxisSpacing: 8,
+          mainAxisSpacing: 8,
+          childAspectRatio: aspectRatio,
+          shrinkWrap: true,
+          physics: const NeverScrollableScrollPhysics(),
+          children: [
+            _kpi(
+              'Puntualidad',
+              '${stats.kpis.puntualidadPct.toStringAsFixed(1)}%',
+            ),
+            _kpi(
+              'Ausentismo',
+              '${stats.kpis.ausentismoPct.toStringAsFixed(1)}%',
+            ),
+            _kpi('No-show', '${stats.kpis.noShowPct.toStringAsFixed(1)}%'),
+            _kpi(
+              'Jornada completa',
+              '${stats.kpis.cumplimientoJornadaPct.toStringAsFixed(1)}%',
+            ),
+          ],
+        );
+      },
     );
   }
 
@@ -524,7 +561,7 @@ class _FiltersCard extends StatelessWidget {
           crossAxisAlignment: CrossAxisAlignment.start,
           children: [
             Text(
-              'Filtros (YYYY-MM-DD, max $todayIso)',
+              'Filtros (dd/MM/yyyy, max $todayIso)',
               style: Theme.of(context).textTheme.titleSmall,
             ),
             const SizedBox(height: 10),
@@ -534,7 +571,7 @@ class _FiltersCard extends StatelessWidget {
               onTap: onPickDesde,
               decoration: InputDecoration(
                 labelText: 'Desde',
-                hintText: '2026-02-01',
+                hintText: '01/02/2026',
                 border: const OutlineInputBorder(),
                 suffixIcon: IconButton(
                   onPressed: onPickDesde,
@@ -550,7 +587,7 @@ class _FiltersCard extends StatelessWidget {
               onTap: onPickHasta,
               decoration: InputDecoration(
                 labelText: 'Hasta',
-                hintText: '2026-02-27',
+                hintText: '27/02/2026',
                 border: const OutlineInputBorder(),
                 suffixIcon: IconButton(
                   onPressed: onPickHasta,
@@ -560,40 +597,80 @@ class _FiltersCard extends StatelessWidget {
               ),
             ),
             const SizedBox(height: 10),
-            Row(
-              children: [
-                Expanded(
-                  child: OutlinedButton(
-                    onPressed: onPresetMonth,
-                    child: const Text('Mes actual'),
-                  ),
-                ),
-                const SizedBox(width: 8),
-                Expanded(
-                  child: OutlinedButton(
-                    onPressed: onPresetYear,
-                    child: const Text('Anio actual'),
-                  ),
-                ),
-              ],
+            LayoutBuilder(
+              builder: (context, constraints) {
+                if (constraints.maxWidth < 360) {
+                  return Column(
+                    crossAxisAlignment: CrossAxisAlignment.stretch,
+                    children: [
+                      OutlinedButton(
+                        onPressed: onPresetMonth,
+                        child: const Text('Mes actual'),
+                      ),
+                      const SizedBox(height: 8),
+                      OutlinedButton(
+                        onPressed: onPresetYear,
+                        child: const Text('Anio actual'),
+                      ),
+                    ],
+                  );
+                }
+                return Row(
+                  children: [
+                    Expanded(
+                      child: OutlinedButton(
+                        onPressed: onPresetMonth,
+                        child: const Text('Mes actual'),
+                      ),
+                    ),
+                    const SizedBox(width: 8),
+                    Expanded(
+                      child: OutlinedButton(
+                        onPressed: onPresetYear,
+                        child: const Text('Anio actual'),
+                      ),
+                    ),
+                  ],
+                );
+              },
             ),
             const SizedBox(height: 10),
-            Row(
-              children: [
-                Expanded(
-                  child: FilledButton(
-                    onPressed: onApply,
-                    child: const Text('Aplicar'),
-                  ),
-                ),
-                const SizedBox(width: 8),
-                Expanded(
-                  child: OutlinedButton(
-                    onPressed: onClear,
-                    child: const Text('Limpiar'),
-                  ),
-                ),
-              ],
+            LayoutBuilder(
+              builder: (context, constraints) {
+                if (constraints.maxWidth < 360) {
+                  return Column(
+                    crossAxisAlignment: CrossAxisAlignment.stretch,
+                    children: [
+                      FilledButton(
+                        onPressed: onApply,
+                        child: const Text('Aplicar'),
+                      ),
+                      const SizedBox(height: 8),
+                      OutlinedButton(
+                        onPressed: onClear,
+                        child: const Text('Limpiar'),
+                      ),
+                    ],
+                  );
+                }
+                return Row(
+                  children: [
+                    Expanded(
+                      child: FilledButton(
+                        onPressed: onApply,
+                        child: const Text('Aplicar'),
+                      ),
+                    ),
+                    const SizedBox(width: 8),
+                    Expanded(
+                      child: OutlinedButton(
+                        onPressed: onClear,
+                        child: const Text('Limpiar'),
+                      ),
+                    ),
+                  ],
+                );
+              },
             ),
           ],
         ),
