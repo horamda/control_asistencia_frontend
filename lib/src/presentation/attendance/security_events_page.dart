@@ -116,14 +116,29 @@ class _SecurityEventsPageState extends State<SecurityEventsPage> {
                         physics: const AlwaysScrollableScrollPhysics(),
                         padding: EdgeInsets.all(horizontalPadding),
                         children: [
-                          if (_error != null)
+                          if (_error != null) ...[
                             Card(
                               color: const Color(0xFFFFF4E5),
                               child: Padding(
                                 padding: const EdgeInsets.all(12),
-                                child: Text(_error!),
+                                child: Column(
+                                  crossAxisAlignment: CrossAxisAlignment.start,
+                                  children: [
+                                    Text(_error!),
+                                    const SizedBox(height: 8),
+                                    OutlinedButton.icon(
+                                      onPressed: _loadingPage
+                                          ? null
+                                          : () => _loadPage(page: _page),
+                                      icon: const Icon(Icons.refresh, size: 16),
+                                      label: const Text('Reintentar'),
+                                    ),
+                                  ],
+                                ),
                               ),
                             ),
+                            const SizedBox(height: 8),
+                          ],
                           Card(
                             child: Padding(
                               padding: const EdgeInsets.all(12),

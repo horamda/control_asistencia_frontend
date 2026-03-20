@@ -1,7 +1,11 @@
 import 'package:flutter_test/flutter_test.dart';
 import 'package:ficharqr/src/core/offline/offline_clock_queue.dart';
+import 'package:flutter_secure_storage/test/test_flutter_secure_storage_platform.dart';
+import 'package:flutter_secure_storage_platform_interface/flutter_secure_storage_platform_interface.dart';
 
 void main() {
+  TestWidgetsFlutterBinding.ensureInitialized();
+
   group('OfflineClockRecord', () {
     test('copyWith permite limpiar campos nullable con null explicito', () {
       final now = DateTime(2026, 3, 11, 10, 0, 0);
@@ -65,6 +69,44 @@ void main() {
       );
 
       expect(invalid.isValid, isFalse);
+    });
+  });
+
+  group('OfflineClockQueue', () {
+    late Map<String, String> data;
+
+    setUp(() {
+      data = <String, String>{};
+      FlutterSecureStoragePlatform.instance = TestFlutterSecureStoragePlatform(
+        data,
+      );
+    });
+
+    test('enqueue falla cuando la cola llega al limite', () async {
+      final queue = OfflineClockQueue();
+      final now = DateTime(2026, 3, 11, 10, 0, 0);
+
+      for (var i = 0; i < 40; i++) {
+        await queue.enqueue(
+          employeeId: 10,
+          qrToken: 'token-$i',
+          eventAt: now.add(Duration(minutes: i)),
+        );
+      }
+
+      await expectLater(
+        () => queue.enqueue(
+          employeeId: 10,
+          qrToken: 'token-40',
+          eventAt: now.add(const Duration(minutes: 40)),
+        ),
+        throwsA(isA<OfflineClockQueueFullException>()),
+      );
+
+      final items = await queue.readForEmployee(10);
+      expect(items, hasLength(40));
+      expect(items.first.qrToken, 'token-0');
+      expect(items.last.qrToken, 'token-39');
     });
   });
 }

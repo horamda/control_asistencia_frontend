@@ -2,10 +2,24 @@ import 'dart:convert';
 import 'dart:io';
 import 'dart:math';
 
+import 'package:path_provider/path_provider.dart';
+
+import '../utils/app_logger.dart';
+
+final _log = AppLogger.get('ClockPhotoCache');
+
+typedef ClockPhotoCacheDirectoryProvider = Future<Directory> Function();
+
 class ClockPhotoCache {
-  ClockPhotoCache({Random? random}) : _random = random ?? Random();
+  ClockPhotoCache({
+    Random? random,
+    ClockPhotoCacheDirectoryProvider? rootDirectoryProvider,
+  }) : _random = random ?? Random(),
+       _rootDirectoryProvider =
+           rootDirectoryProvider ?? getApplicationSupportDirectory;
 
   final Random _random;
+  final ClockPhotoCacheDirectoryProvider _rootDirectoryProvider;
 
   Future<String?> saveFromPath({
     required int employeeId,
@@ -38,7 +52,8 @@ class ClockPhotoCache {
         return null;
       }
       return base64Encode(bytes);
-    } catch (_) {
+    } catch (e) {
+      _log.debug('No se pudo leer foto en base64 [$cleanPath]: $e');
       return null;
     }
   }
@@ -53,7 +68,9 @@ class ClockPhotoCache {
       if (await file.exists()) {
         await file.delete();
       }
-    } catch (_) {}
+    } catch (e) {
+      _log.debug('No se pudo eliminar foto [$cleanPath]: $e');
+    }
   }
 
   Future<void> pruneEmployee({
@@ -76,15 +93,20 @@ class ClockPhotoCache {
         if (!keep.contains(entity.path)) {
           try {
             await entity.delete();
-          } catch (_) {}
+          } catch (e) {
+            _log.debug('No se pudo eliminar foto en prune [${entity.path}]: $e');
+          }
         }
       }
-    } catch (_) {}
+    } catch (e, stack) {
+      _log.warning('Error al listar directorio de fotos para empleado $employeeId', e, stack);
+    }
   }
 
   Future<Directory> _employeeCacheDir(int employeeId) async {
+    final baseDir = await _rootDirectoryProvider();
     final root = Directory(
-      '${Directory.systemTemp.path}${Platform.pathSeparator}offline_clock_photos',
+      '${baseDir.path}${Platform.pathSeparator}offline_clock_photos',
     );
     if (!await root.exists()) {
       await root.create(recursive: true);

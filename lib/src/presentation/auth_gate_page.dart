@@ -37,7 +37,10 @@ class _AuthGatePageState extends State<AuthGatePage> {
   @override
   void initState() {
     super.initState();
-    _apiClient = MobileApiClient(baseUrl: AppConfig.current.apiBaseUrl);
+    _apiClient = MobileApiClient(
+      baseUrl: AppConfig.current.apiBaseUrl,
+      mobileApiPrefix: AppConfig.current.mobileApiPrefix,
+    );
     _devicePermissionBootstrap = DevicePermissionBootstrap();
     _sessionManager = SessionManager(
       apiClient: _apiClient,
@@ -155,6 +158,7 @@ class _AuthGatePageState extends State<AuthGatePage> {
 
   Future<void> _onLoginSuccess(LoginResponse session) async {
     await _sessionManager.onLoginSuccess(session);
+    _scheduleDevicePermissionBootstrap();
     if (mounted) {
       setState(() {});
     }
@@ -282,6 +286,23 @@ class _SessionLockedView extends StatelessWidget {
                             ),
                             const SizedBox(height: 10),
                             Text(message),
+                            if (loading) ...[
+                              const SizedBox(height: 16),
+                              Row(
+                                mainAxisAlignment: MainAxisAlignment.center,
+                                children: const [
+                                  SizedBox(
+                                    width: 16,
+                                    height: 16,
+                                    child: CircularProgressIndicator(
+                                      strokeWidth: 2,
+                                    ),
+                                  ),
+                                  SizedBox(width: 10),
+                                  Text('Verificando huella digital...'),
+                                ],
+                              ),
+                            ],
                             const SizedBox(height: 16),
                             SizedBox(
                               height: 46,

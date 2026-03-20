@@ -3,11 +3,20 @@ import 'dart:async';
 
 import 'package:http/http.dart' as http;
 
+import '../utils/app_logger.dart';
+
+final _log = AppLogger.get('MobileApiClient');
+
 class MobileApiClient {
-  MobileApiClient({required this.baseUrl, http.Client? httpClient})
+  MobileApiClient({
+    required this.baseUrl,
+    this.mobileApiPrefix = '/api/v1/mobile',
+    http.Client? httpClient,
+  })
     : _httpClient = httpClient ?? http.Client();
 
   final String baseUrl;
+  final String mobileApiPrefix;
   final http.Client _httpClient;
   String? Function()? _tokenProvider;
   Future<String?> Function(String expiredToken)? _onUnauthorizedRefresh;
@@ -609,25 +618,26 @@ class MobileApiClient {
     String? telefono,
     String? direccion,
   }) async {
-    final request = http.MultipartRequest('PUT', _uri('/me/perfil'));
-    final effectiveToken = _resolveToken(token);
-    if (effectiveToken.isNotEmpty) {
-      request.headers['Authorization'] = 'Bearer $effectiveToken';
-    }
-
-    if (telefono != null) {
-      request.fields['telefono'] = telefono;
-    }
-    if (direccion != null) {
-      request.fields['direccion'] = direccion;
-    }
-    request.files.add(await http.MultipartFile.fromPath('foto_file', fotoPath));
-
-    final streamedResponse = await _safeSendMultipart(
-      request,
+    final response = await _sendMultipartWithAuthRecovery(
+      token: token,
       actionLabel: 'subir foto de perfil',
+      requestBuilder: (effectiveToken) async {
+        final request = http.MultipartRequest('PUT', _uri('/me/perfil'));
+        if (effectiveToken.isNotEmpty) {
+          request.headers['Authorization'] = 'Bearer $effectiveToken';
+        }
+        if (telefono != null) {
+          request.fields['telefono'] = telefono;
+        }
+        if (direccion != null) {
+          request.fields['direccion'] = direccion;
+        }
+        request.files.add(
+          await http.MultipartFile.fromPath('foto_file', fotoPath),
+        );
+        return request;
+      },
     );
-    final response = await http.Response.fromStream(streamedResponse);
 
     if (response.statusCode != 200) {
       final error = _extractApiError(
@@ -750,18 +760,35 @@ class MobileApiClient {
     final normalizedBase = baseUrl.endsWith('/')
         ? baseUrl.substring(0, baseUrl.length - 1)
         : baseUrl;
-    return Uri.parse('$normalizedBase/api/v1/mobile$path');
+    final fullBase = normalizedBase.endsWith(_normalizedMobileApiPrefix)
+        ? normalizedBase
+        : '$normalizedBase$_normalizedMobileApiPrefix';
+    return Uri.parse('$fullBase$path');
   }
 
   Uri _rootUri(String path) {
     final normalizedBase = baseUrl.endsWith('/')
         ? baseUrl.substring(0, baseUrl.length - 1)
         : baseUrl;
-    const mobilePrefix = '/api/v1/mobile';
-    final rootBase = normalizedBase.endsWith(mobilePrefix)
-        ? normalizedBase.substring(0, normalizedBase.length - mobilePrefix.length)
+    final rootBase = normalizedBase.endsWith(_normalizedMobileApiPrefix)
+        ? normalizedBase.substring(
+            0,
+            normalizedBase.length - _normalizedMobileApiPrefix.length,
+          )
         : normalizedBase;
     return Uri.parse('$rootBase$path');
+  }
+
+  String get _normalizedMobileApiPrefix {
+    final trimmed = mobileApiPrefix.trim();
+    if (trimmed.isEmpty) {
+      return '/api/v1/mobile';
+    }
+    final withLeadingSlash = trimmed.startsWith('/') ? trimmed : '/$trimmed';
+    if (withLeadingSlash.length > 1 && withLeadingSlash.endsWith('/')) {
+      return withLeadingSlash.substring(0, withLeadingSlash.length - 1);
+    }
+    return withLeadingSlash;
   }
 
   String _resolveToken(String? token) {
@@ -822,7 +849,8 @@ class MobileApiClient {
         message:
             'No se pudo conectar al servidor para $actionLabel. Revisa API_BASE_URL: $baseUrl.',
       );
-    } catch (_) {
+    } catch (e, stack) {
+      _log.warning('Error inesperado al $actionLabel', e, stack);
       throw ApiException(message: 'Error de conexion al $actionLabel.');
     }
   }
@@ -853,7 +881,8 @@ class MobileApiClient {
         message:
             'No se pudo conectar al servidor para $actionLabel. Revisa API_BASE_URL: $baseUrl.',
       );
-    } catch (_) {
+    } catch (e, stack) {
+      _log.warning('Error inesperado al $actionLabel', e, stack);
       throw ApiException(message: 'Error de conexion al $actionLabel.');
     }
   }
@@ -886,7 +915,8 @@ class MobileApiClient {
         message:
             'No se pudo conectar al servidor para $actionLabel. Revisa API_BASE_URL: $baseUrl.',
       );
-    } catch (_) {
+    } catch (e, stack) {
+      _log.warning('Error inesperado al $actionLabel', e, stack);
       throw ApiException(message: 'Error de conexion al $actionLabel.');
     }
   }
@@ -917,7 +947,8 @@ class MobileApiClient {
         message:
             'No se pudo conectar al servidor para $actionLabel. Revisa API_BASE_URL: $baseUrl.',
       );
-    } catch (_) {
+    } catch (e, stack) {
+      _log.warning('Error inesperado al $actionLabel', e, stack);
       throw ApiException(message: 'Error de conexion al $actionLabel.');
     }
   }
@@ -967,7 +998,8 @@ class MobileApiClient {
         await _onUnauthorized!.call();
       }
       return retried;
-    } catch (_) {
+    } catch (e) {
+      _log.debug('Error en reintento de auth recovery: $e');
       return response;
     }
   }
@@ -990,8 +1022,64 @@ class MobileApiClient {
         message:
             'No se pudo conectar al servidor para $actionLabel. Revisa API_BASE_URL: $baseUrl.',
       );
-    } catch (_) {
+    } catch (e, stack) {
+      _log.warning('Error inesperado al $actionLabel', e, stack);
       throw ApiException(message: 'Error de conexion al $actionLabel.');
+    }
+  }
+
+  Future<http.Response> _sendMultipartWithAuthRecovery({
+    required String token,
+    required String actionLabel,
+    required Future<http.MultipartRequest> Function(String effectiveToken)
+    requestBuilder,
+    bool allowAuthRecovery = true,
+  }) async {
+    final initialToken = _resolveToken(token);
+    final initialRequest = await requestBuilder(initialToken);
+    final initialStreamedResponse = await _safeSendMultipart(
+      initialRequest,
+      actionLabel: actionLabel,
+    );
+    final initialResponse = await http.Response.fromStream(
+      initialStreamedResponse,
+    );
+    if (!allowAuthRecovery ||
+        (initialResponse.statusCode != 401 && initialResponse.statusCode != 403) ||
+        initialToken.isEmpty) {
+      return initialResponse;
+    }
+    final refreshHandler = _onUnauthorizedRefresh;
+    if (refreshHandler == null) {
+      final unauthorizedHandler = _onUnauthorized;
+      if (unauthorizedHandler != null) {
+        await unauthorizedHandler();
+      }
+      return initialResponse;
+    }
+    try {
+      final nextToken = await refreshHandler(initialToken);
+      if (nextToken == null || nextToken.trim().isEmpty) {
+        final unauthorizedHandler = _onUnauthorized;
+        if (unauthorizedHandler != null) {
+          await unauthorizedHandler();
+        }
+        return initialResponse;
+      }
+      final retryRequest = await requestBuilder(nextToken.trim());
+      final retryStreamedResponse = await _safeSendMultipart(
+        retryRequest,
+        actionLabel: actionLabel,
+      );
+      final retryResponse = await http.Response.fromStream(retryStreamedResponse);
+      if ((retryResponse.statusCode == 401 || retryResponse.statusCode == 403) &&
+          _onUnauthorized != null) {
+        await _onUnauthorized!.call();
+      }
+      return retryResponse;
+    } catch (e) {
+      _log.debug('Error en reintento multipart auth recovery: $e');
+      return initialResponse;
     }
   }
 

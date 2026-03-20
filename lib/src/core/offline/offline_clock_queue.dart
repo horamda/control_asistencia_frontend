@@ -3,6 +3,10 @@ import 'dart:math';
 
 import 'package:flutter_secure_storage/flutter_secure_storage.dart';
 
+import '../utils/app_logger.dart';
+
+final _log = AppLogger.get('OfflineClockQueue');
+
 class OfflineClockQueue {
   OfflineClockQueue({FlutterSecureStorage? secureStorage})
     : _secureStorage =
@@ -21,14 +25,15 @@ class OfflineClockQueue {
     try {
       final raw = await _secureStorage.read(key: _queueKey);
       if (raw == null || raw.trim().isEmpty) {
-        return const <OfflineClockRecord>[];
+        return <OfflineClockRecord>[];
       }
       final decoded = jsonDecode(raw);
       if (decoded is! List) {
+        _log.warning('Cola offline con formato invalido, se resetea.');
         try {
           await _secureStorage.delete(key: _queueKey);
         } catch (_) {}
-        return const <OfflineClockRecord>[];
+        return <OfflineClockRecord>[];
       }
       final items = <OfflineClockRecord>[];
       for (final value in decoded) {
@@ -50,11 +55,12 @@ class OfflineClockQueue {
       }
       items.sort((a, b) => a.createdAt.compareTo(b.createdAt));
       return items;
-    } catch (_) {
+    } catch (e, stack) {
+      _log.warning('Error al leer cola offline, se resetea.', e, stack);
       try {
         await _secureStorage.delete(key: _queueKey);
       } catch (_) {}
-      return const <OfflineClockRecord>[];
+      return <OfflineClockRecord>[];
     }
   }
 
@@ -96,6 +102,9 @@ class OfflineClockQueue {
     String? fotoPath,
   }) async {
     final all = await readAll();
+    if (all.length >= _maxItems) {
+      throw const OfflineClockQueueFullException(maxItems: _maxItems);
+    }
     final cleanFotoPath = (fotoPath ?? '').trim();
     final cleanFotoInline = (foto ?? '').trim();
     final shouldStoreInlinePhoto =
@@ -338,4 +347,15 @@ class OfflineClockSummary {
   final int total;
   final int pending;
   final int failed;
+}
+
+class OfflineClockQueueFullException implements Exception {
+  const OfflineClockQueueFullException({required this.maxItems});
+
+  final int maxItems;
+
+  @override
+  String toString() {
+    return 'La cola offline alcanzo su capacidad maxima de $maxItems fichadas.';
+  }
 }

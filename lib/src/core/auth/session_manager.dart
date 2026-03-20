@@ -4,9 +4,12 @@ import 'dart:convert';
 import 'package:flutter/foundation.dart';
 
 import '../network/mobile_api_client.dart';
+import '../utils/app_logger.dart';
 import 'biometric_auth_service.dart';
 import '../feedback/clock_feedback_profile.dart';
 import 'session_storage.dart';
+
+final _log = AppLogger.get('SessionManager');
 
 class SessionManager extends ChangeNotifier {
   SessionManager({
@@ -107,20 +110,26 @@ class SessionManager extends ChangeNotifier {
       return;
     }
 
-    _startSessionTimers();
-    _bootstrapping = false;
-    notifyListeners();
-
     if (canUseBiometric) {
+      _locked = true;
+      _bootstrapping = false;
+      _statusMessage = 'Desbloquea la sesion con huella.';
+      notifyListeners();
+
       final restored = await restoreWithBiometrics(auto: true);
       if (!restored && _session != null) {
         _locked = true;
         _statusMessage = 'Desbloquea la sesion con huella.';
         notifyListeners();
       }
-    } else {
-      await refreshSession(silent: true, triggerUnauthorized: false);
+      return;
     }
+
+    _locked = false;
+    _startSessionTimers();
+    _bootstrapping = false;
+    notifyListeners();
+    await refreshSession(silent: true, triggerUnauthorized: false);
   }
 
   Future<bool> restoreWithBiometrics({bool auto = false}) async {
@@ -388,7 +397,8 @@ class SessionManager extends ChangeNotifier {
       notifyListeners();
       completer.complete(false);
       return false;
-    } catch (_) {
+    } catch (e, stack) {
+      _log.warning('Error inesperado al renovar sesion', e, stack);
       if (!silent) {
         _statusMessage = 'No se pudo renovar la sesion.';
       }
@@ -499,7 +509,8 @@ class SessionManager extends ChangeNotifier {
         return DateTime.fromMillisecondsSinceEpoch(exp.toInt() * 1000);
       }
       return null;
-    } catch (_) {
+    } catch (e) {
+      _log.debug('No se pudo parsear exp del JWT: $e');
       return null;
     }
   }

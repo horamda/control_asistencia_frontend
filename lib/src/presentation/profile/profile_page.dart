@@ -454,6 +454,15 @@ class _ProfilePageState extends State<ProfilePage> {
                             'Foto de perfil',
                             style: Theme.of(context).textTheme.titleSmall,
                           ),
+                          if (_uploadingPhoto) ...[
+                            const SizedBox(height: 10),
+                            const LinearProgressIndicator(),
+                            const SizedBox(height: 4),
+                            Text(
+                              'Subiendo foto...',
+                              style: Theme.of(context).textTheme.bodySmall,
+                            ),
+                          ],
                           const SizedBox(height: 12),
                           Center(
                             child: _ProfilePhotoAvatar(
