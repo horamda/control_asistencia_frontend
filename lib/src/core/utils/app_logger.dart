@@ -32,7 +32,9 @@ class AppLogger {
   }
 
   /// Fallos recuperables: retry, fallback, dato corrupto.
+  /// Suprimido en release para no filtrar detalles internos en produccion.
   void warning(String message, [Object? error, StackTrace? stackTrace]) {
+    if (kReleaseMode) return;
     dev.log(
       message,
       name: _name,
@@ -43,7 +45,9 @@ class AppLogger {
   }
 
   /// Fallos no recuperables o estados inesperados.
+  /// Suprimido en release para no filtrar detalles internos en produccion.
   void error(String message, [Object? error, StackTrace? stackTrace]) {
+    if (kReleaseMode) return;
     dev.log(
       message,
       name: _name,

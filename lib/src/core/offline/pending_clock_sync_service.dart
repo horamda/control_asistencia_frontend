@@ -11,6 +11,11 @@ class PendingClockSyncService {
        _clockPhotoCache = clockPhotoCache,
        _apiClient = apiClient;
 
+  /// Máximo de intentos automáticos para un registro con error de validación.
+  /// Despues de este limite el registro permanece en cola pero no se reintenta
+  /// automaticamente; el usuario puede forzar un reintento manual desde la UI.
+  static const int _maxAutoRetries = 10;
+
   final OfflineClockQueue _offlineClockQueue;
   final ClockPhotoCache _clockPhotoCache;
   final MobileApiClient _apiClient;
@@ -66,10 +71,14 @@ class PendingClockSyncService {
     var failed = 0;
     var stoppedByConnectivity = false;
 
+    syncLoop:
     for (var i = 0; i < pending.length; i++) {
       final record = pending[i];
       final shouldAttempt =
-          retryFailed || record.status == OfflineClockStatus.pending;
+          record.status == OfflineClockStatus.pending ||
+          (retryFailed &&
+              record.status == OfflineClockStatus.failed &&
+              record.attempts < _maxAutoRetries);
       if (!shouldAttempt) {
         remaining.add(record);
         continue;
@@ -79,8 +88,8 @@ class PendingClockSyncService {
         token: token,
         record: record,
         missingPhotoError:
-            'No se encontro la foto local para esta fichada pendiente.',
-        connectivityError: 'Sin conexion al sincronizar.',
+            'No se encontró la foto local para esta fichada pendiente.',
+        connectivityError: 'Sin conexión al sincronizar.',
       );
 
       switch (attempt.status) {
@@ -94,11 +103,9 @@ class PendingClockSyncService {
         case _PendingClockAttemptStatus.pending:
           remaining.add(attempt.record!);
           stoppedByConnectivity = attempt.connectivityIssue;
-          if (attempt.connectivityIssue && i + 1 < pending.length) {
-            remaining.addAll(pending.sublist(i + 1));
-          }
           if (attempt.connectivityIssue) {
-            i = pending.length;
+            remaining.addAll(pending.sublist(i + 1));
+            break syncLoop;
           }
           break;
       }
@@ -139,8 +146,8 @@ class PendingClockSyncService {
     final attempt = await _attemptRecordSync(
       token: token,
       record: record,
-      missingPhotoError: 'No se encontro la foto local para este item.',
-      connectivityError: 'Error de conexion al sincronizar este item.',
+      missingPhotoError: 'No se encontró la foto local para este ítem.',
+      connectivityError: 'Error de conexión al sincronizar este ítem.',
     );
 
     switch (attempt.status) {
@@ -172,10 +179,10 @@ class PendingClockSyncService {
           keepRecords: snapshot.records,
         );
         final message = attempt.missingPhoto
-            ? 'No se encontro la foto local del item.'
+            ? 'No se encontró la foto local del ítem.'
             : attempt.connectivityIssue
-            ? 'Sin internet. El item sigue pendiente.'
-            : 'El item sigue con error de validacion.';
+            ? 'Sin internet. El ítem sigue pendiente.'
+            : 'El ítem sigue con error de validación.';
         return PendingClockRetryResult(
           snapshot: snapshot,
           message: message,

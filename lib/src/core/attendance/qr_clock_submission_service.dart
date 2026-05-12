@@ -35,6 +35,10 @@ class QrClockSubmissionService {
     ClockGpsPoint? gps;
     var queuedOffline = false;
 
+    // Arrancar GPS inmediatamente — corre en paralelo con la captura de foto.
+    final gpsWatch = Stopwatch()..start();
+    final gpsFuture = captureGps();
+
     try {
       if (requiresPhoto) {
         onPhase?.call('Capturando foto...');
@@ -51,15 +55,14 @@ class QrClockSubmissionService {
       }
 
       onPhase?.call('Validando GPS...');
-      final gpsWatch = Stopwatch()..start();
-      gps = await captureGps();
+      gps = await gpsFuture;
       gpsWatch.stop();
       gpsDuration = gpsWatch.elapsed;
       if (gps == null) {
         throw ApiException(
           message:
-              'No se pudo obtener la ubicacion GPS. '
-              'Verifica que el GPS este activo y que la app tenga permiso de ubicacion.',
+              'No se pudo obtener la ubicación GPS. '
+              'Verificá que el GPS esté activo y que la app tenga permiso de ubicación.',
         );
       }
 

@@ -9,9 +9,8 @@ import 'biometric_auth_service.dart';
 import '../feedback/clock_feedback_profile.dart';
 import 'session_storage.dart';
 
-final _log = AppLogger.get('SessionManager');
-
 class SessionManager extends ChangeNotifier {
+  static final _log = AppLogger.get('SessionManager');
   SessionManager({
     required MobileApiClient apiClient,
     SessionStorage? sessionStorage,
@@ -102,7 +101,7 @@ class SessionManager extends ChangeNotifier {
 
     if (_isOverMaxAge()) {
       await _expireSession(
-        reason: 'La sesion supero el tiempo maximo permitido.',
+        reason: 'La sesión superó el tiempo máximo permitido.',
         clearStored: true,
       );
       _bootstrapping = false;
@@ -113,13 +112,13 @@ class SessionManager extends ChangeNotifier {
     if (canUseBiometric) {
       _locked = true;
       _bootstrapping = false;
-      _statusMessage = 'Desbloquea la sesion con huella.';
+      _statusMessage = 'Desbloqueá la sesión con huella.';
       notifyListeners();
 
       final restored = await restoreWithBiometrics(auto: true);
       if (!restored && _session != null) {
         _locked = true;
-        _statusMessage = 'Desbloquea la sesion con huella.';
+        _statusMessage = 'Desbloqueá la sesión con huella.';
         notifyListeners();
       }
       return;
@@ -146,12 +145,12 @@ class SessionManager extends ChangeNotifier {
     }
 
     if (!_biometricAvailable) {
-      _statusMessage = 'La huella no esta disponible en este dispositivo.';
+      _statusMessage = 'La huella no está disponible en este dispositivo.';
       notifyListeners();
       return false;
     }
     if (!_biometricEnabled) {
-      _statusMessage = 'El uso de huella esta desactivado.';
+      _statusMessage = 'El uso de huella está desactivado.';
       notifyListeners();
       return false;
     }
@@ -163,7 +162,7 @@ class SessionManager extends ChangeNotifier {
     notifyListeners();
 
     final ok = await _biometricAuthService.authenticate(
-      reason: 'Usa tu huella para desbloquear la sesion.',
+      reason: 'Usá tu huella para desbloquear la sesión.',
     );
     if (!ok) {
       _biometricLoading = false;
@@ -192,7 +191,7 @@ class SessionManager extends ChangeNotifier {
     }
 
     _biometricLoading = false;
-    _statusMessage = auto ? null : 'Sesion desbloqueada.';
+    _statusMessage = auto ? null : 'Sesión desbloqueada.';
     await _persistCurrentEnvelope();
     notifyListeners();
     return true;
@@ -206,7 +205,7 @@ class SessionManager extends ChangeNotifier {
     _lastRefreshAt = now;
     _locked = false;
     _hasStoredSession = true;
-    _statusMessage = 'Sesion activa.';
+    _statusMessage = 'Sesión activa.';
     _startSessionTimers();
     await _persistCurrentEnvelope();
     notifyListeners();
@@ -234,13 +233,13 @@ class SessionManager extends ChangeNotifier {
     }
     if (!canUseBiometric) {
       _statusMessage = !_biometricAvailable
-          ? 'La huella no esta disponible en este dispositivo.'
-          : 'El uso de huella esta desactivado.';
+          ? 'La huella no está disponible en este dispositivo.'
+          : 'El uso de huella está desactivado.';
       notifyListeners();
       return;
     }
     _locked = true;
-    _statusMessage = reason ?? 'Sesion bloqueada.';
+    _statusMessage = reason ?? 'Sesión bloqueada.';
     notifyListeners();
     await _persistCurrentEnvelope();
   }
@@ -265,12 +264,40 @@ class SessionManager extends ChangeNotifier {
     notifyListeners();
   }
 
+  /// Verifica la huella sin tocar la sesión activa.
+  /// Usado para re-autenticación biométrica cuando la sesión ya expiró.
+  Future<bool> verifyBiometricOnly() async {
+    if (_biometricLoading) return false;
+    if (!_biometricAvailable) {
+      _statusMessage = 'La huella no está disponible en este dispositivo.';
+      notifyListeners();
+      return false;
+    }
+    if (!_biometricEnabled) {
+      _statusMessage = 'El uso de huella está desactivado.';
+      notifyListeners();
+      return false;
+    }
+    _biometricLoading = true;
+    _statusMessage = null;
+    notifyListeners();
+    final ok = await _biometricAuthService.authenticate(
+      reason: 'Usa tu huella para ingresar a tu cuenta.',
+    );
+    _biometricLoading = false;
+    if (!ok) {
+      _statusMessage = 'No se pudo validar la huella.';
+    }
+    notifyListeners();
+    return ok;
+  }
+
   Future<bool> testBiometricAuthentication() async {
     if (_biometricLoading) {
       return false;
     }
     if (!_biometricAvailable) {
-      _statusMessage = 'La huella no esta disponible en este dispositivo.';
+      _statusMessage = 'La huella no está disponible en este dispositivo.';
       notifyListeners();
       return false;
     }
@@ -280,7 +307,7 @@ class SessionManager extends ChangeNotifier {
     notifyListeners();
 
     final ok = await _biometricAuthService.authenticate(
-      reason: 'Usa tu huella para confirmar esta accion.',
+      reason: 'Usá tu huella para confirmar esta acción.',
     );
     _biometricLoading = false;
     _statusMessage = ok
@@ -299,25 +326,25 @@ class SessionManager extends ChangeNotifier {
 
   Future<T> runAuthorized<T>(Future<T> Function(String token) operation) async {
     if (_session == null) {
-      throw ApiException(message: 'Sesion no iniciada.', statusCode: 401);
+      throw ApiException(message: 'Sesión no iniciada.', statusCode: 401);
     }
     if (_isOverMaxAge()) {
       await _expireSession(
-        reason: 'La sesion supero el tiempo maximo permitido.',
+        reason: 'La sesión superó el tiempo máximo permitido.',
         clearStored: true,
       );
       _onUnauthorizedController.add(null);
       throw ApiException(
-        message: 'La sesion supero el tiempo maximo permitido.',
+        message: 'La sesión superó el tiempo máximo permitido.',
         statusCode: 401,
       );
     }
     _enforcePolicies();
     if (_session == null) {
-      throw ApiException(message: 'Sesion vencida.', statusCode: 401);
+      throw ApiException(message: 'Sesión vencida.', statusCode: 401);
     }
     if (_locked) {
-      throw ApiException(message: 'Sesion bloqueada por inactividad.');
+      throw ApiException(message: 'Sesión bloqueada por inactividad.');
     }
     markActivity();
 
@@ -333,12 +360,12 @@ class SessionManager extends ChangeNotifier {
       );
       if (!refreshed || _session == null) {
         await _expireSession(
-          reason: 'La sesion vencio. Ingresa nuevamente.',
+          reason: 'La sesión venció. Ingresá nuevamente.',
           clearStored: true,
         );
         _onUnauthorizedController.add(null);
         throw ApiException(
-          message: 'La sesion vencio. Ingresa nuevamente.',
+          message: 'La sesión venció. Ingresá nuevamente.',
           statusCode: 401,
         );
       }
@@ -362,7 +389,7 @@ class SessionManager extends ChangeNotifier {
     _refreshCompleter = completer;
     _refreshing = true;
     if (!silent) {
-      _statusMessage = 'Renovando sesion...';
+      _statusMessage = 'Renovando sesión...';
     }
     notifyListeners();
 
@@ -377,7 +404,9 @@ class SessionManager extends ChangeNotifier {
       _lastRefreshAt = DateTime.now();
       _lastActivityAt = DateTime.now();
       _locked = false;
-      _statusMessage = 'Sesion recuperada automaticamente.';
+      if (!silent) {
+        _statusMessage = 'Sesión recuperada automáticamente.';
+      }
       await _persistCurrentEnvelope();
       notifyListeners();
       completer.complete(true);
@@ -385,7 +414,7 @@ class SessionManager extends ChangeNotifier {
     } on ApiException catch (e) {
       if (_isUnauthorized(e)) {
         await _expireSession(
-          reason: 'La sesion vencio. Ingresa nuevamente.',
+          reason: 'La sesión venció. Ingresá nuevamente.',
           clearStored: true,
         );
         if (triggerUnauthorized) {
@@ -398,9 +427,9 @@ class SessionManager extends ChangeNotifier {
       completer.complete(false);
       return false;
     } catch (e, stack) {
-      _log.warning('Error inesperado al renovar sesion', e, stack);
+      _log.warning('Error inesperado al renovar sesión', e, stack);
       if (!silent) {
-        _statusMessage = 'No se pudo renovar la sesion.';
+        _statusMessage = 'No se pudo renovar la sesión.';
       }
       notifyListeners();
       completer.complete(false);
@@ -437,7 +466,7 @@ class SessionManager extends ChangeNotifier {
 
   Future<void> forceExpireFromProvider() async {
     await _expireSession(
-      reason: 'La sesion vencio. Ingresa nuevamente.',
+      reason: 'La sesión venció. Ingresá nuevamente.',
       clearStored: true,
     );
     _onUnauthorizedController.add(null);
@@ -539,7 +568,7 @@ class SessionManager extends ChangeNotifier {
     if (_isOverMaxAge()) {
       unawaited(
         _expireSession(
-          reason: 'La sesion supero el tiempo maximo permitido.',
+          reason: 'La sesión superó el tiempo máximo permitido.',
           clearStored: true,
         ),
       );
@@ -550,12 +579,12 @@ class SessionManager extends ChangeNotifier {
     if (!_locked && now.difference(activityAt) > idleTimeout) {
       if (canUseBiometric) {
         _locked = true;
-        _statusMessage = 'Sesion bloqueada por inactividad.';
+        _statusMessage = 'Sesión bloqueada por inactividad.';
         notifyListeners();
       } else {
         unawaited(
           _expireSession(
-            reason: 'Sesion expirada por inactividad. Ingresa nuevamente.',
+            reason: 'Sesión expirada por inactividad. Ingresá nuevamente.',
             clearStored: true,
           ),
         );
@@ -576,11 +605,14 @@ class SessionManager extends ChangeNotifier {
     _sessionStartedAt = null;
     _lastActivityAt = null;
     _lastRefreshAt = null;
+    // Notificar antes del await para que los widgets vean isAuthenticated=false
+    // en el mismo microtask, antes de que _onUnauthorizedController dispare navegación.
+    notifyListeners();
     if (clearStored) {
       await _sessionStorage.clear();
       _hasStoredSession = false;
+      notifyListeners();
     }
-    notifyListeners();
   }
 
   Future<void> _persistCurrentEnvelope() async {

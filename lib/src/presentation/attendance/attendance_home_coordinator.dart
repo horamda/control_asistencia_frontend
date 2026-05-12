@@ -9,7 +9,15 @@ import '../auth/biometric_settings_page.dart';
 import '../profile/profile_page.dart';
 import 'attendance_history_page.dart';
 import 'employee_stats_page.dart';
+import 'adelantos_page.dart';
+import 'historial_adelantos_page.dart';
+import 'vacaciones_page.dart';
+import 'francos_page.dart';
+import 'legajo_page.dart';
+import 'justificaciones_page.dart';
 import 'marks_history_page.dart';
+import 'pedidos_mercaderia_page.dart';
+import 'kpis_sector_page.dart';
 import 'qr_scan_page.dart';
 import 'security_events_page.dart';
 import 'widgets/pending_queue_sheet.dart';
@@ -53,6 +61,104 @@ class AttendanceHomeCoordinator {
     );
   }
 
+  Future<void> openJustificaciones(
+    BuildContext context, {
+    required MobileApiClient apiClient,
+    required String token,
+  }) {
+    return Navigator.of(context).push(
+      MaterialPageRoute(
+        builder: (_) =>
+            JustificacionesPage(apiClient: apiClient, token: token),
+      ),
+    );
+  }
+
+  Future<void> openAdelantos(
+    BuildContext context, {
+    required MobileApiClient apiClient,
+    required String token,
+  }) {
+    return Navigator.of(context).push(
+      MaterialPageRoute(
+        builder: (_) => AdelantosPage(apiClient: apiClient, token: token),
+      ),
+    );
+  }
+
+  Future<void> openHistorialAdelantos(
+    BuildContext context, {
+    required MobileApiClient apiClient,
+    required String token,
+  }) {
+    return Navigator.of(context).push(
+      MaterialPageRoute(
+        builder: (_) =>
+            HistorialAdelantosPage(apiClient: apiClient, token: token),
+      ),
+    );
+  }
+
+  Future<void> openVacaciones(
+    BuildContext context, {
+    required MobileApiClient apiClient,
+    required String token,
+  }) {
+    return Navigator.of(context).push(
+      MaterialPageRoute(
+        builder: (_) => VacacionesPage(apiClient: apiClient, token: token),
+      ),
+    );
+  }
+
+  Future<void> openFrancos(
+    BuildContext context, {
+    required MobileApiClient apiClient,
+    required String token,
+  }) {
+    return Navigator.of(context).push(
+      MaterialPageRoute(
+        builder: (_) => FrancosPage(apiClient: apiClient, token: token),
+      ),
+    );
+  }
+
+  Future<void> openLegajo(
+    BuildContext context, {
+    required MobileApiClient apiClient,
+    required String token,
+  }) {
+    return Navigator.of(context).push(
+      MaterialPageRoute(
+        builder: (_) => LegajoPage(apiClient: apiClient, token: token),
+      ),
+    );
+  }
+
+  Future<void> openPedidosMercaderia(
+    BuildContext context, {
+    required MobileApiClient apiClient,
+    required String token,
+  }) {
+    return Navigator.of(context).push(
+      MaterialPageRoute(
+        builder: (_) => PedidosMercaderiaPage(apiClient: apiClient, token: token),
+      ),
+    );
+  }
+
+  Future<void> openKpisSector(
+    BuildContext context, {
+    required MobileApiClient apiClient,
+    required String token,
+  }) {
+    return Navigator.of(context).push(
+      MaterialPageRoute(
+        builder: (_) => KpisSectorPage(apiClient: apiClient, token: token),
+      ),
+    );
+  }
+
   Future<void> openStats(
     BuildContext context, {
     required MobileApiClient apiClient,
@@ -69,10 +175,15 @@ class AttendanceHomeCoordinator {
     BuildContext context, {
     required MobileApiClient apiClient,
     required String token,
+    String? employeeDni,
   }) {
     return Navigator.of(context).push(
       MaterialPageRoute(
-        builder: (_) => ProfilePage(apiClient: apiClient, token: token),
+        builder: (_) => ProfilePage(
+          apiClient: apiClient,
+          token: token,
+          employeeDni: employeeDni,
+        ),
       ),
     );
   }
@@ -175,7 +286,7 @@ class AttendanceHomeCoordinator {
                   leading: const Icon(Icons.logout),
                   title: const Text('Salir de la cuenta'),
                   subtitle: const Text(
-                    'Cierra la sesion completamente. Necesitaras ingresar DNI y password la proxima vez.',
+                    'Cierra la sesión completamente. Necesitarás ingresar DNI y contraseña la próxima vez.',
                   ),
                   onTap: () => Navigator.of(
                     sheetContext,

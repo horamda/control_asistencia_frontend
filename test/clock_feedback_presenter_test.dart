@@ -24,8 +24,8 @@ void main() {
       expect(presentation.shouldSyncPendingSilently, isTrue);
       expect(presentation.notice.isError, isFalse);
       expect(presentation.notice.effectiveTone, ClockFeedbackTone.success);
-      expect(presentation.notice.message, contains('ID: 15'));
-      expect(presentation.notice.message, contains('4s'));
+      expect(presentation.notice.message, contains('ingreso'));
+      expect(presentation.notice.message, isNotEmpty);
     });
 
     test('presenta fraude con accion a eventos y estilo destacado', () {

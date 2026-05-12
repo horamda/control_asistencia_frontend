@@ -63,7 +63,7 @@ void main() {
 
       final started = controller.startSync(
         current: const PendingQueueState(),
-        silent: false,
+        isBackground: false,
       );
       final next = await controller.syncAll(
         employeeId: 7,
@@ -90,13 +90,13 @@ void main() {
 
       final started = controller.startSync(
         current: const PendingQueueState(lastMessage: 'Estado previo'),
-        silent: true,
+        isBackground: true,
       );
       final next = await controller.syncAll(
         employeeId: 7,
         token: 'abc',
         current: started,
-        silent: true,
+        isBackground: true,
       );
 
       expect(next.syncing, isFalse);

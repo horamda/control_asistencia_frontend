@@ -31,7 +31,7 @@ class ClockGpsService {
     ClockGpsPoint? cachedGps,
     required Duration gpsTtl,
     bool forceRefresh = false,
-    Duration timeLimit = const Duration(seconds: 12),
+    Duration timeLimit = const Duration(seconds: 7),
   }) async {
     final now = _nowProvider();
     final cachedCapturedAt = cachedGps?.capturedAt;
@@ -43,13 +43,11 @@ class ClockGpsService {
     }
 
     try {
-      final serviceEnabled = await _locationServiceEnabledProvider();
-      if (!serviceEnabled) {
-        return null;
-      }
-
-      final permissionGranted = await _locationGrantedProvider();
-      if (!permissionGranted) {
+      final checks = await Future.wait([
+        _locationServiceEnabledProvider(),
+        _locationGrantedProvider(),
+      ]);
+      if (!checks[0] || !checks[1]) {
         return null;
       }
 
@@ -71,11 +69,13 @@ class ClockGpsService {
 
   Future<ClockGpsAvailability> readAvailability() async {
     final checkedAt = _nowProvider();
-    final locationServiceEnabled = await _locationServiceEnabledProvider();
-    final locationGranted = await _locationGrantedProvider();
+    final checks = await Future.wait([
+      _locationServiceEnabledProvider(),
+      _locationGrantedProvider(),
+    ]);
     return ClockGpsAvailability(
-      locationServiceEnabled: locationServiceEnabled,
-      locationGranted: locationGranted,
+      locationServiceEnabled: checks[0],
+      locationGranted: checks[1],
       checkedAt: checkedAt,
     );
   }

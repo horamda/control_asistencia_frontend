@@ -1,0 +1,15 @@
+.git
+.dart_tool
+.idea
+.tmp_appdata
+.vscode
+build
+android/.gradle
+android/app/build
+ios/Flutter/.last_build_id
+linux/flutter/ephemeral
+macos/Flutter/ephemeral
+windows/flutter/ephemeral
+*.log
+*.iml
+test/failures

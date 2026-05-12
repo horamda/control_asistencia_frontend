@@ -1,8 +1,63 @@
+import org.gradle.api.GradleException
+import java.io.File
+import java.io.FileInputStream
+import java.util.Properties
+
 plugins {
     id("com.android.application")
     id("kotlin-android")
     // The Flutter Gradle Plugin must be applied after the Android and Kotlin Gradle plugins.
     id("dev.flutter.flutter-gradle-plugin")
+}
+
+val keystoreProperties = Properties().apply {
+    val keystorePropertiesFile = rootProject.file("key.properties")
+    if (keystorePropertiesFile.exists()) {
+        FileInputStream(keystorePropertiesFile).use(::load)
+    }
+}
+
+fun readSigningValue(propertyKey: String, envKey: String): String? {
+    val value = keystoreProperties.getProperty(propertyKey)
+        ?: System.getenv(envKey)
+    return value?.trim()?.takeIf { it.isNotEmpty() }
+}
+
+fun resolveSigningFile(path: String): File {
+    val candidate = File(path)
+    return if (candidate.isAbsolute) candidate else rootProject.file(path)
+}
+
+val releaseStoreFilePath = readSigningValue("storeFile", "ANDROID_KEYSTORE_PATH")
+val releaseStorePassword = readSigningValue("storePassword", "ANDROID_KEYSTORE_PASSWORD")
+val releaseKeyAlias = readSigningValue("keyAlias", "ANDROID_KEY_ALIAS")
+val releaseKeyPassword = readSigningValue("keyPassword", "ANDROID_KEY_PASSWORD")
+
+val releaseSigningFields = mapOf(
+    "storeFile" to releaseStoreFilePath,
+    "storePassword" to releaseStorePassword,
+    "keyAlias" to releaseKeyAlias,
+    "keyPassword" to releaseKeyPassword,
+)
+
+val configuredReleaseSigningFields = releaseSigningFields.filterValues { !it.isNullOrBlank() }
+if (
+    configuredReleaseSigningFields.isNotEmpty() &&
+    configuredReleaseSigningFields.size != releaseSigningFields.size
+) {
+    val missingFields = releaseSigningFields
+        .filterValues { it.isNullOrBlank() }
+        .keys
+        .sorted()
+        .joinToString(", ")
+    throw GradleException("Incomplete Android release signing configuration. Missing: $missingFields")
+}
+
+val hasReleaseSigning = configuredReleaseSigningFields.size == releaseSigningFields.size
+val resolvedReleaseStoreFile = releaseStoreFilePath?.let(::resolveSigningFile)
+
+if (hasReleaseSigning && (resolvedReleaseStoreFile == null || !resolvedReleaseStoreFile.exists())) {
+    throw GradleException("Android release keystore not found: ${resolvedReleaseStoreFile?.path}")
 }
 
 android {
@@ -20,21 +75,29 @@ android {
     }
 
     defaultConfig {
-        // TODO: Specify your own unique Application ID (https://developer.android.com/studio/build/application-id.html).
         applicationId = "com.controlasistencia.ficharqr"
-        // You can update the following values to match your application needs.
-        // For more information, see: https://flutter.dev/to/review-gradle-config.
         minSdk = flutter.minSdkVersion
         targetSdk = flutter.targetSdkVersion
         versionCode = flutter.versionCode
         versionName = flutter.versionName
     }
 
+    signingConfigs {
+        if (hasReleaseSigning) {
+            create("release") {
+                storeFile = resolvedReleaseStoreFile
+                storePassword = releaseStorePassword!!
+                keyAlias = releaseKeyAlias!!
+                keyPassword = releaseKeyPassword!!
+            }
+        }
+    }
+
     buildTypes {
         release {
-            // TODO: Add your own signing config for the release build.
-            // Signing with the debug keys for now, so `flutter run --release` works.
-            signingConfig = signingConfigs.getByName("debug")
+            if (hasReleaseSigning) {
+                signingConfig = signingConfigs.getByName("release")
+            }
         }
     }
 }

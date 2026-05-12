@@ -1,6 +1,20 @@
-﻿import 'package:flutter/material.dart';
+﻿import 'dart:async';
+
+import 'package:flutter/material.dart';
 
 import '../../widgets/employee_photo_widget.dart';
+
+// ── Helpers ───────────────────────────────────────────────────────────────────
+
+String _heroDate() {
+  const days = ['Lun', 'Mar', 'Mié', 'Jue', 'Vie', 'Sáb', 'Dom'];
+  const months = [
+    'ene', 'feb', 'mar', 'abr', 'may', 'jun',
+    'jul', 'ago', 'sep', 'oct', 'nov', 'dic',
+  ];
+  final n = DateTime.now();
+  return '${days[n.weekday - 1]} ${n.day} de ${months[n.month - 1]}';
+}
 
 class AttendancePendingBanner extends StatelessWidget {
   const AttendancePendingBanner({
@@ -24,8 +38,9 @@ class AttendancePendingBanner extends StatelessWidget {
 
   @override
   Widget build(BuildContext context) {
+    final cs = Theme.of(context).colorScheme;
     return Card(
-      color: hasErrors ? const Color(0xFFFFE7E7) : const Color(0xFFFFF7E8),
+      color: hasErrors ? cs.errorContainer : cs.tertiaryContainer,
       child: Padding(
         padding: const EdgeInsets.fromLTRB(12, 12, 12, 12),
         child: Column(
@@ -35,14 +50,19 @@ class AttendancePendingBanner extends StatelessWidget {
               children: [
                 Icon(
                   hasErrors ? Icons.error_outline : Icons.wifi_off_outlined,
+                  color: hasErrors ? cs.onErrorContainer : cs.onTertiaryContainer,
                 ),
                 const SizedBox(width: 8),
                 Expanded(
                   child: Text(
                     hasErrors
-                        ? 'Accion requerida: fichadas con error'
-                        : 'Pendientes de sincronizacion',
-                    style: Theme.of(context).textTheme.titleSmall,
+                        ? 'Acción requerida: fichadas con error'
+                        : 'Pendientes de sincronización',
+                    style: Theme.of(context).textTheme.titleSmall?.copyWith(
+                          color: hasErrors
+                              ? cs.onErrorContainer
+                              : cs.onTertiaryContainer,
+                        ),
                   ),
                 ),
               ],
@@ -50,11 +70,24 @@ class AttendancePendingBanner extends StatelessWidget {
             const SizedBox(height: 6),
             Text(
               'Pendientes: $pendingCleanCount | Con error: $failedCount',
+              style: TextStyle(
+                color: hasErrors ? cs.onErrorContainer : cs.onTertiaryContainer,
+              ),
             ),
-            Text('Ultima sincronizacion: $lastSyncText'),
+            Text(
+              'Última sincronización: $lastSyncText',
+              style: TextStyle(
+                color: hasErrors ? cs.onErrorContainer : cs.onTertiaryContainer,
+              ),
+            ),
             if ((statusMessage ?? '').trim().isNotEmpty) ...[
               const SizedBox(height: 4),
-              Text(statusMessage!),
+              Text(
+                statusMessage!,
+                style: TextStyle(
+                  color: hasErrors ? cs.onErrorContainer : cs.onTertiaryContainer,
+                ),
+              ),
             ],
             const SizedBox(height: 8),
             Wrap(
@@ -81,6 +114,7 @@ class AttendanceHeroCard extends StatelessWidget {
     super.key,
     required this.photoUrl,
     required this.token,
+    required this.greeting,
     required this.employeeName,
     required this.employeeDni,
     this.employeeCompany,
@@ -93,6 +127,7 @@ class AttendanceHeroCard extends StatelessWidget {
 
   final String photoUrl;
   final String token;
+  final String greeting;
   final String employeeName;
   final String employeeDni;
   final String? employeeCompany;
@@ -104,6 +139,8 @@ class AttendanceHeroCard extends StatelessWidget {
 
   @override
   Widget build(BuildContext context) {
+    // First name only for the greeting
+    final firstName = employeeName.split(' ').first;
     return Container(
       decoration: BoxDecoration(
         borderRadius: BorderRadius.circular(18),
@@ -118,49 +155,78 @@ class AttendanceHeroCard extends StatelessWidget {
         ),
       ),
       child: Padding(
-        padding: const EdgeInsets.fromLTRB(16, 14, 16, 14),
+        padding: const EdgeInsets.fromLTRB(16, 16, 16, 14),
         child: Column(
           crossAxisAlignment: CrossAxisAlignment.start,
           children: [
+            // ── Greeting row ──────────────────────────────────────────────
             Row(
-              crossAxisAlignment: CrossAxisAlignment.start,
+              crossAxisAlignment: CrossAxisAlignment.center,
               children: [
                 EmployeePhotoWidget(
                   photoUrl: photoUrl,
                   token: token,
-                  radius: 26,
+                  radius: 28,
                 ),
-                const SizedBox(width: 12),
+                const SizedBox(width: 14),
                 Expanded(
                   child: Column(
                     crossAxisAlignment: CrossAxisAlignment.start,
                     children: [
                       Text(
-                        employeeName,
-                        style: Theme.of(context).textTheme.titleMedium?.copyWith(
-                          color: Colors.white,
-                          fontWeight: FontWeight.w700,
+                        '$greeting,',
+                        maxLines: 1,
+                        overflow: TextOverflow.ellipsis,
+                        style: const TextStyle(
+                          color: Colors.white70,
+                          fontSize: 13,
                         ),
                       ),
-                      const SizedBox(height: 4),
+                      Text(
+                        firstName,
+                        maxLines: 1,
+                        overflow: TextOverflow.ellipsis,
+                        style: const TextStyle(
+                          color: Colors.white,
+                          fontSize: 22,
+                          fontWeight: FontWeight.w800,
+                          height: 1.1,
+                        ),
+                      ),
+                      const SizedBox(height: 3),
                       Text(
                         'DNI: $employeeDni',
-                        style: const TextStyle(color: Colors.white70),
-                      ),
-                      if ((employeeCompany ?? '').trim().isNotEmpty)
-                        Text(
-                          employeeCompany!,
-                          style: const TextStyle(color: Colors.white70),
+                        maxLines: 1,
+                        overflow: TextOverflow.ellipsis,
+                        style: const TextStyle(
+                          color: Colors.white54,
+                          fontSize: 12,
                         ),
+                      ),
                     ],
                   ),
                 ),
+                // Reloj en vivo a la derecha
+                const _LiveClock(),
               ],
             ),
             const SizedBox(height: 12),
+            const Divider(color: Colors.white24, height: 1),
+            const SizedBox(height: 10),
+            // ── Status pills ──────────────────────────────────────────────
+            Row(
+              children: [
+                Text(
+                  _heroDate(),
+                  style: const TextStyle(color: Colors.white60, fontSize: 12),
+                ),
+                const Spacer(),
+              ],
+            ),
+            const SizedBox(height: 8),
             Wrap(
               spacing: 8,
-              runSpacing: 8,
+              runSpacing: 6,
               children: [
                 DashboardStatusPill(
                   icon: Icons.cloud_done_outlined,
@@ -181,6 +247,141 @@ class AttendanceHeroCard extends StatelessWidget {
                   foreground: Colors.white,
                 ),
               ],
+            ),
+          ],
+        ),
+      ),
+    );
+  }
+}
+
+// ─── Status banner (estilo "Mis Puntos ServiClub") ────────────────────────────
+
+class AttendanceStatusBanner extends StatelessWidget {
+  const AttendanceStatusBanner({
+    super.key,
+    required this.pendingTotal,
+    required this.pendingFailed,
+    required this.lastClockText,
+    required this.hasClockToday,
+    required this.hasFreshGps,
+    required this.onTap,
+  });
+
+  final int pendingTotal;
+  final int pendingFailed;
+  final String lastClockText;
+  final bool hasClockToday;
+  final bool hasFreshGps;
+  final VoidCallback? onTap;
+
+  @override
+  Widget build(BuildContext context) {
+    final hasPendingErrors = pendingFailed > 0;
+    final hasPending = pendingTotal > 0;
+
+    final Color bg;
+    final Color fg;
+    final IconData icon;
+    final String title;
+    final String subtitle;
+    final String badge;
+
+    if (hasPendingErrors) {
+      bg = const Color(0xFFB71C1C);
+      fg = Colors.white;
+      icon = Icons.error_outline;
+      title = 'Fichadas con error';
+      subtitle = 'Revisar y reintentar';
+      badge = '$pendingFailed';
+    } else if (hasPending) {
+      bg = const Color(0xFFE65100);
+      fg = Colors.white;
+      icon = Icons.cloud_upload_outlined;
+      title = 'Fichadas en cola';
+      subtitle = 'Pendientes de sincronización';
+      badge = '$pendingTotal';
+    } else if (!hasClockToday) {
+      bg = const Color(0xFF1565C0);
+      fg = Colors.white;
+      icon = Icons.qr_code_scanner;
+      title = 'Sin fichar hoy';
+      subtitle = 'Escanea el QR para registrar ingreso';
+      badge = '!';
+    } else {
+      bg = const Color(0xFF1B5E20);
+      fg = Colors.white;
+      icon = Icons.check_circle_outline;
+      title = 'Jornada registrada';
+      subtitle = 'Última fichada: $lastClockText';
+      badge = 'OK';
+    }
+
+    return GestureDetector(
+      onTap: onTap,
+      child: Container(
+        decoration: BoxDecoration(
+          color: bg,
+          borderRadius: BorderRadius.circular(14),
+        ),
+        padding: const EdgeInsets.symmetric(horizontal: 16, vertical: 14),
+        child: Row(
+          children: [
+            Container(
+              width: 42,
+              height: 42,
+              decoration: BoxDecoration(
+                color: Colors.white.withValues(alpha: 0.15),
+                shape: BoxShape.circle,
+              ),
+              child: Icon(icon, color: fg, size: 22),
+            ),
+            const SizedBox(width: 14),
+            Expanded(
+              child: Column(
+                crossAxisAlignment: CrossAxisAlignment.start,
+                children: [
+                  Text(
+                    title,
+                    style: TextStyle(
+                      color: fg,
+                      fontWeight: FontWeight.w700,
+                      fontSize: 15,
+                    ),
+                  ),
+                  Text(
+                    subtitle,
+                    style: TextStyle(
+                      color: fg.withValues(alpha: 0.8),
+                      fontSize: 12,
+                    ),
+                  ),
+                ],
+              ),
+            ),
+            Container(
+              padding: const EdgeInsets.symmetric(horizontal: 12, vertical: 6),
+              decoration: BoxDecoration(
+                color: Colors.white.withValues(alpha: 0.20),
+                borderRadius: BorderRadius.circular(20),
+              ),
+              child: Row(
+                mainAxisSize: MainAxisSize.min,
+                children: [
+                  Text(
+                    badge,
+                    style: TextStyle(
+                      color: fg,
+                      fontWeight: FontWeight.w900,
+                      fontSize: 18,
+                    ),
+                  ),
+                  if (onTap != null) ...[
+                    const SizedBox(width: 4),
+                    Icon(Icons.chevron_right, color: fg, size: 18),
+                  ],
+                ],
+              ),
             ),
           ],
         ),
@@ -272,11 +473,10 @@ class AttendanceNextStepCard extends StatelessWidget {
   }
 }
 
-class AttendanceStatsGrid extends StatelessWidget {
-  const AttendanceStatsGrid({
-    super.key,
-    required this.items,
-  });
+/// Carrusel de 2x2 tarjetas de stats — muestra todas en una grilla compacta
+/// o en PageView de pares si la pantalla es muy angosta.
+class AttendanceStatsCarousel extends StatelessWidget {
+  const AttendanceStatsCarousel({super.key, required this.items});
 
   final List<AttendanceStatItem> items;
 
@@ -284,32 +484,28 @@ class AttendanceStatsGrid extends StatelessWidget {
   Widget build(BuildContext context) {
     return LayoutBuilder(
       builder: (context, constraints) {
-        const spacing = 10.0;
-        final cardsPerRow = constraints.maxWidth >= 640
-            ? 4
-            : constraints.maxWidth >= 380
-            ? 2
-            : 1;
-        final cardWidth = cardsPerRow == 1
-            ? constraints.maxWidth
-            : (constraints.maxWidth - (spacing * (cardsPerRow - 1))) /
-                cardsPerRow;
+        // En cualquier ancho mostramos grilla 2x2 (o 4 en fila si es muy ancho)
+        final cols = constraints.maxWidth >= 600 ? 4 : 2;
+        final rows = (items.length / cols).ceil();
+        final itemW = (constraints.maxWidth - (8.0 * (cols - 1))) / cols;
+        const itemH = 86.0;
+
         return Wrap(
-          spacing: spacing,
-          runSpacing: spacing,
-          children: items
-              .map(
-                (item) => SizedBox(
-                  width: cardWidth,
-                  child: DashboardStatCard(
-                    title: item.title,
-                    value: item.value,
-                    icon: item.icon,
-                    accent: item.accent,
-                  ),
+          spacing: 8,
+          runSpacing: 8,
+          children: [
+            for (var i = 0; i < items.length && i < cols * rows; i++)
+              SizedBox(
+                width: itemW,
+                height: itemH,
+                child: DashboardStatCard(
+                  title: items[i].title,
+                  value: items[i].value,
+                  icon: items[i].icon,
+                  accent: items[i].accent,
                 ),
-              )
-              .toList(growable: false),
+              ),
+          ],
         );
       },
     );
@@ -319,6 +515,8 @@ class AttendanceStatsGrid extends StatelessWidget {
 class AttendanceClockPanel extends StatelessWidget {
   const AttendanceClockPanel({
     super.key,
+    this.sectionTitle,
+    this.sectionSubtitle,
     required this.warming,
     required this.readinessBadges,
     required this.readinessSummary,
@@ -330,6 +528,8 @@ class AttendanceClockPanel extends StatelessWidget {
     this.lastQrText,
   });
 
+  final String? sectionTitle;
+  final String? sectionSubtitle;
   final bool warming;
   final List<AttendanceReadinessBadgeData> readinessBadges;
   final String readinessSummary;
@@ -348,6 +548,23 @@ class AttendanceClockPanel extends StatelessWidget {
         child: Column(
           crossAxisAlignment: CrossAxisAlignment.start,
           children: [
+            if ((sectionTitle ?? '').isNotEmpty) ...[
+              Row(
+                children: [
+                  const Icon(Icons.qr_code_2_outlined),
+                  const SizedBox(width: 8),
+                  Text(
+                    sectionTitle!,
+                    style: Theme.of(context).textTheme.titleMedium,
+                  ),
+                ],
+              ),
+              if ((sectionSubtitle ?? '').isNotEmpty) ...[
+                const SizedBox(height: 4),
+                Text(sectionSubtitle!),
+              ],
+              const SizedBox(height: 12),
+            ],
             Container(
               padding: const EdgeInsets.all(12),
               decoration: BoxDecoration(
@@ -364,7 +581,7 @@ class AttendanceClockPanel extends StatelessWidget {
                       const SizedBox(width: 8),
                       Expanded(
                         child: Text(
-                          'Preparacion de fichada',
+                          'Preparación de fichada',
                           style: Theme.of(context).textTheme.titleSmall,
                         ),
                       ),
@@ -482,7 +699,7 @@ class AttendanceClockPanel extends StatelessWidget {
             ),
             if ((lastQrText ?? '').trim().isNotEmpty)
               Text(
-                'Ultimo QR: $lastQrText',
+                'Último QR: $lastQrText',
                 style: Theme.of(context).textTheme.bodySmall,
               ),
           ],
@@ -492,23 +709,18 @@ class AttendanceClockPanel extends StatelessWidget {
   }
 }
 
+/// Grilla de accesos rapidos — 2 columnas en pantallas angostas, 4 en anchas.
 class AttendanceQuickActionsCard extends StatelessWidget {
-  const AttendanceQuickActionsCard({
-    super.key,
-    required this.columns,
-    required this.ratio,
-    required this.items,
-  });
+  const AttendanceQuickActionsCard({super.key, required this.items});
 
-  final int columns;
-  final double ratio;
   final List<AttendanceQuickActionItem> items;
 
   @override
   Widget build(BuildContext context) {
+    if (items.isEmpty) return const SizedBox.shrink();
     return Card(
       child: Padding(
-        padding: const EdgeInsets.fromLTRB(14, 14, 14, 10),
+        padding: const EdgeInsets.fromLTRB(14, 14, 14, 14),
         child: Column(
           crossAxisAlignment: CrossAxisAlignment.start,
           children: [
@@ -522,25 +734,195 @@ class AttendanceQuickActionsCard extends StatelessWidget {
                 ),
               ],
             ),
-            const SizedBox(height: 10),
-            GridView.count(
-              crossAxisCount: columns,
-              shrinkWrap: true,
-              physics: const NeverScrollableScrollPhysics(),
-              mainAxisSpacing: 8,
-              crossAxisSpacing: 8,
-              childAspectRatio: ratio,
-              children: items
+            const SizedBox(height: 12),
+            LayoutBuilder(
+              builder: (context, constraints) {
+                const spacing = 8.0;
+                final cols = constraints.maxWidth >= 600 ? 4 : 2;
+                final itemW =
+                    (constraints.maxWidth - spacing * (cols - 1)) / cols;
+                return Wrap(
+                  spacing: spacing,
+                  runSpacing: spacing,
+                  children: [
+                    for (final item in items)
+                      SizedBox(
+                        width: itemW,
+                        child: _QuickActionGridItem(
+                          icon: item.icon,
+                          label: item.label,
+                          onTap: item.onTap,
+                        ),
+                      ),
+                  ],
+                );
+              },
+            ),
+          ],
+        ),
+      ),
+    );
+  }
+}
+
+class _QuickActionGridItem extends StatelessWidget {
+  const _QuickActionGridItem({
+    required this.icon,
+    required this.label,
+    this.onTap,
+  });
+
+  final IconData icon;
+  final String label;
+  final VoidCallback? onTap;
+
+  @override
+  Widget build(BuildContext context) {
+    final cs = Theme.of(context).colorScheme;
+    final enabled = onTap != null;
+    final fg = enabled
+        ? cs.onSurfaceVariant
+        : cs.onSurface.withValues(alpha: 0.38);
+    return Material(
+      color: enabled ? cs.surfaceContainerLow : cs.surfaceContainerLowest,
+      borderRadius: BorderRadius.circular(12),
+      child: InkWell(
+        borderRadius: BorderRadius.circular(12),
+        onTap: onTap,
+        child: Padding(
+          padding: const EdgeInsets.symmetric(horizontal: 12, vertical: 13),
+          child: Row(
+            children: [
+              Icon(icon, size: 20, color: fg),
+              const SizedBox(width: 10),
+              Expanded(
+                child: Text(
+                  label,
+                  maxLines: 1,
+                  overflow: TextOverflow.ellipsis,
+                  style: TextStyle(
+                    color: fg,
+                    fontSize: 13,
+                    fontWeight: FontWeight.w600,
+                  ),
+                ),
+              ),
+            ],
+          ),
+        ),
+      ),
+    );
+  }
+}
+
+// ─── Compact readiness strip ───────────────────────────────────────────────────
+
+/// Tira compacta de chips de preparacion de fichada.
+/// Reemplaza al [AttendanceClockPanel] en el home para reducir la densidad visual.
+class AttendanceReadinessStrip extends StatelessWidget {
+  const AttendanceReadinessStrip({
+    super.key,
+    required this.warming,
+    required this.badges,
+    this.phaseText,
+  });
+
+  final bool warming;
+  final List<AttendanceReadinessBadgeData> badges;
+  final String? phaseText;
+
+  @override
+  Widget build(BuildContext context) {
+    final cs = Theme.of(context).colorScheme;
+    final allReady = badges.every((b) => b.ready);
+
+    return Card(
+      child: Padding(
+        padding: const EdgeInsets.symmetric(horizontal: 14, vertical: 10),
+        child: Column(
+          crossAxisAlignment: CrossAxisAlignment.start,
+          children: [
+            Row(
+              children: [
+                Icon(
+                  allReady
+                      ? Icons.check_circle_outline
+                      : Icons.bolt_outlined,
+                  size: 15,
+                  color: allReady ? Colors.green.shade700 : cs.onSurfaceVariant,
+                ),
+                const SizedBox(width: 6),
+                Text(
+                  allReady ? 'Listo para fichar' : 'Preparación',
+                  style: Theme.of(context).textTheme.labelLarge?.copyWith(
+                        color: allReady
+                            ? Colors.green.shade700
+                            : cs.onSurfaceVariant,
+                      ),
+                ),
+                const Spacer(),
+                if (warming)
+                  const SizedBox(
+                    width: 14,
+                    height: 14,
+                    child: CircularProgressIndicator(strokeWidth: 2),
+                  ),
+              ],
+            ),
+            const SizedBox(height: 8),
+            Wrap(
+              spacing: 6,
+              runSpacing: 6,
+              children: badges
                   .map(
-                    (item) => DashboardQuickActionTile(
-                      icon: item.icon,
-                      label: item.label,
-                      enabled: item.onTap != null,
-                      onTap: item.onTap ?? () {},
+                    (b) => AttendanceReadinessChip(
+                      text: b.text,
+                      ready: b.ready,
                     ),
                   )
                   .toList(growable: false),
             ),
+            if ((phaseText ?? '').trim().isNotEmpty) ...[
+              const SizedBox(height: 8),
+              Container(
+                padding: const EdgeInsets.symmetric(
+                  horizontal: 10,
+                  vertical: 8,
+                ),
+                decoration: BoxDecoration(
+                  color: const Color(0xFFFFF8E1),
+                  borderRadius: BorderRadius.circular(10),
+                  border: Border.all(
+                    color: const Color(0xFFFFCC02),
+                    width: 1.5,
+                  ),
+                ),
+                child: Row(
+                  children: [
+                    const SizedBox(
+                      width: 14,
+                      height: 14,
+                      child: CircularProgressIndicator(
+                        strokeWidth: 2,
+                        valueColor: AlwaysStoppedAnimation<Color>(
+                          Color(0xFFF59E0B),
+                        ),
+                      ),
+                    ),
+                    const SizedBox(width: 8),
+                    Expanded(
+                      child: Text(
+                        phaseText!,
+                        style: Theme.of(context).textTheme.bodySmall?.copyWith(
+                              fontWeight: FontWeight.w600,
+                              color: const Color(0xFF92400E),
+                            ),
+                      ),
+                    ),
+                  ],
+                ),
+              ),
+            ],
           ],
         ),
       ),
@@ -582,8 +964,8 @@ class AttendanceDiagnosticsCard extends StatelessWidget {
       child: ExpansionTile(
         initiallyExpanded: false,
         tilePadding: const EdgeInsets.symmetric(horizontal: 14, vertical: 2),
-        title: const Text('Diagnostico y reglas'),
-        subtitle: const Text('Informacion tecnica para soporte.'),
+        title: const Text('Diagnóstico y reglas'),
+        subtitle: const Text('Información técnica para soporte.'),
         childrenPadding: const EdgeInsets.fromLTRB(14, 0, 14, 12),
         children: [
           if (ruleBadges.isNotEmpty)
@@ -600,23 +982,23 @@ class AttendanceDiagnosticsCard extends StatelessWidget {
             ),
             const SizedBox(height: 4),
             Text(
-              'Muestras: $sampleCount${(lastClockText ?? '').trim().isNotEmpty ? ' | Ultima: $lastClockText' : ''}',
+              'Muestras: $sampleCount${(lastClockText ?? '').trim().isNotEmpty ? ' | Última: $lastClockText' : ''}',
             ),
             if ((lastTotalText ?? '').trim().isNotEmpty)
-              Text('Ultimo total: $lastTotalText'),
+              Text('Último total: $lastTotalText'),
             if ((lastApiText ?? '').trim().isNotEmpty)
-              Text('Ultima API: $lastApiText'),
+              Text('Última API: $lastApiText'),
             if ((lastGpsText ?? '').trim().isNotEmpty)
-              Text('Ultimo GPS: $lastGpsText'),
+              Text('Último GPS: $lastGpsText'),
             if ((lastPhotoText ?? '').trim().isNotEmpty)
-              Text('Ultima foto: $lastPhotoText'),
+              Text('Última foto: $lastPhotoText'),
             const SizedBox(height: 4),
             Text('Promedio total: $averageTotalText'),
             Text('Promedio API: $averageApiText'),
           ],
           if ((lastQrText ?? '').trim().isNotEmpty) ...[
             const SizedBox(height: 8),
-            Text('Ultimo QR: $lastQrText'),
+            Text('Último QR: $lastQrText'),
           ],
         ],
       ),
@@ -636,11 +1018,15 @@ class AttendanceRuleChip extends StatelessWidget {
 
   @override
   Widget build(BuildContext context) {
+    final cs = Theme.of(context).colorScheme;
     return Chip(
       label: Text('$label: ${enabled ? "requerido" : "opcional"}'),
       backgroundColor: enabled
-          ? const Color(0xFFE6F4EA)
-          : const Color(0xFFF1F3F5),
+          ? cs.primaryContainer
+          : cs.surfaceContainerHighest,
+      labelStyle: TextStyle(
+        color: enabled ? cs.onPrimaryContainer : cs.onSurfaceVariant,
+      ),
     );
   }
 }
@@ -652,7 +1038,12 @@ class AttendanceInfoChip extends StatelessWidget {
 
   @override
   Widget build(BuildContext context) {
-    return Chip(label: Text(text), backgroundColor: const Color(0xFFE8EEF7));
+    final cs = Theme.of(context).colorScheme;
+    return Chip(
+      label: Text(text),
+      backgroundColor: cs.secondaryContainer,
+      labelStyle: TextStyle(color: cs.onSecondaryContainer),
+    );
   }
 }
 
@@ -668,13 +1059,17 @@ class AttendanceReadinessChip extends StatelessWidget {
 
   @override
   Widget build(BuildContext context) {
+    final cs = Theme.of(context).colorScheme;
     return Chip(
       label: Text(text),
-      backgroundColor: ready
-          ? const Color(0xFFE6F4EA)
-          : const Color(0xFFFFF3DF),
+      backgroundColor: ready ? cs.primaryContainer : cs.tertiaryContainer,
+      labelStyle: TextStyle(
+        color: ready ? cs.onPrimaryContainer : cs.onTertiaryContainer,
+      ),
       side: BorderSide(
-        color: ready ? const Color(0xFF9FD0AA) : const Color(0xFFE2B66F),
+        color: ready
+            ? cs.primary.withValues(alpha: 0.4)
+            : cs.tertiary.withValues(alpha: 0.4),
       ),
     );
   }
@@ -697,21 +1092,27 @@ class DashboardStatusPill extends StatelessWidget {
   @override
   Widget build(BuildContext context) {
     return Container(
-      constraints: const BoxConstraints(minHeight: 36),
-      padding: const EdgeInsets.symmetric(horizontal: 10, vertical: 8),
+      constraints: const BoxConstraints(minHeight: 32),
+      padding: const EdgeInsets.symmetric(horizontal: 10, vertical: 6),
       decoration: BoxDecoration(
         color: background,
-        borderRadius: BorderRadius.circular(12),
+        borderRadius: BorderRadius.circular(20),
       ),
       child: Row(
         mainAxisSize: MainAxisSize.min,
         children: [
-          Icon(icon, size: 16, color: foreground),
-          const SizedBox(width: 6),
+          Icon(icon, size: 14, color: foreground),
+          const SizedBox(width: 5),
           Flexible(
             child: Text(
               text,
-              style: TextStyle(color: foreground, fontWeight: FontWeight.w600),
+              maxLines: 1,
+              overflow: TextOverflow.ellipsis,
+              style: TextStyle(
+                color: foreground,
+                fontWeight: FontWeight.w600,
+                fontSize: 12,
+              ),
             ),
           ),
         ],
@@ -739,35 +1140,37 @@ class DashboardStatCard extends StatelessWidget {
     return Container(
       padding: const EdgeInsets.symmetric(horizontal: 10, vertical: 10),
       decoration: BoxDecoration(
-        color: Colors.white,
+        color: Theme.of(context).colorScheme.surfaceContainerLow,
         borderRadius: BorderRadius.circular(14),
         border: Border.all(color: accent.withAlpha(95)),
       ),
       child: Column(
-        crossAxisAlignment: CrossAxisAlignment.start,
+        mainAxisAlignment: MainAxisAlignment.center,
+        crossAxisAlignment: CrossAxisAlignment.center,
         children: [
-          Row(
-            children: [
-              Icon(icon, size: 15, color: accent),
-              const SizedBox(width: 6),
-              Expanded(
-                child: Text(
-                  title,
-                  style: Theme.of(context).textTheme.labelMedium?.copyWith(
-                    color: const Color(0xFF4F637A),
-                  ),
-                ),
-              ),
-            ],
-          ),
-          const SizedBox(height: 6),
+          Icon(icon, size: 14, color: accent),
+          const SizedBox(height: 4),
           Text(
-            value,
+            title,
             maxLines: 1,
             overflow: TextOverflow.ellipsis,
-            style: Theme.of(
-              context,
-            ).textTheme.titleMedium?.copyWith(fontWeight: FontWeight.w700),
+            textAlign: TextAlign.center,
+            style: Theme.of(context).textTheme.labelSmall?.copyWith(
+              color: const Color(0xFF4F637A),
+              fontSize: 11,
+            ),
+          ),
+          const SizedBox(height: 4),
+          FittedBox(
+            fit: BoxFit.scaleDown,
+            child: Text(
+              value,
+              maxLines: 1,
+              textAlign: TextAlign.center,
+              style: Theme.of(
+                context,
+              ).textTheme.titleMedium?.copyWith(fontWeight: FontWeight.w700),
+            ),
           ),
         ],
       ),
@@ -791,9 +1194,12 @@ class DashboardQuickActionTile extends StatelessWidget {
 
   @override
   Widget build(BuildContext context) {
-    final fg = enabled ? const Color(0xFF173A57) : const Color(0xFF8090A2);
+    final cs = Theme.of(context).colorScheme;
+    final fg = enabled
+        ? cs.onSurfaceVariant
+        : cs.onSurface.withValues(alpha: 0.38);
     return Material(
-      color: enabled ? const Color(0xFFF3F8FC) : const Color(0xFFEAF0F5),
+      color: enabled ? cs.surfaceContainerLow : cs.surfaceContainerLowest,
       borderRadius: BorderRadius.circular(12),
       child: InkWell(
         borderRadius: BorderRadius.circular(12),
@@ -940,6 +1346,51 @@ class AttendanceStatItem {
   final String value;
   final IconData icon;
   final Color accent;
+}
+
+// ── Live clock ────────────────────────────────────────────────────────────────
+
+class _LiveClock extends StatefulWidget {
+  const _LiveClock();
+
+  @override
+  State<_LiveClock> createState() => _LiveClockState();
+}
+
+class _LiveClockState extends State<_LiveClock> {
+  late Timer _timer;
+
+  @override
+  void initState() {
+    super.initState();
+    _timer = Timer.periodic(const Duration(seconds: 1), (_) {
+      if (mounted) setState(() {});
+    });
+  }
+
+  @override
+  void dispose() {
+    _timer.cancel();
+    super.dispose();
+  }
+
+  @override
+  Widget build(BuildContext context) {
+    final n = DateTime.now();
+    final h = n.hour.toString().padLeft(2, '0');
+    final m = n.minute.toString().padLeft(2, '0');
+    // Mostramos HH:MM (sin segundos) para no comprimir la columna del nombre
+    // en pantallas angostas.
+    return Text(
+      '$h:$m',
+      style: const TextStyle(
+        color: Colors.white,
+        fontSize: 18,
+        fontWeight: FontWeight.w700,
+        letterSpacing: 1.0,
+      ),
+    );
+  }
 }
 
 class _FilledActionButton extends StatelessWidget {

@@ -1,13 +1,12 @@
 import 'dart:convert';
-import 'dart:math';
 
 import 'package:flutter_secure_storage/flutter_secure_storage.dart';
+import 'package:uuid/uuid.dart';
 
 import '../utils/app_logger.dart';
 
-final _log = AppLogger.get('OfflineClockQueue');
-
 class OfflineClockQueue {
+  static final _log = AppLogger.get('OfflineClockQueue');
   OfflineClockQueue({FlutterSecureStorage? secureStorage})
     : _secureStorage =
           secureStorage ??
@@ -17,9 +16,9 @@ class OfflineClockQueue {
 
   static const _queueKey = 'offline_clock_queue_v1';
   static const _maxItems = 40;
+  static const _uuid = Uuid();
 
   final FlutterSecureStorage _secureStorage;
-  final Random _random = Random();
 
   Future<List<OfflineClockRecord>> readAll() async {
     try {
@@ -67,11 +66,6 @@ class OfflineClockQueue {
   Future<List<OfflineClockRecord>> readForEmployee(int employeeId) async {
     final all = await readAll();
     return all.where((item) => item.employeeId == employeeId).toList();
-  }
-
-  Future<int> countForEmployee(int employeeId) async {
-    final items = await readForEmployee(employeeId);
-    return items.length;
   }
 
   Future<OfflineClockSummary> summaryForEmployee(int employeeId) async {
@@ -157,11 +151,7 @@ class OfflineClockQueue {
     await _writeAll(all);
   }
 
-  String _newId() {
-    final now = DateTime.now().microsecondsSinceEpoch;
-    final rnd = _random.nextInt(1 << 20);
-    return '${now}_$rnd';
-  }
+  String _newId() => _uuid.v4();
 
   Future<void> _writeAll(List<OfflineClockRecord> records) async {
     final normalized = records

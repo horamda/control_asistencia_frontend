@@ -147,7 +147,5 @@ AttendanceHomeViewData _viewData({
     nextStepPriorityForeground: const Color(0xFF1F5A35),
     contentMaxWidth: 960,
     horizontalPadding: 20,
-    quickActionColumns: 3,
-    quickActionRatio: 2.2,
   );
 }

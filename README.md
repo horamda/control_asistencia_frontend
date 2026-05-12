@@ -41,6 +41,44 @@ Notas:
 - En iOS simulator usar `http://localhost:5000`.
 - En dispositivo fisico usar IP LAN del backend.
 
+## Android release signing
+
+La app ya no usa la debug key para `release`. Para generar APK o AAB distribuibles, configura una firma real con una de estas dos opciones:
+
+- Archivo local `android/key.properties`.
+- Variables de entorno para CI.
+
+Archivo recomendado:
+
+```properties
+storeFile=upload-keystore.jks
+storePassword=tu_store_password
+keyAlias=upload
+keyPassword=tu_key_password
+```
+
+Referencia rapida:
+
+- Guarda el keystore dentro de `android/` o usa una ruta absoluta en `storeFile`.
+- `android/key.properties` esta ignorado por git.
+- Si defines solo parte de la configuracion, Gradle falla al inicio para evitar builds ambiguos.
+
+Variables equivalentes para CI:
+
+```bash
+ANDROID_KEYSTORE_PATH=/ruta/al/upload-keystore.jks
+ANDROID_KEYSTORE_PASSWORD=tu_store_password
+ANDROID_KEY_ALIAS=upload
+ANDROID_KEY_PASSWORD=tu_key_password
+```
+
+Build release:
+
+```bash
+flutter build apk --release
+flutter build appbundle --release
+```
+
 ## Estructura inicial
 
 - `lib/main.dart`: bootstrap

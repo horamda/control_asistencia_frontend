@@ -24,11 +24,11 @@ class PendingQueueController {
 
   PendingQueueState startSync({
     required PendingQueueState current,
-    required bool silent,
+    bool isBackground = false,
   }) {
     return current.copyWith(
       syncing: true,
-      lastMessage: silent ? current.lastMessage : null,
+      lastMessage: isBackground ? current.lastMessage : null,
     );
   }
 
@@ -36,26 +36,26 @@ class PendingQueueController {
     required int employeeId,
     required String token,
     required PendingQueueState current,
-    bool silent = false,
+    bool isBackground = false,
   }) async {
     try {
       final result = await _syncService.syncAll(
         employeeId: employeeId,
         token: token,
-        retryFailed: !silent,
+        retryFailed: !isBackground,
       );
       return current.copyWith(
         snapshot: result.snapshot,
         syncing: false,
         lastSyncAt: result.completedAt ?? current.lastSyncAt,
-        lastMessage: (!silent || result.shouldNotify)
+        lastMessage: (!isBackground || result.shouldNotify)
             ? result.message
             : current.lastMessage,
       );
     } catch (_) {
       return current.copyWith(
         syncing: false,
-        lastMessage: silent
+        lastMessage: isBackground
             ? current.lastMessage
             : 'No se pudo actualizar la cola local de pendientes.',
       );

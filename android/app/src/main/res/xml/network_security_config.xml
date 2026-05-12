@@ -1,0 +1,28 @@
+<?xml version="1.0" encoding="utf-8"?>
+<!--
+  Certificate pinning para el backend de FicharQR.
+
+  Se pina el SPKI SHA-256 de ISRG Root X1 (Let's Encrypt root, valido hasta 2035).
+  Pinear la root CA en lugar del certificado hoja evita rotaciones manuales
+  cada 90 dias cuando Let's Encrypt renueva el certificado del servidor.
+
+  Pines actuales (SPKI SHA-256, Base64):
+    - ISRG Root X1:  C5+lpZ7tcVwmwQIMcRtPbsQtWLABXhQzejna0wHFr8M=
+    - ISRG Root X2:  diGVwiVYbubAI3RW4hB9xU8e/CH2GnkuvmFZRIjNaLU=  (backup)
+
+  Si el backend migra a otra CA en el futuro, actualizar los pines aqui y
+  redesplegar la app antes de que el certificado viejo expire.
+-->
+<network-security-config>
+    <domain-config cleartextTrafficPermitted="false">
+        <domain includeSubdomains="true">onrender.com</domain>
+        <pin-set>
+            <!-- ISRG Root X1 — Let's Encrypt root, expira 2035-06-04 -->
+            <pin digest="SHA-256">C5+lpZ7tcVwmwQIMcRtPbsQtWLABXhQzejna0wHFr8M=</pin>
+            <!-- ISRG Root X2 — backup por si Let's Encrypt rota la intermediaria -->
+            <pin digest="SHA-256">diGVwiVYbubAI3RW4hB9xU8e/CH2GnkuvmFZRIjNaLU=</pin>
+        </pin-set>
+    </domain-config>
+    <!-- Cleartext bloqueado globalmente (solo HTTPS) -->
+    <base-config cleartextTrafficPermitted="false" />
+</network-security-config>

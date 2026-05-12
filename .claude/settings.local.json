@@ -1,0 +1,11 @@
+{
+  "permissions": {
+    "allow": [
+      "Bash(flutter test:*)",
+      "Bash(flutter analyze:*)",
+      "Bash(grep -rn \"dart-define\\\\|API_BASE_URL\\\\|apiBaseUrl\" 'c:/Users/horac/Desktop/Proyectos WEB/control_asistencia/frontend_flutter/' --include=*.json --include=*.sh --include=*.yaml --include=*.yml --include=launch.json)",
+      "Bash(flutter pub:*)",
+      "Bash(dart analyze *)"
+    ]
+  }
+}

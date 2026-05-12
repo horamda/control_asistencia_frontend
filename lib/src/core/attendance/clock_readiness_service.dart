@@ -25,8 +25,12 @@ class ClockReadinessService {
     required Duration gpsTtl,
     required Future<ClockGpsPoint?> Function() captureGps,
   }) async {
-    final cameraGranted = await _cameraGrantedProvider();
-    final locationGranted = await _locationGrantedProvider();
+    final permChecks = await Future.wait([
+      _cameraGrantedProvider(),
+      _locationGrantedProvider(),
+    ]);
+    final cameraGranted = permChecks[0];
+    final locationGranted = permChecks[1];
     final locationServiceEnabled = locationGranted
         ? await _locationServiceEnabledProvider()
         : false;

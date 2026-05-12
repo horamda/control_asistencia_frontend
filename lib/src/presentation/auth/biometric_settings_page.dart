@@ -43,7 +43,7 @@ class _BiometricSettingsPageState extends State<BiometricSettingsPage> {
     final manager = widget.sessionManager;
     if (enabled && !manager.biometricAvailable) {
       _showMessage(
-        'Este dispositivo no tiene huella disponible o no esta configurada.',
+        'Este dispositivo no tiene huella disponible o no está configurada.',
         isError: true,
       );
       return;
@@ -99,7 +99,7 @@ class _BiometricSettingsPageState extends State<BiometricSettingsPage> {
     final selected =
         _selectedSoundProfile ?? widget.sessionManager.clockFeedbackProfile;
     if (selected == widget.sessionManager.clockFeedbackProfile) {
-      _showMessage('Ese perfil ya esta aplicado.');
+      _showMessage('Ese perfil ya está aplicado.');
       return;
     }
     setState(() {
@@ -192,12 +192,12 @@ class _BiometricSettingsPageState extends State<BiometricSettingsPage> {
                             crossAxisAlignment: CrossAxisAlignment.start,
                             children: [
                               Text(
-                                'Acceso biometrico',
+                                'Acceso biométrico',
                                 style: Theme.of(context).textTheme.titleMedium,
                               ),
                               const SizedBox(height: 8),
                               const Text(
-                                'Activa el uso de huella para ingreso rapido y desbloqueo por inactividad.',
+                                'Activá el uso de huella para ingreso rápido y desbloqueo por inactividad.',
                               ),
                             ],
                           ),
@@ -211,9 +211,9 @@ class _BiometricSettingsPageState extends State<BiometricSettingsPage> {
                           title: const Text('Usar huella en este dispositivo'),
                           subtitle: Text(
                             !available
-                                ? 'No disponible. Configura una huella en el telefono.'
+                                ? 'No disponible. Configurá una huella en el teléfono.'
                                 : enabled
-                                ? 'Activada para desbloquear sesion.'
+                                ? 'Activada para desbloquear sesión.'
                                 : 'Desactivada.',
                           ),
                         ),
@@ -271,7 +271,7 @@ class _BiometricSettingsPageState extends State<BiometricSettingsPage> {
                                         }
                                       },
                                 title: const Text('Discreto'),
-                                subtitle: const Text('Mas suave.'),
+                                subtitle: const Text('Más suave.'),
                               ),
                               RadioListTile<ClockFeedbackProfile>.adaptive(
                                 contentPadding: EdgeInsets.zero,
@@ -303,7 +303,7 @@ class _BiometricSettingsPageState extends State<BiometricSettingsPage> {
                                         }
                                       },
                                 title: const Text('Fuerte'),
-                                subtitle: const Text('Mas notorio.'),
+                                subtitle: const Text('Más notorio.'),
                               ),
                               const SizedBox(height: 8),
                               Wrap(
@@ -342,7 +342,7 @@ class _BiometricSettingsPageState extends State<BiometricSettingsPage> {
                               if (hasUnsavedSoundChanges) ...[
                                 const SizedBox(height: 8),
                                 Text(
-                                  'Tienes cambios de sonido sin guardar.',
+                                  'Tenés cambios de sonido sin guardar.',
                                   style: Theme.of(context).textTheme.bodySmall,
                                 ),
                               ],
@@ -355,7 +355,7 @@ class _BiometricSettingsPageState extends State<BiometricSettingsPage> {
                         child: Padding(
                           padding: EdgeInsets.all(12),
                           child: Text(
-                            'Tip: si desactivas huella, el bloqueo por inactividad no se usara y se pedira login completo al vencer el tiempo de inactividad.',
+                            'Tip: si desactivás la huella, el bloqueo por inactividad no se usará y se pedirá el login completo al vencer el tiempo de inactividad.',
                           ),
                         ),
                       ),

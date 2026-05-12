@@ -76,16 +76,16 @@ class AttendanceHomeViewDataBuilder {
         ? 'Config lista'
         : 'Config pendiente';
     final cameraPrepText = readiness.cameraGranted == null
-        ? 'Camara sin chequear'
+        ? 'Cámara sin chequear'
         : cameraReady
-        ? 'Camara OK'
-        : 'Camara pendiente';
+        ? 'Cámara OK'
+        : 'Cámara pendiente';
     final locationPrepText = readiness.locationGranted == null
-        ? 'Ubicacion sin chequear'
+        ? 'Ubicación sin chequear'
         : !locationReady
-        ? 'Ubicacion pendiente'
+        ? 'Ubicación pendiente'
         : locationServiceReady
-        ? 'Ubicacion OK'
+        ? 'Ubicación OK'
         : 'GPS apagado';
     final gpsPrepText = gps == null
         ? 'GPS sin muestra'
@@ -104,7 +104,7 @@ class AttendanceHomeViewDataBuilder {
         ? 'Preparando ficha en segundo plano.'
         : 'Faltan validaciones para agilizar la fichada.';
     final lastClockText = clockMetrics.lastClockAt == null
-        ? 'Aun no hay fichadas en esta sesion'
+        ? 'Aún no hay fichadas en esta sesión'
         : '${formatTimeOfDay(clockMetrics.lastClockAt!)} (${formatRelative(clockMetrics.lastClockAt!)})';
     final lastClockStatText = clockMetrics.lastClockAt == null
         ? '-'
@@ -135,10 +135,10 @@ class AttendanceHomeViewDataBuilder {
         : pendingQueue.total > 0
         ? 'Hay ${pendingQueue.total} fichadas guardadas localmente. Sincroniza para evitar diferencias.'
         : !hasFreshGps
-        ? 'Actualiza tu ubicacion para reducir rechazos al escanear.'
+        ? 'Actualizá tu ubicación para reducir rechazos al escanear.'
         : !hasClockToday
         ? 'Cuando llegues al punto de control, escanea el QR para iniciar la jornada.'
-        : 'Ultima actividad: $lastClockText.';
+        : 'Última actividad: $lastClockText.';
     final nextStepPriorityLabel = hasPendingErrors
         ? 'Prioridad alta'
         : hasPendingSync || !hasFreshGps
@@ -162,16 +162,6 @@ class AttendanceHomeViewDataBuilder {
         ? 720.0
         : 460.0;
     final horizontalPadding = screenWidth < 600 ? 12.0 : 20.0;
-    final quickActionColumns = screenWidth >= 900
-        ? 3
-        : screenWidth >= 560
-        ? 2
-        : 1;
-    final quickActionRatio = quickActionColumns == 1
-        ? 3.3
-        : quickActionColumns == 2
-        ? 2.5
-        : 2.2;
 
     return AttendanceHomeViewData(
       syncText: syncText,
@@ -212,8 +202,6 @@ class AttendanceHomeViewDataBuilder {
       nextStepPriorityForeground: nextStepPriorityForeground,
       contentMaxWidth: contentMaxWidth,
       horizontalPadding: horizontalPadding,
-      quickActionColumns: quickActionColumns,
-      quickActionRatio: quickActionRatio,
     );
   }
 }
@@ -258,8 +246,6 @@ class AttendanceHomeViewData {
     required this.nextStepPriorityForeground,
     required this.contentMaxWidth,
     required this.horizontalPadding,
-    required this.quickActionColumns,
-    required this.quickActionRatio,
   });
 
   final String syncText;
@@ -300,6 +286,4 @@ class AttendanceHomeViewData {
   final Color nextStepPriorityForeground;
   final double contentMaxWidth;
   final double horizontalPadding;
-  final int quickActionColumns;
-  final double quickActionRatio;
 }

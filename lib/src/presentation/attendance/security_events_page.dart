@@ -118,7 +118,7 @@ class _SecurityEventsPageState extends State<SecurityEventsPage> {
                         children: [
                           if (_error != null) ...[
                             Card(
-                              color: const Color(0xFFFFF4E5),
+                              color: Theme.of(context).colorScheme.errorContainer,
                               child: Padding(
                                 padding: const EdgeInsets.all(12),
                                 child: Column(
@@ -142,7 +142,7 @@ class _SecurityEventsPageState extends State<SecurityEventsPage> {
                           Card(
                             child: Padding(
                               padding: const EdgeInsets.all(12),
-                              child: Text('Pagina $_page | Registros: $_total'),
+                              child: Text('Página $_page | Registros: $_total'),
                             ),
                           ),
                           const SizedBox(height: 8),

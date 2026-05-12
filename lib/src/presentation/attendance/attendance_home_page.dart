@@ -1,9 +1,13 @@
 import 'dart:async';
 
+import 'package:connectivity_plus/connectivity_plus.dart';
 import 'package:flutter/material.dart';
 import 'package:geolocator/geolocator.dart';
 import 'package:image_picker/image_picker.dart';
 
+import '../../config/app_config.dart';
+import '../../core/attendance/attendance_config_cache.dart';
+import '../../core/attendance/clock_readiness_cache.dart';
 import '../../core/attendance/clock_feedback_presenter.dart';
 import '../../core/attendance/clock_gps_service.dart';
 import '../../core/attendance/clock_metrics_tracker.dart';
@@ -19,6 +23,8 @@ import '../../core/offline/pending_clock_sync_service.dart';
 import '../../core/offline/offline_clock_queue.dart';
 import '../../core/offline/pending_queue_controller.dart';
 import '../../core/permissions/device_permission_bootstrap.dart';
+import '../../core/utils/app_logger.dart';
+import '../../core/utils/clock_format_utils.dart';
 import 'attendance_home_action_presenter.dart';
 import 'attendance_home_coordinator.dart';
 import 'attendance_home_view_model.dart';
@@ -49,12 +55,16 @@ class AttendanceHomePage extends StatefulWidget {
 
 class _AttendanceHomePageState extends State<AttendanceHomePage>
     with WidgetsBindingObserver {
+  static final _log = AppLogger.get('AttendanceHomePage');
+
   static const Duration _configCacheTtl = Duration(minutes: 3);
   static const Duration _gpsCacheTtl = Duration(minutes: 2);
   static const Duration _clockReadinessRefreshInterval = Duration(seconds: 75);
 
   final ImagePicker _imagePicker = ImagePicker();
   final ClockPhotoCache _clockPhotoCache = ClockPhotoCache();
+  final AttendanceConfigCache _attendanceConfigCache = AttendanceConfigCache();
+  final ClockReadinessCache _clockReadinessCache = ClockReadinessCache();
   final ClockFeedbackAudioService _feedbackAudio = ClockFeedbackAudioService();
   final DevicePermissionBootstrap _devicePermissionBootstrap =
       DevicePermissionBootstrap();
@@ -72,18 +82,29 @@ class _AttendanceHomePageState extends State<AttendanceHomePage>
   late final QrClockSubmissionService _qrClockSubmissionService;
   late final PendingQueueController _pendingQueueController;
 
+  int _selectedTab = 0;
+
   bool _submitting = false;
   bool _loadingConfig = false;
   bool _loadingProfile = false;
   bool _locatingGps = false;
+  DashboardResponse? _dashboard;
   String? _lastQrData;
   String? _profileLoadError;
   AttendanceConfig? _config;
   EmployeeProfile? _profile;
+
+  // URL de foto memoizada: se calcula una vez y solo se actualiza cuando
+  // imagenVersion realmente cambia (usuario subio/elimino foto).
+  // Si recalculamos en cada build(), CachedNetworkImage ve URLs distintas
+  // entre EmployeeSummary y EmployeeProfile (null vs 0 vs 1 en version)
+  // y descarta el cache → re-descarga → si falla, la foto desaparece.
+  late String _resolvedPhotoUrl;
   DateTime? _configLoadedAt;
   DateTime? _profileLoadedAt;
   Timer? _pendingSyncTicker;
   Timer? _clockReadinessTicker;
+  StreamSubscription<List<ConnectivityResult>>? _connectivitySubscription;
   ClockMetricsSnapshot _clockMetrics = const ClockMetricsSnapshot();
   PendingQueueState _pendingQueue = const PendingQueueState();
   ClockReadinessSnapshot _clockReadiness = const ClockReadinessSnapshot();
@@ -120,10 +141,25 @@ class _AttendanceHomePageState extends State<AttendanceHomePage>
     _pendingQueueController = PendingQueueController(
       syncService: _pendingClockSyncService,
     );
+    // Inicializar URL de foto usando el endpoint canonico /empleados/imagen/{dni}.
+    // No usar el campo `foto` de EmployeeSummary como primario porque el backend
+    // puede devolverlo como URL relativa (sin esquema), que CachedNetworkImage
+    // no puede descargar y queda en blanco.
+    _resolvedPhotoUrl = widget.empleado.dni.isNotEmpty
+        ? widget.apiClient.buildEmpleadoImagenUrl(
+            dni: widget.empleado.dni,
+            version: widget.empleado.imagenVersion,
+          )
+        : ProfilePhotoCache.withVersion(
+            widget.empleado.foto,
+            version: widget.empleado.imagenVersion,
+          );
     unawaited(_feedbackAudio.initialize());
     unawaited(_applyFeedbackProfileFromSession());
+    unawaited(_preloadReadinessFromCache());
     _loadConfig();
     _loadProfile();
+    unawaited(_loadDashboard());
     _loadPendingQueueState();
     Future<void>.microtask(() => _warmUpClockReadiness(forceGps: true));
     Future<void>.microtask(
@@ -131,12 +167,12 @@ class _AttendanceHomePageState extends State<AttendanceHomePage>
         employeeId: widget.empleado.id,
       ),
     );
-    Future<void>.microtask(() => _syncPendingClocks(silent: true));
+    Future<void>.microtask(() => _syncPendingClocks(isBackground: true));
     _pendingSyncTicker = Timer.periodic(const Duration(seconds: 45), (_) {
       if (!mounted || !_pendingQueue.hasPending || _pendingQueue.syncing || _submitting) {
         return;
       }
-      _syncPendingClocks(silent: true);
+      _syncPendingClocks(isBackground: true);
     });
     _clockReadinessTicker = Timer.periodic(_clockReadinessRefreshInterval, (_) {
       if (!mounted || _submitting || _locatingGps) {
@@ -144,6 +180,9 @@ class _AttendanceHomePageState extends State<AttendanceHomePage>
       }
       unawaited(_warmUpClockReadiness());
     });
+    _connectivitySubscription = Connectivity().onConnectivityChanged.listen(
+      _onConnectivityChanged,
+    );
   }
 
   @override
@@ -151,8 +190,36 @@ class _AttendanceHomePageState extends State<AttendanceHomePage>
     WidgetsBinding.instance.removeObserver(this);
     _pendingSyncTicker?.cancel();
     _clockReadinessTicker?.cancel();
+    _connectivitySubscription?.cancel();
     unawaited(_feedbackAudio.dispose());
     super.dispose();
+  }
+
+  void _onConnectivityChanged(List<ConnectivityResult> results) {
+    final hasConnection = results.any((r) => r != ConnectivityResult.none);
+    if (!hasConnection || !mounted) return;
+
+    // Si la sesion es offline, el token no sirve para la API.
+    // Avisamos al usuario que reconecte sesion y no intentamos sincronizar.
+    if (_isOfflineToken) {
+      if (_pendingQueue.hasPending) {
+        _showMessage(
+          'Conexión restaurada. Volvé a iniciar sesión para sincronizar tus fichadas pendientes.',
+          isError: false,
+          tone: ClockFeedbackTone.warning,
+        );
+      }
+      if (!_hasFreshConfig()) unawaited(_loadConfig());
+      return;
+    }
+
+    // Recupero de red: sincronizar pendientes y refrescar config si hace falta.
+    if (_pendingQueue.hasPending && !_pendingQueue.syncing && !_submitting) {
+      unawaited(_syncPendingClocks(isBackground: true));
+    }
+    if (!_hasFreshConfig()) {
+      unawaited(_loadConfig());
+    }
   }
 
   @override
@@ -171,6 +238,73 @@ class _AttendanceHomePageState extends State<AttendanceHomePage>
       return;
     }
     await _homeCoordinator.openSecurityEvents(
+      context,
+      apiClient: widget.apiClient,
+      token: widget.token,
+    );
+  }
+
+  Future<void> _openJustificaciones() async {
+    if (_submitting) {
+      return;
+    }
+    await _homeCoordinator.openJustificaciones(
+      context,
+      apiClient: widget.apiClient,
+      token: widget.token,
+    );
+  }
+
+  Future<void> _openAdelantos() async {
+    if (_submitting) {
+      return;
+    }
+    await _homeCoordinator.openAdelantos(
+      context,
+      apiClient: widget.apiClient,
+      token: widget.token,
+    );
+  }
+
+  Future<void> _openVacaciones() async {
+    if (_submitting) return;
+    await _homeCoordinator.openVacaciones(
+      context,
+      apiClient: widget.apiClient,
+      token: widget.token,
+    );
+  }
+
+  Future<void> _openFrancos() async {
+    if (_submitting) return;
+    await _homeCoordinator.openFrancos(
+      context,
+      apiClient: widget.apiClient,
+      token: widget.token,
+    );
+  }
+
+  Future<void> _openLegajo() async {
+    if (_submitting) return;
+    await _homeCoordinator.openLegajo(
+      context,
+      apiClient: widget.apiClient,
+      token: widget.token,
+    );
+  }
+
+  Future<void> _openPedidosMercaderia() async {
+    if (_submitting) return;
+    await _homeCoordinator.openPedidosMercaderia(
+      context,
+      apiClient: widget.apiClient,
+      token: widget.token,
+    );
+  }
+
+  Future<void> _openKpisSector() async {
+    if (_submitting) return;
+    await _homeCoordinator.openKpisSector(
       context,
       apiClient: widget.apiClient,
       token: widget.token,
@@ -218,6 +352,7 @@ class _AttendanceHomePageState extends State<AttendanceHomePage>
       context,
       apiClient: widget.apiClient,
       token: widget.token,
+      employeeDni: widget.empleado.dni,
     );
     if (!mounted) {
       return;
@@ -244,6 +379,18 @@ class _AttendanceHomePageState extends State<AttendanceHomePage>
     await _feedbackAudio.setProfile(widget.sessionManager.clockFeedbackProfile);
   }
 
+  Future<void> _loadDashboard() async {
+    try {
+      final dashboard = await widget.apiClient.getDashboard(
+        token: widget.token,
+      );
+      if (!mounted) return;
+      setState(() => _dashboard = dashboard);
+    } catch (_) {
+      // Dashboard es opcional — si falla no bloqueamos el home
+    }
+  }
+
   Future<void> _loadProfile({bool force = false}) async {
     if (_loadingProfile) {
       return;
@@ -255,23 +402,34 @@ class _AttendanceHomePageState extends State<AttendanceHomePage>
             const Duration(minutes: 2)) {
       return;
     }
-    final previousPhotoUrl = _photoUrlForProfile(_profile);
+    final previousVersion = _profile?.imagenVersion ?? widget.empleado.imagenVersion;
     setState(() {
       _loadingProfile = true;
     });
     try {
       final profile = await widget.apiClient.getMe(token: widget.token);
-      final nextPhotoUrl = _photoUrlForProfile(profile);
-      if (previousPhotoUrl != nextPhotoUrl) {
-        await ProfilePhotoCache.evict(previousPhotoUrl);
+      // Solo evictar si la version de la imagen realmente cambio (el usuario
+      // subio/elimino una foto). Comparar por URL string causa evicts falsos
+      // cuando EmployeeSummary y EmployeeProfile difieren en formato de URL.
+      final nextVersion = profile.imagenVersion;
+      if (nextVersion != previousVersion) {
+        await ProfilePhotoCache.evict(_resolvedPhotoUrl, version: previousVersion);
       }
-      if (!mounted) {
-        return;
-      }
+      if (!mounted) return;
+      // Recalcular URL solo si la version cambio, para no romper el cache de
+      // Usar siempre el endpoint canonico por DNI (mismo criterio que initState).
+      final effectiveDni = (profile.dni ?? widget.empleado.dni).trim();
+      final newUrl = effectiveDni.isNotEmpty
+          ? widget.apiClient.buildEmpleadoImagenUrl(
+              dni: effectiveDni,
+              version: profile.imagenVersion,
+            )
+          : ProfilePhotoCache.withVersion(profile.foto, version: profile.imagenVersion);
       setState(() {
         _profile = profile;
         _profileLoadError = null;
         _profileLoadedAt = DateTime.now();
+        if (newUrl.isNotEmpty) _resolvedPhotoUrl = newUrl;
       });
     } on ApiException catch (e) {
       if (!mounted) {
@@ -305,42 +463,60 @@ class _AttendanceHomePageState extends State<AttendanceHomePage>
   }
 
   Future<void> _loadConfig({bool force = false}) async {
-    if (_loadingConfig) {
-      return;
-    }
-    if (!force && _hasFreshConfig()) {
-      return;
-    }
-    setState(() {
-      _loadingConfig = true;
-    });
+    if (_loadingConfig) return;
+    if (!force && _hasFreshConfig()) return;
+    setState(() => _loadingConfig = true);
     try {
       final config = await widget.apiClient.getConfigAsistencia(
         token: widget.token,
       );
-      if (!mounted) {
-        return;
-      }
+      if (!mounted) return;
       setState(() {
         _config = config;
         _configLoadedAt = DateTime.now();
       });
+      // Persistir para que funcione en cold-start sin internet.
+      unawaited(_attendanceConfigCache.save(config));
     } on ApiException catch (e) {
-      if (!mounted) {
+      if (!mounted) return;
+      if (_config != null) {
+        // Ya hay config en memoria de esta sesion — ignorar silenciosamente.
         return;
       }
-      _showMessage(e.message, isError: true);
-    } finally {
-      if (mounted) {
-        setState(() {
-          _loadingConfig = false;
-        });
+      // Sin config en memoria: intentar recuperar del cache persistente.
+      final cached = await _attendanceConfigCache.load();
+      if (!mounted) return;
+      if (cached != null) {
+        // Usar config cacheada; configLoadedAt queda null → se reintentara
+        // la API en la proxima llamada.
+        setState(() => _config = cached);
+      } else {
+        _showMessage(e.message, isError: true);
       }
+    } finally {
+      if (mounted) setState(() => _loadingConfig = false);
     }
   }
 
   bool _hasFreshGps() {
     return _clockReadiness.hasFreshGps(_gpsCacheTtl);
+  }
+
+  /// Pre-carga el estado de permisos desde cache persistente.
+  ///
+  /// Se llama en [initState] para que los badges de readiness muestren el
+  /// estado correcto de inmediato, sin esperar el primer warm-up.
+  /// El warm-up posterior sobreescribe con el valor real del sistema.
+  Future<void> _preloadReadinessFromCache() async {
+    final cached = await _clockReadinessCache.load();
+    if (!mounted) return;
+    if (!cached.cameraGranted && !cached.locationGranted) return;
+    setState(() {
+      _clockReadiness = _clockReadiness.copyWith(
+        cameraGranted: cached.cameraGranted ? true : null,
+        locationGranted: cached.locationGranted ? true : null,
+      );
+    });
   }
 
   Future<void> _warmUpClockReadiness({
@@ -376,6 +552,14 @@ class _AttendanceHomePageState extends State<AttendanceHomePage>
         ),
       );
 
+      // Persistir permisos concedidos para arranques futuros.
+      if (next.cameraGranted == true || next.locationGranted == true) {
+        unawaited(_clockReadinessCache.saveGranted(
+          cameraGranted: next.cameraGranted == true,
+          locationGranted: next.locationGranted == true,
+        ));
+      }
+
       if (!mounted) {
         _clockReadiness = next;
         return;
@@ -410,9 +594,9 @@ class _AttendanceHomePageState extends State<AttendanceHomePage>
     try {
       final photo = await _imagePicker.pickImage(
         source: ImageSource.camera,
-        maxWidth: 960,
-        maxHeight: 960,
-        imageQuality: 70,
+        maxWidth: 640,
+        maxHeight: 640,
+        imageQuality: 60,
         requestFullMetadata: false,
       );
       if (photo == null) {
@@ -457,7 +641,7 @@ class _AttendanceHomePageState extends State<AttendanceHomePage>
           _showNotice(_clockFeedbackPresenter.locationServiceDisabled());
         } else {
           _showNotice(
-            _clockFeedbackPresenter.permissionSettings(missing: 'la ubicacion'),
+            _clockFeedbackPresenter.permissionSettings(missing: 'la ubicación'),
           );
         }
         return;
@@ -470,9 +654,7 @@ class _AttendanceHomePageState extends State<AttendanceHomePage>
           checkedAt: DateTime.now(),
         );
       });
-      _showMessage(
-        'GPS OK: ${gps.lat.toStringAsFixed(6)}, ${gps.lon.toStringAsFixed(6)}',
-      );
+      _showMessage('Ubicación obtenida correctamente.');
     } finally {
       if (mounted) {
         setState(() {
@@ -517,7 +699,7 @@ class _AttendanceHomePageState extends State<AttendanceHomePage>
         return;
       case QrClockPreflightStatus.cameraPermissionDenied:
         _showNotice(
-          _clockFeedbackPresenter.permissionSettings(missing: 'la camara'),
+          _clockFeedbackPresenter.permissionSettings(missing: 'la cámara'),
         );
         return;
       case QrClockPreflightStatus.locationServiceDisabled:
@@ -525,7 +707,7 @@ class _AttendanceHomePageState extends State<AttendanceHomePage>
         return;
       case QrClockPreflightStatus.locationPermissionDenied:
         _showNotice(
-          _clockFeedbackPresenter.permissionSettings(missing: 'la ubicacion'),
+          _clockFeedbackPresenter.permissionSettings(missing: 'la ubicación'),
         );
         return;
     }
@@ -608,11 +790,11 @@ class _AttendanceHomePageState extends State<AttendanceHomePage>
 
       final presentation = _clockFeedbackPresenter.presentSubmissionResult(
         result,
-        formatDuration: _fmtDuration,
+        formatDuration: fmtClockDuration,
       );
       _showNotice(presentation.notice);
       if (presentation.shouldSyncPendingSilently) {
-        await _syncPendingClocks(silent: true);
+        await _syncPendingClocks(isBackground: true);
       }
     } finally {
       if (mounted) {
@@ -638,14 +820,28 @@ class _AttendanceHomePageState extends State<AttendanceHomePage>
     });
   }
 
-  Future<String?> _syncPendingClocks({bool silent = false}) async {
+  Future<String?> _syncPendingClocks({bool isBackground = false}) async {
     if (_pendingQueue.syncing) {
+      return null;
+    }
+
+    // El token 'offline' no es valido en el servidor: intentar sincronizar lo
+    // marcaria todo como "failed". Avisamos al usuario (solo en sync manual)
+    // y abortamos.
+    if (_isOfflineToken) {
+      if (!isBackground && mounted) {
+        _showMessage(
+          'Sesión iniciada sin conexión. Volvé a ingresar con internet para sincronizar tus fichadas.',
+          isError: false,
+          tone: ClockFeedbackTone.warning,
+        );
+      }
       return null;
     }
 
     final started = _pendingQueueController.startSync(
       current: _pendingQueue,
-      silent: silent,
+      isBackground: isBackground,
     );
     if (mounted) {
       setState(() {
@@ -659,16 +855,16 @@ class _AttendanceHomePageState extends State<AttendanceHomePage>
       employeeId: widget.empleado.id,
       token: widget.token,
       current: started,
-      silent: silent,
+      isBackground: isBackground,
     );
     if (!mounted) {
       _pendingQueue = next;
-      return silent ? null : next.lastMessage;
+      return isBackground ? null : next.lastMessage;
     }
     setState(() {
       _pendingQueue = next;
     });
-    return silent ? null : next.lastMessage;
+    return isBackground ? null : next.lastMessage;
   }
 
   Future<void> _openPendingQueueDetails() async {
@@ -696,7 +892,7 @@ class _AttendanceHomePageState extends State<AttendanceHomePage>
       }
       final started = _pendingQueueController.startSync(
         current: queueState.value,
-        silent: false,
+        isBackground: false,
       );
       syncState(started);
       final next = await _pendingQueueController.syncAll(
@@ -729,7 +925,7 @@ class _AttendanceHomePageState extends State<AttendanceHomePage>
     await _homeCoordinator.showPendingQueueSheet(
       context,
       queueState: queueState,
-      formatDateTime: _fmtDateTime,
+      formatDateTime: fmtClockDateTime,
       onSync: runSync,
       onClearAll: clearAll,
       onRetry: (item) async {
@@ -760,13 +956,19 @@ class _AttendanceHomePageState extends State<AttendanceHomePage>
     await Future.wait([
       _loadConfig(force: true),
       _loadProfile(force: true),
-      _syncPendingClocks(silent: true),
+      _loadDashboard(),
+      _syncPendingClocks(isBackground: true),
       _warmUpClockReadiness(forceGps: true, refreshConfig: true),
     ]);
     await _loadPendingQueueState();
   }
 
   bool get _isBusy => _submitting || _loadingConfig;
+
+  /// Devuelve true cuando la sesion se inicio sin conexion (token sintetico).
+  /// En ese caso NO se intenta sincronizar pendientes con la API porque el token
+  /// no es valido en el servidor y causaria que los registros queden en "failed".
+  bool get _isOfflineToken => widget.token.startsWith('offline_');
 
   AttendanceActionButtonData _buttonData(AttendanceHomeActionSpec spec) {
     return AttendanceActionButtonData(
@@ -831,6 +1033,34 @@ class _AttendanceHomePageState extends State<AttendanceHomePage>
         return () {
           unawaited(_openSecurityEvents());
         };
+      case AttendanceHomeActionIntent.openJustificaciones:
+        return () {
+          unawaited(_openJustificaciones());
+        };
+      case AttendanceHomeActionIntent.openAdelantos:
+        return () {
+          unawaited(_openAdelantos());
+        };
+      case AttendanceHomeActionIntent.openVacaciones:
+        return () {
+          unawaited(_openVacaciones());
+        };
+      case AttendanceHomeActionIntent.openFrancos:
+        return () {
+          unawaited(_openFrancos());
+        };
+      case AttendanceHomeActionIntent.openLegajo:
+        return () {
+          unawaited(_openLegajo());
+        };
+      case AttendanceHomeActionIntent.openPedidosMercaderia:
+        return () {
+          unawaited(_openPedidosMercaderia());
+        };
+      case AttendanceHomeActionIntent.openKpisSector:
+        return () {
+          unawaited(_openKpisSector());
+        };
     }
   }
 
@@ -890,10 +1120,95 @@ class _AttendanceHomePageState extends State<AttendanceHomePage>
           label: 'Ver eventos',
           textColor: Colors.white,
           onPressed: () {
-            _openSecurityEvents();
+            unawaited(_openSecurityEvents());
           },
         );
     }
+  }
+
+  void _showDiagnosticsSheet(
+    BuildContext context, {
+    required AttendanceHomeViewData viewData,
+    required ClockMetricsSnapshot clockMetrics,
+  }) {
+    showModalBottomSheet<void>(
+      context: context,
+      isScrollControlled: true,
+      useSafeArea: true,
+      builder: (_) => DraggableScrollableSheet(
+        expand: false,
+        initialChildSize: 0.55,
+        minChildSize: 0.3,
+        maxChildSize: 0.85,
+        builder: (ctx, sc) => Column(
+          children: [
+            Padding(
+              padding: const EdgeInsets.symmetric(vertical: 10),
+              child: Container(
+                width: 36,
+                height: 4,
+                decoration: BoxDecoration(
+                  color: Theme.of(context).colorScheme.outlineVariant,
+                  borderRadius: BorderRadius.circular(2),
+                ),
+              ),
+            ),
+            Expanded(
+              child: ListView(
+                controller: sc,
+                padding: const EdgeInsets.fromLTRB(16, 0, 16, 24),
+                children: [
+                  AttendanceDiagnosticsCard(
+                    ruleBadges: [
+                      if (_config != null) ...[
+                        AttendanceRuleChip(
+                          label: 'QR',
+                          enabled: _config!.requiereQr,
+                        ),
+                        AttendanceRuleChip(
+                          label: 'FOTO',
+                          enabled: _config!.requiereFoto,
+                        ),
+                        const AttendanceRuleChip(label: 'GPS', enabled: true),
+                        AttendanceInfoChip(
+                          'Cooldown: ${_config!.cooldownScanSegundos}s',
+                        ),
+                        if (_config!.intervaloMinimoFichadasMinutos != null)
+                          AttendanceInfoChip(
+                            'Intervalo min: ${_config!.intervaloMinimoFichadasMinutos} min',
+                          ),
+                        if (_config!.toleranciaGlobal != null)
+                          AttendanceInfoChip(
+                            'Tolerancia: ${_config!.toleranciaGlobal} min',
+                          ),
+                        if (_config!.metodosHabilitados.isNotEmpty)
+                          AttendanceInfoChip(
+                            'Metodos: ${_config!.metodosHabilitados.join(', ')}',
+                          ),
+                      ],
+                    ],
+                    hasMetrics: clockMetrics.hasSamples,
+                    sampleCount: clockMetrics.sampleCount,
+                    lastClockText: viewData.lastClockStatText == '-'
+                        ? null
+                        : viewData.lastClockStatText,
+                    lastTotalText: viewData.lastClockTotalText,
+                    lastApiText: viewData.lastClockApiText,
+                    lastGpsText: viewData.lastClockGpsText,
+                    lastPhotoText: viewData.lastClockPhotoText,
+                    averageTotalText: viewData.avgTotal,
+                    averageApiText: viewData.avgApi,
+                    lastQrText: _lastQrData == null
+                        ? null
+                        : shortQrToken(_lastQrData!),
+                  ),
+                ],
+              ),
+            ),
+          ],
+        ),
+      ),
+    );
   }
 
   void _recordClockMetrics({
@@ -923,53 +1238,11 @@ class _AttendanceHomePageState extends State<AttendanceHomePage>
         photo: photo,
       );
     }
-    debugPrint(
-      '[clock-metric] success=$success code=${errorCode ?? "-"} '
+    _log.debug(
+      'clock-metric success=$success code=${errorCode ?? "-"} '
       'total_ms=${total.inMilliseconds} api_ms=${api?.inMilliseconds ?? 0} '
       'gps_ms=${gps?.inMilliseconds ?? 0} photo_ms=${photo?.inMilliseconds ?? 0}',
     );
-  }
-
-  String _fmtDuration(Duration duration) {
-    if (duration.inMilliseconds < 1000) {
-      return '${duration.inMilliseconds} ms';
-    }
-    return '${(duration.inMilliseconds / 1000).toStringAsFixed(2)} s';
-  }
-
-  String _fmtTimeOfDay(DateTime dateTime) {
-    final hh = dateTime.hour.toString().padLeft(2, '0');
-    final mm = dateTime.minute.toString().padLeft(2, '0');
-    final ss = dateTime.second.toString().padLeft(2, '0');
-    return '$hh:$mm:$ss';
-  }
-
-  String _fmtDateTime(DateTime dateTime) {
-    final d = dateTime.day.toString().padLeft(2, '0');
-    final m = dateTime.month.toString().padLeft(2, '0');
-    final y = dateTime.year.toString().padLeft(4, '0');
-    return '$d/$m/$y ${_fmtTimeOfDay(dateTime)}';
-  }
-
-  String _fmtRelative(DateTime dateTime) {
-    var diff = DateTime.now().difference(dateTime);
-    if (diff.isNegative) {
-      diff = Duration.zero;
-    }
-    if (diff.inSeconds < 45) {
-      return 'hace segundos';
-    }
-    if (diff.inMinutes < 60) {
-      return 'hace ${diff.inMinutes} min';
-    }
-    if (diff.inHours < 24) {
-      return 'hace ${diff.inHours} h';
-    }
-    return 'hace ${diff.inDays} d';
-  }
-
-  bool _isSameDay(DateTime a, DateTime b) {
-    return a.year == b.year && a.month == b.month && a.day == b.day;
   }
 
   String? _syncStatusText() {
@@ -996,12 +1269,12 @@ class _AttendanceHomePageState extends State<AttendanceHomePage>
 
   String _sessionStatusText() {
     if (widget.sessionManager.isRefreshing) {
-      return 'Sesion: renovando...';
+      return 'Sesión: renovando...';
     }
     if (widget.sessionManager.isLocked) {
-      return 'Sesion: bloqueada';
+      return 'Sesión: bloqueada';
     }
-    return 'Sesion: activa';
+    return 'Sesión: activa';
   }
 
   Color _sessionStatusColor() {
@@ -1014,56 +1287,41 @@ class _AttendanceHomePageState extends State<AttendanceHomePage>
     return const Color(0xFFE6F4EA);
   }
 
-  Future<void> _showSessionExitOptions() async {
-    if (_submitting) {
-      return;
-    }
-    final action = await _homeCoordinator.showSessionExitOptions(context);
-    if (!mounted || action == null) {
-      return;
-    }
-    switch (action) {
-      case AttendanceSessionExitAction.lock:
-        await widget.onLockSession();
-        return;
-      case AttendanceSessionExitAction.logout:
-        await widget.onLogout();
+  void _onTabSelected(int index) {
+    if (index == _selectedTab && index == 0) return;
+    switch (index) {
+      case 0:
+        setState(() => _selectedTab = 0);
+      case 1:
+        unawaited(_navigateAndReset(_openMarksHistory, index));
+      case 2:
+        unawaited(_navigateAndReset(_openStats, index));
+      case 3:
+        unawaited(_navigateAndReset(_openProfile, index));
     }
   }
 
-  String _resolvePhotoUrl({String? rawUrl, String? dni, int? imagenVersion}) {
-    return ProfilePhotoCache.resolve(
-      rawUrl: rawUrl,
-      dni: dni,
-      version: imagenVersion,
-      fallbackBuilder: (valueDni, valueVersion) => widget.apiClient
-          .buildEmpleadoImagenUrl(dni: valueDni, version: valueVersion),
-    );
+  String _greetingPrefix() {
+    final hour = DateTime.now().hour;
+    if (hour < 12) return 'Buenos días';
+    if (hour < 19) return 'Buenas tardes';
+    return 'Buenas noches';
   }
 
-  String _photoUrlForProfile(EmployeeProfile? profile) {
-    if (profile != null) {
-      final fromProfile = _resolvePhotoUrl(
-        rawUrl: profile.foto,
-        dni: profile.dni ?? widget.empleado.dni,
-        imagenVersion: profile.imagenVersion,
-      );
-      if (fromProfile.isNotEmpty) {
-        return fromProfile;
-      }
-    }
-    return _resolvePhotoUrl(
-      rawUrl: widget.empleado.foto,
-      dni: widget.empleado.dni,
-      imagenVersion: widget.empleado.imagenVersion,
-    );
+  Future<void> _navigateAndReset(
+    Future<void> Function() action,
+    int tab,
+  ) async {
+    setState(() => _selectedTab = tab);
+    await action();
+    if (mounted) setState(() => _selectedTab = 0);
   }
 
   @override
   Widget build(BuildContext context) {
     final empleado = widget.empleado;
     final now = DateTime.now();
-    final fotoUrl = _photoUrlForProfile(_profile);
+    final fotoUrl = _resolvedPhotoUrl;
     final sessionColor = _sessionStatusColor();
     final readiness = _clockReadiness;
     final clockMetrics = _clockMetrics;
@@ -1073,7 +1331,13 @@ class _AttendanceHomePageState extends State<AttendanceHomePage>
       screenWidth: MediaQuery.of(context).size.width,
       syncText: _syncStatusText() ?? 'Sincronizando datos...',
       sessionBaseText: _sessionStatusText(),
-      sessionMessage: widget.sessionManager.statusMessage,
+      // Solo propagar statusMessage cuando agrega info real (lock/refresh).
+      // En sesion activa normal, statusMessage = 'Sesion activa.' que ya esta
+      // incorporado en sessionBaseText, lo que causaria texto duplicado.
+      sessionMessage: (widget.sessionManager.isRefreshing ||
+              widget.sessionManager.isLocked)
+          ? widget.sessionManager.statusMessage
+          : null,
       sessionColor: sessionColor,
       readiness: readiness,
       clockMetrics: clockMetrics,
@@ -1081,10 +1345,10 @@ class _AttendanceHomePageState extends State<AttendanceHomePage>
       loadingConfig: _loadingConfig,
       hasFreshConfig: _hasFreshConfig(),
       hasFreshGps: _hasFreshGps(),
-      formatTimeOfDay: _fmtTimeOfDay,
-      formatRelative: _fmtRelative,
-      formatDuration: _fmtDuration,
-      isSameDay: _isSameDay,
+      formatTimeOfDay: fmtClockTimeOfDay,
+      formatRelative: fmtClockRelative,
+      formatDuration: fmtClockDuration,
+      isSameDay: clockIsSameDay,
     );
     final actionViewData = _homeActionPresenter.build(
       viewData: viewData,
@@ -1093,28 +1357,154 @@ class _AttendanceHomePageState extends State<AttendanceHomePage>
       locatingGps: _locatingGps,
       isBusy: _isBusy,
     );
+    final cs = Theme.of(context).colorScheme;
     return Scaffold(
       appBar: AppBar(
-        title: const Text('Fichada por QR'),
+        title: const Text('FichaYa'),
         actions: [
-          IconButton(
-            onPressed: _submitting ? null : _openProfile,
-            icon: const Icon(Icons.person_outline),
-            tooltip: 'Mi perfil',
-          ),
-          IconButton(
-            onPressed: _submitting ? null : _openBiometricSettings,
-            icon: const Icon(Icons.fingerprint),
-            tooltip: 'Seguridad y sonido',
-          ),
-          IconButton(
-            onPressed: _submitting ? null : _showSessionExitOptions,
-            icon: const Icon(Icons.logout),
-            tooltip: 'Opciones de sesion',
+          PopupMenuButton<_HomeMenuAction>(
+            enabled: !_submitting,
+            icon: const Icon(Icons.more_vert),
+            tooltip: 'Mas opciones',
+            onSelected: (action) async {
+              switch (action) {
+                case _HomeMenuAction.biometrics:
+                  await _openBiometricSettings();
+                case _HomeMenuAction.security:
+                  await _openSecurityEvents();
+                case _HomeMenuAction.diagnostics:
+                  if (mounted) {
+                    _showDiagnosticsSheet(
+                      context,
+                      viewData: viewData,
+                      clockMetrics: clockMetrics,
+                    );
+                  }
+                case _HomeMenuAction.lockSession:
+                  await widget.onLockSession();
+                case _HomeMenuAction.logout:
+                  await widget.onLogout();
+              }
+            },
+            itemBuilder: (_) => [
+              const PopupMenuItem(
+                value: _HomeMenuAction.biometrics,
+                child: ListTile(
+                  leading: Icon(Icons.fingerprint),
+                  title: Text('Sesion y sonido'),
+                  contentPadding: EdgeInsets.zero,
+                  dense: true,
+                ),
+              ),
+              const PopupMenuItem(
+                value: _HomeMenuAction.security,
+                child: ListTile(
+                  leading: Icon(Icons.shield_outlined),
+                  title: Text('Seguridad'),
+                  contentPadding: EdgeInsets.zero,
+                  dense: true,
+                ),
+              ),
+              if (!AppConfig.current.isProd)
+                const PopupMenuItem(
+                  value: _HomeMenuAction.diagnostics,
+                  child: ListTile(
+                    leading: Icon(Icons.developer_mode_outlined),
+                    title: Text('Diagnóstico'),
+                    contentPadding: EdgeInsets.zero,
+                    dense: true,
+                  ),
+                ),
+              const PopupMenuDivider(),
+              const PopupMenuItem(
+                value: _HomeMenuAction.lockSession,
+                child: ListTile(
+                  leading: Icon(Icons.lock_outline),
+                  title: Text('Bloquear sesión'),
+                  contentPadding: EdgeInsets.zero,
+                  dense: true,
+                ),
+              ),
+              const PopupMenuItem(
+                value: _HomeMenuAction.logout,
+                child: ListTile(
+                  leading: Icon(Icons.logout),
+                  title: Text('Cerrar sesión'),
+                  contentPadding: EdgeInsets.zero,
+                  dense: true,
+                ),
+              ),
+            ],
           ),
         ],
       ),
-      body: RefreshIndicator(
+      floatingActionButton: FloatingActionButton.large(
+        onPressed: _submitting ? null : _fichar,
+        backgroundColor: _submitting ? cs.surfaceContainerHighest : const Color(0xFF00B09C),
+        foregroundColor: Colors.white,
+        elevation: 6,
+        tooltip: 'Fichar con QR',
+        shape: const CircleBorder(),
+        child: _submitting
+            ? const SizedBox(
+                width: 28,
+                height: 28,
+                child: CircularProgressIndicator(
+                  strokeWidth: 3,
+                  valueColor: AlwaysStoppedAnimation(Colors.white),
+                ),
+              )
+            : const Icon(Icons.qr_code_scanner, size: 34),
+      ),
+      floatingActionButtonLocation: FloatingActionButtonLocation.centerDocked,
+      bottomNavigationBar: BottomAppBar(
+        height: 64,
+        padding: EdgeInsets.zero,
+        notchMargin: 8,
+        shape: const CircularNotchedRectangle(),
+        child: Row(
+          mainAxisAlignment: MainAxisAlignment.spaceAround,
+          children: [
+            _NavBarItem(
+              icon: Badge(
+                isLabelVisible: pendingQueue.hasPending,
+                label: Text('${pendingQueue.total}',
+                    style: const TextStyle(fontSize: 10)),
+                child: const Icon(Icons.home_outlined),
+              ),
+              selectedIcon: const Icon(Icons.home),
+              label: 'Inicio',
+              selected: _selectedTab == 0,
+              onTap: () => _onTabSelected(0),
+            ),
+            _NavBarItem(
+              icon: const Icon(Icons.punch_clock_outlined),
+              selectedIcon: const Icon(Icons.punch_clock),
+              label: 'Historial',
+              selected: _selectedTab == 1,
+              onTap: () => _onTabSelected(1),
+            ),
+            const SizedBox(width: 64), // espacio para el FAB
+            _NavBarItem(
+              icon: const Icon(Icons.bar_chart_outlined),
+              selectedIcon: const Icon(Icons.bar_chart),
+              label: 'Stats',
+              selected: _selectedTab == 2,
+              onTap: () => _onTabSelected(2),
+            ),
+            _NavBarItem(
+              icon: const Icon(Icons.person_outline),
+              selectedIcon: const Icon(Icons.person),
+              label: 'Perfil',
+              selected: _selectedTab == 3,
+              onTap: () => _onTabSelected(3),
+            ),
+          ],
+        ),
+      ),
+      body: Stack(
+        children: [
+          RefreshIndicator(
         onRefresh: _refreshHome,
         child: Center(
           child: ConstrainedBox(
@@ -1147,11 +1537,10 @@ class _AttendanceHomePageState extends State<AttendanceHomePage>
                 AttendanceHeroCard(
                   photoUrl: fotoUrl,
                   token: widget.token,
+                  greeting: _greetingPrefix(),
                   employeeName: empleado.nombreCompleto,
                   employeeDni: empleado.dni,
-                  employeeCompany: empleado.empresaId == null
-                      ? null
-                      : 'Empresa: ${empleado.empresaId}',
+                  employeeCompany: null,
                   syncText: viewData.syncText,
                   sessionText: viewData.sessionText,
                   sessionColor: sessionColor,
@@ -1159,176 +1548,181 @@ class _AttendanceHomePageState extends State<AttendanceHomePage>
                   gpsStatusText: viewData.gpsStatusText,
                 ),
                 if (_profileLoadError != null) ...[
-                  const SizedBox(height: 10),
+                  const SizedBox(height: 8),
                   Card(
-                    color: const Color(0xFFFFF4E5),
+                    color: Theme.of(context).colorScheme.errorContainer,
                     child: Padding(
                       padding: const EdgeInsets.all(12),
-                      child: Text(_profileLoadError!),
+                      child: Text(
+                        _profileLoadError!,
+                        style: TextStyle(
+                          color: Theme.of(context).colorScheme.onErrorContainer,
+                        ),
+                      ),
                     ),
                   ),
                 ],
                 const SizedBox(height: 12),
-                AttendanceNextStepCard(
-                  priorityLabel: viewData.nextStepPriorityLabel,
-                  priorityBackground: viewData.nextStepPriorityBackground,
-                  priorityForeground: viewData.nextStepPriorityForeground,
-                  title: viewData.nextStepTitle,
-                  body: viewData.nextStepBody,
-                  primaryAction: _buttonData(actionViewData.nextStepPrimary),
-                  secondaryAction: _buttonData(
-                    actionViewData.nextStepSecondary,
-                  ),
+                // ── Status banner ──────────────────────────────────
+                AttendanceStatusBanner(
+                  pendingTotal: pendingQueue.total,
+                  pendingFailed: pendingQueue.failed,
+                  lastClockText: viewData.lastClockStatText,
+                  hasClockToday: viewData.hasClockToday,
+                  hasFreshGps: viewData.hasFreshGps,
+                  onTap: viewData.hasPendingErrors || viewData.hasPendingSync
+                      ? () => unawaited(_openPendingQueueDetails())
+                      : null,
                 ),
                 const SizedBox(height: 12),
-                AttendanceStatsGrid(
+                // ── Stats grid (4 tiles) ───────────────────────────
+                AttendanceStatsCarousel(
                   items: [
+                    AttendanceStatItem(
+                      title: 'Puntualidad',
+                      value: _dashboard != null
+                          ? '${_dashboard!.asistencia.kpis.puntualidadPct.toStringAsFixed(0)}%'
+                          : '–',
+                      icon: Icons.timer_outlined,
+                      accent: const Color(0xFF2A789E),
+                    ),
+                    AttendanceStatItem(
+                      title: 'A tiempo semana',
+                      value: _dashboard != null
+                          ? '${_dashboard!.asistencia.totales.ok} / ${_dashboard!.asistencia.totales.ok + _dashboard!.asistencia.totales.tarde + _dashboard!.asistencia.totales.ausente}'
+                          : '–',
+                      icon: Icons.calendar_today_outlined,
+                      accent: const Color(0xFF315D52),
+                    ),
                     AttendanceStatItem(
                       title: 'Pendientes',
                       value: '${pendingQueue.total}',
                       icon: Icons.cloud_upload_outlined,
-                      accent: const Color(0xFF2A789E),
+                      accent: pendingQueue.total > 0
+                          ? const Color(0xFFC85F0F)
+                          : const Color(0xFF3D4F6B),
                     ),
                     AttendanceStatItem(
-                      title: 'Con error',
-                      value: '${pendingQueue.failed}',
-                      icon: Icons.warning_amber_rounded,
-                      accent: const Color(0xFFC85F0F),
-                    ),
-                    AttendanceStatItem(
-                      title: 'Ultima sync',
-                      value: viewData.lastSyncStatText,
-                      icon: Icons.schedule,
-                      accent: const Color(0xFF3D4F6B),
-                    ),
-                    AttendanceStatItem(
-                      title: 'Ultima fichada',
+                      title: 'Última fichada',
                       value: viewData.lastClockStatText,
                       icon: Icons.punch_clock_outlined,
-                      accent: const Color(0xFF315D52),
+                      accent: const Color(0xFF5C3D8F),
                     ),
                   ],
                 ),
-                const SizedBox(height: 12),
-                Card(
-                  child: Padding(
-                    padding: const EdgeInsets.fromLTRB(14, 14, 14, 14),
-                        child: Column(
-                      crossAxisAlignment: CrossAxisAlignment.start,
-                      children: [
-                        Row(
-                          children: [
-                            const Icon(Icons.qr_code_2_outlined),
-                            const SizedBox(width: 8),
-                            Text(
-                              'Fichar',
-                              style: Theme.of(context).textTheme.titleMedium,
-                            ),
-                          ],
-                        ),
-                        const SizedBox(height: 4),
-                        const Text(
-                          'Escanea el QR en el punto de control. Detectamos ingreso/egreso automaticamente.',
-                        ),
-                        const SizedBox(height: 12),
-                        AttendanceClockPanel(
-                          warming: readiness.warming,
-                          readinessBadges: [
-                            AttendanceReadinessBadgeData(
-                              text: viewData.configPrepText,
-                              ready: viewData.configReady,
-                            ),
-                            AttendanceReadinessBadgeData(
-                              text: viewData.cameraPrepText,
-                              ready: viewData.cameraReady,
-                            ),
-                            AttendanceReadinessBadgeData(
-                              text: viewData.locationPrepText,
-                              ready: viewData.locationReady &&
-                                  viewData.locationServiceReady,
-                            ),
-                            AttendanceReadinessBadgeData(
-                              text: viewData.gpsPrepText,
-                              ready: viewData.hasFreshGps,
-                            ),
-                          ],
-                          readinessSummary: viewData.readinessSummary,
-                          readinessCheckText: viewData.readinessCheckText,
-                          phaseText: _clockActionPhase,
-                          mainAction: _buttonData(actionViewData.clockMain),
-                          secondaryActions: actionViewData.clockSecondary
-                              .map(_buttonData)
-                              .toList(growable: false),
-                          gpsText: viewData.gpsText,
-                          lastQrText: _lastQrData == null
-                              ? null
-                              : _shortQr(_lastQrData!),
-                        ),
-                      ],
-                    ),
+                // ── Readiness strip: solo visible si algo no está listo ────
+                if (!viewData.configReady ||
+                    !viewData.cameraReady ||
+                    !(viewData.locationReady && viewData.locationServiceReady) ||
+                    !viewData.hasFreshGps ||
+                    readiness.warming ||
+                    _clockActionPhase != null) ...[
+                  const SizedBox(height: 12),
+                  AttendanceReadinessStrip(
+                    warming: readiness.warming,
+                    phaseText: _clockActionPhase,
+                    badges: [
+                      AttendanceReadinessBadgeData(
+                        text: viewData.configPrepText,
+                        ready: viewData.configReady,
+                      ),
+                      AttendanceReadinessBadgeData(
+                        text: viewData.cameraPrepText,
+                        ready: viewData.cameraReady,
+                      ),
+                      AttendanceReadinessBadgeData(
+                        text: viewData.locationPrepText,
+                        ready: viewData.locationReady &&
+                            viewData.locationServiceReady,
+                      ),
+                      AttendanceReadinessBadgeData(
+                        text: viewData.gpsPrepText,
+                        ready: viewData.hasFreshGps,
+                      ),
+                    ],
                   ),
-                ),
+                ],
                 const SizedBox(height: 12),
+                // ── Quick actions ──────────────────────────────────
                 AttendanceQuickActionsCard(
-                  columns: viewData.quickActionColumns,
-                  ratio: viewData.quickActionRatio,
                   items: actionViewData.quickActions
                       .map(_quickActionItem)
                       .toList(growable: false),
                 ),
-                const SizedBox(height: 12),
-                AttendanceDiagnosticsCard(
-                  ruleBadges: [
-                    if (_config != null) ...[
-                      AttendanceRuleChip(
-                        label: 'QR',
-                        enabled: _config!.requiereQr,
-                      ),
-                      AttendanceRuleChip(
-                        label: 'FOTO',
-                        enabled: _config!.requiereFoto,
-                      ),
-                      const AttendanceRuleChip(label: 'GPS', enabled: true),
-                      AttendanceInfoChip(
-                        'Cooldown: ${_config!.cooldownScanSegundos}s',
-                      ),
-                      if (_config!.intervaloMinimoFichadasMinutos != null)
-                        AttendanceInfoChip(
-                          'Intervalo minimo: ${_config!.intervaloMinimoFichadasMinutos} min',
-                        ),
-                      if (_config!.toleranciaGlobal != null)
-                        AttendanceInfoChip(
-                          'Tolerancia: ${_config!.toleranciaGlobal} min',
-                        ),
-                      if (_config!.metodosHabilitados.isNotEmpty)
-                        AttendanceInfoChip(
-                          'Metodos: ${_config!.metodosHabilitados.join(', ')}',
-                        ),
-                    ],
-                  ],
-                  hasMetrics: clockMetrics.hasSamples,
-                  sampleCount: clockMetrics.sampleCount,
-                  lastClockText: viewData.lastClockStatText == '-'
-                      ? null
-                      : viewData.lastClockStatText,
-                  lastTotalText: viewData.lastClockTotalText,
-                  lastApiText: viewData.lastClockApiText,
-                  lastGpsText: viewData.lastClockGpsText,
-                  lastPhotoText: viewData.lastClockPhotoText,
-                  averageTotalText: viewData.avgTotal,
-                  averageApiText: viewData.avgApi,
-                  lastQrText: _lastQrData == null ? null : _shortQr(_lastQrData!),
-                ),
-                const SizedBox(height: 12),
-                const Card(
-                  child: Padding(
-                    padding: EdgeInsets.all(12),
-                    child: Text(
-                      'Para fichar con QR la ubicacion del dispositivo es obligatoria. '
-                      'Si no hay internet, la marca queda en cola offline. '
-                      'Desliza hacia abajo para refrescar.',
-                    ),
+              ],
+            ),
+          ),
+        ),
+          ),
+          // ── Overlay de procesamiento (visible mientras _submitting = true) ─
+          if (_submitting)
+            _ClockProcessingOverlay(phase: _clockActionPhase),
+        ],
+      ),
+    );
+  }
+
+}
+
+// ─── Menu actions ────────────────────────────────────────────────────────────
+
+enum _HomeMenuAction { biometrics, security, diagnostics, lockSession, logout }
+
+// ─── Processing overlay ───────────────────────────────────────────────────────
+
+/// Overlay que cubre el body mientras se procesa una fichada.
+/// Aparece en cuanto el usuario vuelve de la pantalla de escaneo QR y
+/// desaparece al terminar (success, error u offline queued).
+class _ClockProcessingOverlay extends StatelessWidget {
+  const _ClockProcessingOverlay({required this.phase});
+
+  final String? phase;
+
+  @override
+  Widget build(BuildContext context) {
+    final theme = Theme.of(context);
+    final cs = theme.colorScheme;
+    return DecoratedBox(
+      decoration: const BoxDecoration(color: Colors.black45),
+      child: Center(
+        child: Card(
+          margin: const EdgeInsets.symmetric(horizontal: 48),
+          shape: RoundedRectangleBorder(
+            borderRadius: BorderRadius.circular(24),
+          ),
+          elevation: 16,
+          child: Padding(
+            padding: const EdgeInsets.symmetric(horizontal: 32, vertical: 36),
+            child: Column(
+              mainAxisSize: MainAxisSize.min,
+              children: [
+                SizedBox(
+                  width: 52,
+                  height: 52,
+                  child: CircularProgressIndicator(
+                    strokeWidth: 3,
+                    color: cs.primary,
                   ),
+                ),
+                const SizedBox(height: 24),
+                AnimatedSwitcher(
+                  duration: const Duration(milliseconds: 250),
+                  child: Text(
+                    phase ?? 'Procesando fichada...',
+                    key: ValueKey(phase),
+                    style: theme.textTheme.titleMedium?.copyWith(
+                      fontWeight: FontWeight.w600,
+                    ),
+                    textAlign: TextAlign.center,
+                  ),
+                ),
+                const SizedBox(height: 6),
+                Text(
+                  'Por favor espera un momento',
+                  style: theme.textTheme.bodySmall?.copyWith(
+                    color: cs.onSurfaceVariant,
+                  ),
+                  textAlign: TextAlign.center,
                 ),
               ],
             ),
@@ -1337,11 +1731,58 @@ class _AttendanceHomePageState extends State<AttendanceHomePage>
       ),
     );
   }
+}
 
-  String _shortQr(String token) {
-    if (token.length <= 38) {
-      return token;
-    }
-    return '${token.substring(0, 22)}...${token.substring(token.length - 12)}';
+// ─── Bottom nav item ──────────────────────────────────────────────────────────
+
+class _NavBarItem extends StatelessWidget {
+  const _NavBarItem({
+    required this.icon,
+    required this.selectedIcon,
+    required this.label,
+    required this.selected,
+    required this.onTap,
+  });
+
+  final Widget icon;
+  final Widget selectedIcon;
+  final String label;
+  final bool selected;
+  final VoidCallback onTap;
+
+  @override
+  Widget build(BuildContext context) {
+    final cs = Theme.of(context).colorScheme;
+    final color = selected ? cs.primary : cs.onSurfaceVariant;
+    return Expanded(
+      child: InkWell(
+        onTap: onTap,
+        customBorder: const RoundedRectangleBorder(
+          borderRadius: BorderRadius.all(Radius.circular(8)),
+        ),
+        child: Padding(
+          padding: const EdgeInsets.symmetric(vertical: 6),
+          child: Column(
+            mainAxisSize: MainAxisSize.min,
+            children: [
+              IconTheme(
+                data: IconThemeData(color: color, size: 24),
+                child: selected ? selectedIcon : icon,
+              ),
+              const SizedBox(height: 2),
+              Text(
+                label,
+                style: TextStyle(
+                  fontSize: 11,
+                  color: color,
+                  fontWeight:
+                      selected ? FontWeight.w700 : FontWeight.normal,
+                ),
+              ),
+            ],
+          ),
+        ),
+      ),
+    );
   }
 }

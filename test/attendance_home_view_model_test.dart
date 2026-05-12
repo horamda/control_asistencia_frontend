@@ -88,7 +88,6 @@ void main() {
       expect(data.lastClockApiText, '3s');
       expect(data.lastClockGpsText, '2s');
       expect(data.lastClockPhotoText, isNull);
-      expect(data.quickActionColumns, 3);
     });
 
     test('marca jornada en curso cuando todo esta listo', () {
@@ -135,7 +134,6 @@ void main() {
       expect(data.lastClockText, '09:50 (hace 10m)');
       expect(data.contentMaxWidth, 460.0);
       expect(data.horizontalPadding, 12.0);
-      expect(data.quickActionColumns, 1);
     });
   });
 }

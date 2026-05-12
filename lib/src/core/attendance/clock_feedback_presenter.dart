@@ -14,7 +14,7 @@ class ClockFeedbackPresenter {
 
   ClockUserNotice missingConfig() {
     return const ClockUserNotice(
-      message: 'No se pudo obtener la configuracion de fichada. Reintenta.',
+      message: 'No se pudo obtener la configuración de fichada. Reintenta.',
       isError: true,
     );
   }
@@ -31,7 +31,7 @@ class ClockFeedbackPresenter {
       message: 'Debes habilitar $missing en Ajustes para continuar.',
       isError: true,
       duration: const Duration(seconds: 5),
-      action: missing.trim().toLowerCase() == 'la camara'
+      action: missing.trim().toLowerCase() == 'la cámara'
           ? ClockNoticeAction.openAppSettings
           : ClockNoticeAction.openAppSettings,
     );
@@ -39,7 +39,7 @@ class ClockFeedbackPresenter {
 
   ClockUserNotice locationServiceDisabled() {
     return const ClockUserNotice(
-      message: 'Activa el GPS del telefono para continuar con la fichada.',
+      message: 'Activá el GPS del teléfono para continuar con la fichada.',
       isError: true,
       duration: Duration(seconds: 5),
       action: ClockNoticeAction.openLocationSettings,
@@ -54,12 +54,10 @@ class ClockFeedbackPresenter {
       case QrClockSubmissionStatus.success:
         final response = result.response!;
         final accion = (response.accion ?? 'movimiento').trim();
-        final estado = response.estado ?? '-';
         return ClockSubmissionPresentation(
           notice: ClockUserNotice(
-            message:
-                'Fichada de $accion registrada. ID: ${response.id}. Estado: $estado. '
-                'Tiempo total: ${formatDuration(result.totalDuration)}.',
+            message: 'Fichada de $accion registrada correctamente.',
+            duration: const Duration(seconds: 4),
           ),
           shouldSyncPendingSilently: true,
         );
@@ -67,8 +65,9 @@ class ClockFeedbackPresenter {
         return const ClockSubmissionPresentation(
           notice: ClockUserNotice(
             message:
-                'Sin internet: fichada guardada como pendiente de sincronizacion.',
+                'Sin conexión — fichada guardada. Se enviará automáticamente cuando recuperés internet.',
             tone: ClockFeedbackTone.offlineQueued,
+            duration: Duration(seconds: 5),
           ),
         );
       case QrClockSubmissionStatus.offlineQueueFull:

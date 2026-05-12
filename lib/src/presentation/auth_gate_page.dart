@@ -3,8 +3,11 @@ import 'dart:async';
 import 'package:flutter/material.dart';
 
 import '../config/app_config.dart';
+import '../core/auth/biometric_credential_cache.dart';
+import '../core/auth/offline_credentials_cache.dart';
 import '../core/auth/session_manager.dart';
 import '../core/network/mobile_api_client.dart';
+import '../core/network/pinned_http_client.dart';
 import '../core/permissions/device_permission_bootstrap.dart';
 import 'attendance/attendance_home_page.dart';
 import 'auth/login_page.dart';
@@ -21,6 +24,12 @@ class _AuthGatePageState extends State<AuthGatePage> {
   late final MobileApiClient _apiClient;
   late final SessionManager _sessionManager;
   late final DevicePermissionBootstrap _devicePermissionBootstrap;
+  final _offlineCredentialsCache = OfflineCredentialsCache();
+  final _biometricCredentialCache = BiometricCredentialCache();
+  bool _hasBiometricReauthCreds = false;
+  bool _biometricReauthApiLoading = false;
+  String? _biometricReauthError;
+  bool _autoTriggeredReauth = false;
   bool _bootstrappingDevicePermissions = false;
   bool _devicePermissionBootstrapDoneForSession = false;
   bool _permissionBootstrapMessageShownForSession = false;
@@ -31,12 +40,32 @@ class _AuthGatePageState extends State<AuthGatePage> {
       return;
     }
     _scheduleDevicePermissionBootstrap();
+    _maybeTriggerBiometricAutoReauth();
     setState(() {});
+  }
+
+  void _maybeTriggerBiometricAutoReauth() {
+    if (_autoTriggeredReauth) return;
+    if (_sessionManager.isBootstrapping) return;
+    if (_sessionManager.session != null) return;
+    if (_sessionManager.isLocked) return;
+    if (!_hasBiometricReauthCreds) return;
+    if (!_sessionManager.biometricAvailable) return;
+    if (!_sessionManager.biometricEnabled) return;
+    _autoTriggeredReauth = true;
+    WidgetsBinding.instance.addPostFrameCallback((_) {
+      if (mounted) unawaited(_onBiometricReauth());
+    });
   }
 
   @override
   void initState() {
     super.initState();
+    assert(
+      AppConfig.current.apiBaseUrl.isNotEmpty,
+      'API_BASE_URL no fue inyectada en tiempo de compilacion.\n'
+      'Ejecuta: flutter build apk --dart-define=API_BASE_URL=https://tu-backend.com',
+    );
     _apiClient = MobileApiClient(
       baseUrl: AppConfig.current.apiBaseUrl,
       mobileApiPrefix: AppConfig.current.mobileApiPrefix,
@@ -62,6 +91,13 @@ class _AuthGatePageState extends State<AuthGatePage> {
       setState(() {});
     });
     _sessionManager.bootstrap();
+    unawaited(_checkBiometricReauthCreds());
+    // Upgrade al cliente con certificate pinning en cuanto el asset este listo.
+    // Si el asset no existe todavia, PinnedHttpClient.create() devuelve un
+    // http.Client() estandar sin lanzar excepcion (ver pinned_http_client.dart).
+    unawaited(
+      PinnedHttpClient.create().then(_apiClient.upgradeHttpClient),
+    );
   }
 
   void _scheduleDevicePermissionBootstrap() {
@@ -111,8 +147,8 @@ class _AuthGatePageState extends State<AuthGatePage> {
           (!result.cameraGranted || !result.locationGranted)) {
         _permissionBootstrapMessageShownForSession = true;
         final missing = <String>[
-          if (!result.cameraGranted) 'camara',
-          if (!result.locationGranted) 'ubicacion',
+          if (!result.cameraGranted) 'cámara',
+          if (!result.locationGranted) 'ubicación',
         ].join(' y ');
         WidgetsBinding.instance.addPostFrameCallback((_) {
           if (!mounted) {
@@ -120,7 +156,7 @@ class _AuthGatePageState extends State<AuthGatePage> {
           }
           showCenteredSnackBar(
             context,
-            text: 'Para fichar, habilita $missing en Ajustes del telefono.',
+            text: 'Para fichar, habilitá $missing en Ajustes del teléfono.',
             isError: true,
             duration: const Duration(seconds: 5),
             action: SnackBarAction(
@@ -157,17 +193,87 @@ class _AuthGatePageState extends State<AuthGatePage> {
   }
 
   Future<void> _onLoginSuccess(LoginResponse session) async {
+    _autoTriggeredReauth = false;
     await _sessionManager.onLoginSuccess(session);
     _scheduleDevicePermissionBootstrap();
+    unawaited(_checkBiometricReauthCreds());
     if (mounted) {
-      setState(() {});
+      setState(() {
+        _biometricReauthApiLoading = false;
+        _biometricReauthError = null;
+      });
     }
   }
 
+  Future<void> _checkBiometricReauthCreds() async {
+    final has = await _biometricCredentialCache.hasCredentials;
+    if (!mounted) return;
+    setState(() => _hasBiometricReauthCreds = has);
+    _maybeTriggerBiometricAutoReauth();
+  }
+
   Future<void> _logoutDevice() async {
-    await _sessionManager.logout(clearStored: true);
-    if (mounted) {
-      setState(() {});
+    // Reset so biometric auto-trigger fires again on the login screen.
+    _autoTriggeredReauth = false;
+    await Future.wait([
+      _sessionManager.logout(clearStored: true),
+      _offlineCredentialsCache.clear(),
+      // Biometric credentials are kept intentionally: the user should be
+      // able to log back in with fingerprint right after closing the session.
+    ]);
+    // Re-check so the login page reflects the correct biometric state.
+    if (mounted) unawaited(_checkBiometricReauthCreds());
+  }
+
+  Future<void> _onBiometricReauth() async {
+    setState(() {
+      _biometricReauthError = null;
+    });
+
+    // Fase 1: verificar huella (SessionManager gestiona el loading)
+    final verified = await _sessionManager.verifyBiometricOnly();
+    if (!verified || !mounted) return;
+
+    // Fase 2: obtener credenciales cacheadas
+    final creds = await _biometricCredentialCache.read();
+    if (creds == null || !mounted) {
+      // Creds desaparecieron inesperadamente; limpiamos el estado
+      setState(() => _hasBiometricReauthCreds = false);
+      return;
+    }
+
+    // Fase 3: login contra la API con las credenciales guardadas
+    setState(() => _biometricReauthApiLoading = true);
+    try {
+      final session = await _apiClient.login(
+        dni: creds.dni,
+        password: creds.password,
+      );
+      if (!mounted) return;
+      await _onLoginSuccess(session);
+    } on ApiException catch (e) {
+      if (!mounted) return;
+      if (e.statusCode == 401 || e.statusCode == 403) {
+        await _biometricCredentialCache.clear();
+        if (!mounted) return;
+        setState(() {
+          _hasBiometricReauthCreds = false;
+          _biometricReauthError =
+              'Tu contraseña fue cambiada. Ingresá con DNI y contraseña para reactivar el acceso por huella.';
+          _biometricReauthApiLoading = false;
+        });
+      } else {
+        setState(() {
+          _biometricReauthError = e.message;
+          _biometricReauthApiLoading = false;
+        });
+      }
+    } catch (_) {
+      if (!mounted) return;
+      setState(() {
+        _biometricReauthError = 'Error al autenticar con huella.';
+        _biometricReauthApiLoading = false;
+      });
     }
   }
 
@@ -207,8 +313,11 @@ class _AuthGatePageState extends State<AuthGatePage> {
       return LoginPage(
         apiClient: _apiClient,
         onLoginSuccess: _onLoginSuccess,
+        offlineCredentialsCache: _offlineCredentialsCache,
+        biometricCredentialCache: _biometricCredentialCache,
         biometricAvailable: _sessionManager.biometricAvailable,
         hasStoredSession: _sessionManager.hasStoredSession,
+        biometricEnabled: _sessionManager.biometricEnabled,
         onBiometricLogin:
             (_sessionManager.hasStoredSession &&
                 _sessionManager.canUseBiometric)
@@ -216,9 +325,17 @@ class _AuthGatePageState extends State<AuthGatePage> {
                 await _sessionManager.restoreWithBiometrics(auto: false);
               }
             : null,
+        onBiometricReauth:
+            (_hasBiometricReauthCreds &&
+                !_sessionManager.hasStoredSession &&
+                _sessionManager.biometricAvailable &&
+                _sessionManager.biometricEnabled)
+            ? _onBiometricReauth
+            : null,
         biometricLoading: _sessionManager.isBiometricLoading,
-        biometricError: _sessionManager.statusMessage,
-        biometricEnabled: _sessionManager.biometricEnabled,
+        biometricReauthLoading: _biometricReauthApiLoading,
+        biometricError:
+            _sessionManager.statusMessage ?? _biometricReauthError,
       );
     }
 
@@ -330,7 +447,7 @@ class _SessionLockedView extends StatelessWidget {
                               child: OutlinedButton.icon(
                                 onPressed: loading ? null : onLogout,
                                 icon: const Icon(Icons.logout),
-                                label: const Text('Cerrar sesion'),
+                                label: const Text('Cerrar sesión'),
                               ),
                             ),
                           ],

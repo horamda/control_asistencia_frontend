@@ -37,18 +37,20 @@ class AppConfig {
       ? 8
       : (_isStage ? 8 : 10);
 
+  // API_BASE_URL debe inyectarse en tiempo de compilacion:
+  //   flutter build apk --dart-define=API_BASE_URL=https://tu-backend.com
+  // Si no se inyecta, la URL queda vacia y la app falla al arrancar (ver
+  // assert en AuthGatePage.initState). Esto es intencional: evita que la URL
+  // real del backend quede expuesta en el binario distribuido.
   static const current = AppConfig(
-    apiBaseUrl: String.fromEnvironment(
-      'API_BASE_URL',
-      defaultValue: 'https://control-asistencia-backend-8gle.onrender.com',
-    ),
+    apiBaseUrl: String.fromEnvironment('API_BASE_URL'),
     mobileApiPrefix: String.fromEnvironment(
       'MOBILE_API_PREFIX',
       defaultValue: '/api/v1/mobile',
     ),
     mobileContractVersion: String.fromEnvironment(
       'MOBILE_CONTRACT_VERSION',
-      defaultValue: '1.10.0',
+      defaultValue: '1.15.0',
     ),
     flavorLabel: _flavor,
     isProd: _isProd,

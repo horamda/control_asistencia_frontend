@@ -40,24 +40,24 @@ class BiometricAuthService {
         localizedReason: reason,
         authMessages: const <AuthMessages>[
           AndroidAuthMessages(
-            signInTitle: 'Autenticacion requerida',
+            signInTitle: 'Autenticación requerida',
             biometricHint: 'Toca el sensor de huellas digitales',
             biometricNotRecognized:
                 'Huella no reconocida. Intenta nuevamente.',
             biometricRequiredTitle: 'Huella requerida',
             biometricSuccess: 'Huella validada',
             cancelButton: 'Cancelar',
-            goToSettingsButton: 'Ir a configuracion',
+            goToSettingsButton: 'Ir a configuración',
             goToSettingsDescription:
                 'Configura tu huella para habilitar este acceso.',
           ),
           IOSAuthMessages(
             cancelButton: 'Cancelar',
-            goToSettingsButton: 'Ir a configuracion',
+            goToSettingsButton: 'Ir a configuración',
             goToSettingsDescription:
                 'Habilita Touch ID o Face ID para continuar.',
             lockOut:
-                'Biometria bloqueada temporalmente. Desbloquea el dispositivo e intenta de nuevo.',
+                'Biometría bloqueada temporalmente. Desbloquea el dispositivo e intenta de nuevo.',
           ),
         ],
         options: const AuthenticationOptions(

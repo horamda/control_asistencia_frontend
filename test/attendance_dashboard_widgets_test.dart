@@ -120,8 +120,6 @@ void main() {
           Column(
             children: [
               AttendanceQuickActionsCard(
-                columns: 2,
-                ratio: 2.5,
                 items: [
                   AttendanceQuickActionItem(
                     icon: Icons.timeline_outlined,

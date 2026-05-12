@@ -113,6 +113,7 @@ Future<void> _pumpScenario(
                   AttendanceHeroCard(
                     photoUrl: '',
                     token: '',
+                    greeting: 'Buenos dias',
                     employeeName: 'Horacio Perez',
                     employeeDni: '30111222',
                     employeeCompany: 'Empresa: 17',
@@ -137,7 +138,7 @@ Future<void> _pumpScenario(
                     ),
                   ),
                   const SizedBox(height: 12),
-                  AttendanceStatsGrid(
+                  AttendanceStatsCarousel(
                     items: [
                       AttendanceStatItem(
                         title: 'Pendientes',
@@ -222,8 +223,6 @@ Future<void> _pumpScenario(
                   ),
                   const SizedBox(height: 12),
                   AttendanceQuickActionsCard(
-                    columns: scenario.viewData.quickActionColumns,
-                    ratio: scenario.viewData.quickActionRatio,
                     items: scenario.actions.quickActions
                         .map(_quickActionItem)
                         .toList(growable: false),

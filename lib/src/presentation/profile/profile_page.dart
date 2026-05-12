@@ -1,4 +1,5 @@
 import 'dart:async';
+import 'dart:io';
 
 import 'package:flutter/material.dart';
 import 'package:image_picker/image_picker.dart';
@@ -10,10 +11,18 @@ import '../widgets/centered_snackbar.dart';
 import '../widgets/employee_photo_widget.dart';
 
 class ProfilePage extends StatefulWidget {
-  const ProfilePage({super.key, required this.apiClient, required this.token});
+  const ProfilePage({
+    super.key,
+    required this.apiClient,
+    required this.token,
+    this.employeeDni,
+  });
 
   final MobileApiClient apiClient;
   final String token;
+  /// DNI del empleado para construir la URL de foto como fallback cuando
+  /// [EmployeeProfile.dni] es null (puede ocurrir en ciertos perfiles).
+  final String? employeeDni;
 
   @override
   State<ProfilePage> createState() => _ProfilePageState();
@@ -33,6 +42,8 @@ class _ProfilePageState extends State<ProfilePage> {
   bool _uploadingPhoto = false;
   bool _deletingPhoto = false;
   bool _savingPassword = false;
+  bool _obscureActual = true;
+  bool _obscureNueva = true;
   String? _error;
   EmployeeProfile? _profile;
   XFile? _selectedPhoto;
@@ -54,94 +65,66 @@ class _ProfilePageState extends State<ProfilePage> {
   }
 
   Future<void> _loadProfile() async {
-    final previousPhotoUrl = _photoUrlForProfile(_profile);
+    final previousPhotoUrl = _photoUrl(_profile);
     setState(() {
       _loading = true;
       _error = null;
     });
     try {
       final profile = await widget.apiClient.getMe(token: widget.token);
-      final nextPhotoUrl = _photoUrlForProfile(profile);
+      final nextPhotoUrl = _photoUrl(profile);
       if (previousPhotoUrl != nextPhotoUrl) {
         await ProfilePhotoCache.evict(previousPhotoUrl);
       }
-      if (!mounted) {
-        return;
-      }
+      if (!mounted) return;
       setState(() {
         _profile = profile;
         _telefonoController.text = profile.telefono ?? '';
         _direccionController.text = profile.direccion ?? '';
       });
     } on ApiException catch (e) {
-      if (!mounted) {
-        return;
-      }
-      setState(() {
-        _error = e.message;
-      });
+      if (!mounted) return;
+      setState(() => _error = e.message);
     } catch (_) {
-      if (!mounted) {
-        return;
-      }
-      setState(() {
-        _error = 'Error inesperado al consultar perfil.';
-      });
+      if (!mounted) return;
+      setState(() => _error = 'Error inesperado al consultar perfil.');
     } finally {
-      if (mounted) {
-        setState(() {
-          _loading = false;
-        });
-      }
+      if (mounted) setState(() => _loading = false);
     }
   }
 
   Future<void> _saveProfile() async {
-    if (_savingProfile) {
-      return;
-    }
-    setState(() {
-      _savingProfile = true;
-    });
+    if (_savingProfile) return;
+    setState(() => _savingProfile = true);
     try {
       final updated = await widget.apiClient.updatePerfil(
         token: widget.token,
         telefono: _telefonoController.text.trim(),
         direccion: _direccionController.text.trim(),
       );
-      if (!mounted) {
-        return;
-      }
+      if (!mounted) return;
       setState(() {
         _telefonoController.text = updated.telefono ?? '';
         _direccionController.text = updated.direccion ?? '';
       });
-      _showMessage('Perfil actualizado correctamente.');
+      _showMsg('Perfil actualizado correctamente.');
       await _loadProfile();
     } on ApiException catch (e) {
-      if (!mounted) {
-        return;
-      }
-      _showMessage(e.message, isError: true);
+      if (!mounted) return;
+      _showMsg(e.message, isError: true);
     } catch (_) {
-      if (!mounted) {
-        return;
-      }
-      _showMessage('Error inesperado al actualizar perfil.', isError: true);
+      if (!mounted) return;
+      _showMsg('Error inesperado al actualizar perfil.', isError: true);
     } finally {
-      if (mounted) {
-        setState(() {
-          _savingProfile = false;
-        });
-      }
+      if (mounted) setState(() => _savingProfile = false);
     }
   }
 
   Future<void> _pickPhoto(ImageSource source) async {
     if (source == ImageSource.camera) {
-      final cameraGranted = await _devicePermissionBootstrap.isCameraGranted();
-      if (!cameraGranted) {
-        _showCameraSettingsMessage();
+      final ok = await _devicePermissionBootstrap.isCameraGranted();
+      if (!ok) {
+        _showCameraSettings();
         return;
       }
     }
@@ -149,40 +132,27 @@ class _ProfilePageState extends State<ProfilePage> {
       final picked = await _imagePicker.pickImage(
         source: source,
         imageQuality: 72,
-        maxWidth: 960,
-        maxHeight: 960,
+        maxWidth: 800,
+        maxHeight: 800,
         requestFullMetadata: false,
       );
-      if (picked == null || !mounted) {
-        return;
-      }
+      if (picked == null || !mounted) return;
       final size = await picked.length();
       setState(() {
         _selectedPhoto = picked;
         _selectedPhotoBytes = size;
       });
     } catch (_) {
-      if (!mounted) {
-        return;
-      }
-      _showMessage('No se pudo abrir la camara/galeria.', isError: true);
+      if (!mounted) return;
+      _showMsg('No se pudo abrir la cámara/galería.', isError: true);
     }
   }
 
   Future<void> _uploadSelectedPhoto() async {
     final selected = _selectedPhoto;
-    final previousPhotoUrl = _photoUrlForProfile(_profile);
-    if (selected == null) {
-      _showMessage('Selecciona una foto antes de subir.', isError: true);
-      return;
-    }
-    if (_uploadingPhoto) {
-      return;
-    }
-
-    setState(() {
-      _uploadingPhoto = true;
-    });
+    if (selected == null || _uploadingPhoto) return;
+    final previousUrl = _photoUrl(_profile);
+    setState(() => _uploadingPhoto = true);
     try {
       final updated = await widget.apiClient.updatePerfilConFotoFile(
         token: widget.token,
@@ -190,529 +160,407 @@ class _ProfilePageState extends State<ProfilePage> {
         telefono: _telefonoController.text.trim(),
         direccion: _direccionController.text.trim(),
       );
-      await ProfilePhotoCache.evict(previousPhotoUrl);
-      if (!mounted) {
-        return;
-      }
+      await ProfilePhotoCache.evict(previousUrl);
+      if (!mounted) return;
       setState(() {
         _selectedPhoto = null;
         _selectedPhotoBytes = null;
         _telefonoController.text = updated.telefono ?? '';
         _direccionController.text = updated.direccion ?? '';
       });
-      _showMessage('Foto de perfil actualizada.');
+      _showMsg('Foto de perfil actualizada.');
       await _loadProfile();
     } on ApiException catch (e) {
-      if (!mounted) {
-        return;
-      }
-      _showMessage(e.message, isError: true);
+      if (!mounted) return;
+      _showMsg(e.message, isError: true);
     } catch (_) {
-      if (!mounted) {
-        return;
-      }
-      _showMessage('Error inesperado al subir foto.', isError: true);
+      if (!mounted) return;
+      _showMsg('Error inesperado al subir foto.', isError: true);
     } finally {
-      if (mounted) {
-        setState(() {
-          _uploadingPhoto = false;
-        });
-      }
+      if (mounted) setState(() => _uploadingPhoto = false);
     }
   }
 
   Future<void> _deletePhoto() async {
-    final previousPhotoUrl = _photoUrlForProfile(_profile);
-    if (_deletingPhoto) {
-      return;
-    }
-
+    if (_deletingPhoto) return;
     final confirmed = await showDialog<bool>(
       context: context,
-      builder: (context) {
-        return AlertDialog(
-          title: const Text('Eliminar foto'),
-          content: const Text('Se eliminara tu foto de perfil actual.'),
-          actions: [
-            TextButton(
-              onPressed: () => Navigator.of(context).pop(false),
-              child: const Text('Cancelar'),
-            ),
-            FilledButton(
-              onPressed: () => Navigator.of(context).pop(true),
-              child: const Text('Eliminar'),
-            ),
-          ],
-        );
-      },
+      builder: (ctx) => AlertDialog(
+        title: const Text('Eliminar foto'),
+        content: const Text('Se eliminara tu foto de perfil actual.'),
+        actions: [
+          TextButton(
+            onPressed: () => Navigator.pop(ctx, false),
+            child: const Text('Cancelar'),
+          ),
+          FilledButton(
+            onPressed: () => Navigator.pop(ctx, true),
+            child: const Text('Eliminar'),
+          ),
+        ],
+      ),
     );
-    if (confirmed != true) {
-      return;
-    }
-
-    setState(() {
-      _deletingPhoto = true;
-    });
+    if (confirmed != true || !mounted) return;
+    final previousUrl = _photoUrl(_profile);
+    setState(() => _deletingPhoto = true);
     try {
       await widget.apiClient.deleteFotoPerfil(token: widget.token);
-      await ProfilePhotoCache.evict(previousPhotoUrl);
-      if (!mounted) {
-        return;
-      }
+      await ProfilePhotoCache.evict(previousUrl);
+      if (!mounted) return;
       setState(() {
         _selectedPhoto = null;
         _selectedPhotoBytes = null;
       });
-      _showMessage('Foto eliminada.');
+      _showMsg('Foto eliminada.');
       await _loadProfile();
     } on ApiException catch (e) {
-      if (!mounted) {
-        return;
-      }
-      _showMessage(e.message, isError: true);
+      if (!mounted) return;
+      _showMsg(e.message, isError: true);
     } catch (_) {
-      if (!mounted) {
-        return;
-      }
-      _showMessage('Error inesperado al eliminar foto.', isError: true);
+      if (!mounted) return;
+      _showMsg('Error inesperado al eliminar foto.', isError: true);
     } finally {
-      if (mounted) {
-        setState(() {
-          _deletingPhoto = false;
-        });
-      }
+      if (mounted) setState(() => _deletingPhoto = false);
     }
   }
 
   Future<void> _savePassword() async {
-    if (_savingPassword) {
-      return;
-    }
+    if (_savingPassword) return;
     final current = _passwordActualController.text;
     final next = _passwordNuevaController.text;
     if (current.trim().isEmpty || next.trim().isEmpty) {
-      _showMessage('Completa password actual y nueva.', isError: true);
+      _showMsg('Completa password actual y nueva.', isError: true);
       return;
     }
     if (next.trim().length < 8) {
-      _showMessage(
+      _showMsg(
         'La nueva password debe tener al menos 8 caracteres.',
         isError: true,
       );
       return;
     }
-
-    setState(() {
-      _savingPassword = true;
-    });
+    setState(() => _savingPassword = true);
     try {
       await widget.apiClient.updatePassword(
         token: widget.token,
         passwordActual: current,
         passwordNueva: next,
       );
-      if (!mounted) {
-        return;
-      }
+      if (!mounted) return;
       _passwordActualController.clear();
       _passwordNuevaController.clear();
-      _showMessage('Password actualizada correctamente.');
+      _showMsg('Password actualizada correctamente.');
     } on ApiException catch (e) {
-      if (!mounted) {
-        return;
-      }
-      _showMessage(e.message, isError: true);
+      if (!mounted) return;
+      _showMsg(e.message, isError: true);
     } catch (_) {
-      if (!mounted) {
-        return;
-      }
-      _showMessage('Error inesperado al actualizar password.', isError: true);
+      if (!mounted) return;
+      _showMsg('Error inesperado al actualizar password.', isError: true);
     } finally {
-      if (mounted) {
-        setState(() {
-          _savingPassword = false;
-        });
-      }
+      if (mounted) setState(() => _savingPassword = false);
     }
   }
 
-  void _showMessage(String text, {bool isError = false}) {
-    showCenteredSnackBar(
-      context,
-      text: text,
-      isError: isError,
-    );
+  void _showMsg(String text, {bool isError = false}) {
+    showCenteredSnackBar(context, text: text, isError: isError);
   }
 
-  void _showCameraSettingsMessage() {
+  void _showCameraSettings() {
     showCenteredSnackBar(
       context,
-      text: 'Debes habilitar la camara en Ajustes para actualizar la foto.',
+      text: 'Debés habilitar la cámara en Ajustes para actualizar la foto.',
       isError: true,
       duration: const Duration(seconds: 5),
       action: SnackBarAction(
         label: 'Ajustes',
         textColor: Colors.white,
-        onPressed: () {
-          unawaited(_devicePermissionBootstrap.openAppSettings());
-        },
+        onPressed: () => unawaited(_devicePermissionBootstrap.openAppSettings()),
       ),
     );
   }
 
-  String _fmtBytes(int? value) {
-    if (value == null || value <= 0) {
-      return '-';
+  String _photoUrl(EmployeeProfile? profile) {
+    if (profile == null) return '';
+    final effectiveDni = profile.dni ?? widget.employeeDni;
+    // Preferir siempre el endpoint canonico /empleados/imagen/{dni} ya que
+    // el campo `foto` del backend puede ser una URL relativa (sin esquema)
+    // que ProfilePhotoCache.resolve descarta, dejando la foto en blanco.
+    if (effectiveDni != null && effectiveDni.isNotEmpty) {
+      return widget.apiClient.buildEmpleadoImagenUrl(
+        dni: effectiveDni,
+        version: profile.imagenVersion,
+      );
     }
+    // Ultimo fallback: usar foto absoluta si la hay
+    return ProfilePhotoCache.withVersion(profile.foto, version: profile.imagenVersion);
+  }
+
+  String _fmtBytes(int? value) {
+    if (value == null || value <= 0) return '–';
     if (value >= 1024 * 1024) {
       return '${(value / (1024 * 1024)).toStringAsFixed(2)} MB';
     }
     return '${(value / 1024).toStringAsFixed(0)} KB';
   }
 
-  String _photoUrlForProfile(EmployeeProfile? profile) {
-    final effectiveProfile = profile;
-    if (effectiveProfile == null) {
-      return '';
-    }
-    return ProfilePhotoCache.resolve(
-      rawUrl: effectiveProfile.foto,
-      dni: effectiveProfile.dni,
-      version: effectiveProfile.imagenVersion,
-      fallbackBuilder: (valueDni, valueVersion) => widget.apiClient
-          .buildEmpleadoImagenUrl(dni: valueDni, version: valueVersion),
-    );
-  }
-
   @override
   Widget build(BuildContext context) {
-    final profile = _profile;
-    final remoteFoto = _photoUrlForProfile(profile);
-    final hasRemoteFoto = remoteFoto.isNotEmpty;
-    final busyPhotoAction = _uploadingPhoto || _deletingPhoto;
+    final p = _profile;
+    final remoteFoto = _photoUrl(p);
+    final busyPhoto = _uploadingPhoto || _deletingPhoto;
 
     return Scaffold(
-      appBar: AppBar(title: const Text('Mi perfil')),
+      appBar: AppBar(
+        title: const Text('Mi perfil'),
+        bottom: (_uploadingPhoto || _deletingPhoto || _savingProfile)
+            ? const PreferredSize(
+                preferredSize: Size.fromHeight(3),
+                child: LinearProgressIndicator(),
+              )
+            : null,
+      ),
       body: _loading
           ? const Center(child: CircularProgressIndicator())
           : RefreshIndicator(
               onRefresh: _loadProfile,
               child: LayoutBuilder(
                 builder: (context, constraints) {
-                  final maxWidth = constraints.maxWidth >= 1200
-                      ? 1040.0
-                      : constraints.maxWidth >= 900
-                      ? 900.0
-                      : double.infinity;
-                  final horizontalPadding = constraints.maxWidth < 600
-                      ? 12.0
-                      : 16.0;
+                  final maxWidth = constraints.maxWidth >= 900 ? 640.0 : double.infinity;
                   return Center(
                     child: ConstrainedBox(
                       constraints: BoxConstraints(maxWidth: maxWidth),
                       child: ListView(
                         physics: const AlwaysScrollableScrollPhysics(),
-                        padding: EdgeInsets.all(horizontalPadding),
+                        padding: const EdgeInsets.symmetric(
+                          horizontal: 16,
+                          vertical: 16,
+                        ),
                         children: [
-                  if (_error != null)
-                    Card(
-                      color: const Color(0xFFFFF4E5),
-                      child: Padding(
-                        padding: const EdgeInsets.all(12),
-                        child: Text(_error!),
-                      ),
-                    ),
-                  if (_error != null) const SizedBox(height: 10),
-                  Card(
-                    child: Padding(
-                      padding: const EdgeInsets.all(14),
-                      child: Column(
-                        crossAxisAlignment: CrossAxisAlignment.start,
-                        children: [
-                          Text(
-                            profile?.nombreCompleto ?? 'Empleado',
-                            style: Theme.of(context).textTheme.titleMedium,
-                          ),
-                          const SizedBox(height: 8),
-                          Text('ID: ${profile?.id ?? '-'}'),
-                          Text('DNI: ${profile?.dni ?? '-'}'),
-                          Text('Legajo: ${profile?.legajo ?? '-'}'),
-                          Text('Email: ${profile?.email ?? '-'}'),
-                          Text('Estado: ${profile?.estado ?? '-'}'),
-                        ],
-                      ),
-                    ),
-                  ),
-                  const SizedBox(height: 12),
-                  Card(
-                    child: Padding(
-                      padding: const EdgeInsets.all(14),
-                      child: Column(
-                        crossAxisAlignment: CrossAxisAlignment.start,
-                        children: [
-                          Text(
-                            'Foto de perfil',
-                            style: Theme.of(context).textTheme.titleSmall,
-                          ),
-                          if (_uploadingPhoto) ...[
-                            const SizedBox(height: 10),
-                            const LinearProgressIndicator(),
-                            const SizedBox(height: 4),
-                            Text(
-                              'Subiendo foto...',
-                              style: Theme.of(context).textTheme.bodySmall,
+                          if (_error != null) ...[
+                            _ErrorBanner(
+                              message: _error!,
+                              onRetry: _loadProfile,
                             ),
+                            const SizedBox(height: 14),
                           ],
-                          const SizedBox(height: 12),
-                          Center(
-                            child: _ProfilePhotoAvatar(
-                              localPhotoPath: _selectedPhoto?.path,
-                              remotePhotoUrl: remoteFoto,
-                              token: widget.token,
+
+                          // ── Hero ───────────────────────────────────
+                          _ProfileHero(
+                            profile: p,
+                            remoteFotoUrl: remoteFoto,
+                            localPhotoPath: _selectedPhoto?.path,
+                            token: widget.token,
+                            busyPhoto: busyPhoto,
+                            onPickCamera: () => _pickPhoto(ImageSource.camera),
+                            onPickGallery: () => _pickPhoto(ImageSource.gallery),
+                          ),
+                          const SizedBox(height: 16),
+
+                          // ── Info tiles ────────────────────────────
+                          if (p != null) ...[
+                            _SectionCard(
+                              title: 'Informacion',
+                              icon: Icons.badge_outlined,
+                              children: [
+                                _InfoTile(
+                                  icon: Icons.numbers_outlined,
+                                  label: 'Legajo',
+                                  value: p.legajo ?? '–',
+                                ),
+                                _InfoTile(
+                                  icon: Icons.fingerprint,
+                                  label: 'DNI',
+                                  value: p.dni ?? '–',
+                                ),
+                                _InfoTile(
+                                  icon: Icons.email_outlined,
+                                  label: 'Email',
+                                  value: p.email ?? '–',
+                                ),
+                                if ((p.telefono ?? '').isNotEmpty)
+                                  _InfoTile(
+                                    icon: Icons.phone_outlined,
+                                    label: 'Telefono',
+                                    value: p.telefono!,
+                                  ),
+                                if ((p.direccion ?? '').isNotEmpty)
+                                  _InfoTile(
+                                    icon: Icons.home_outlined,
+                                    label: 'Direccion',
+                                    value: p.direccion!,
+                                  ),
+                              ],
                             ),
-                          ),
-                          const SizedBox(height: 12),
-                          LayoutBuilder(
-                            builder: (context, constraints) {
-                              if (constraints.maxWidth < 420) {
-                                return Column(
-                                  crossAxisAlignment: CrossAxisAlignment.stretch,
-                                  children: [
-                                    OutlinedButton.icon(
-                                      onPressed: busyPhotoAction
-                                          ? null
-                                          : () => _pickPhoto(ImageSource.camera),
-                                      icon: const Icon(
-                                        Icons.photo_camera_outlined,
-                                      ),
-                                      label: const Text('Camara'),
-                                    ),
-                                    const SizedBox(height: 8),
-                                    OutlinedButton.icon(
-                                      onPressed: busyPhotoAction
-                                          ? null
-                                          : () => _pickPhoto(ImageSource.gallery),
-                                      icon: const Icon(
-                                        Icons.photo_library_outlined,
-                                      ),
-                                      label: const Text('Galeria'),
-                                    ),
-                                  ],
-                                );
-                              }
-                              return Row(
-                                children: [
-                                  Expanded(
-                                    child: OutlinedButton.icon(
-                                      onPressed: busyPhotoAction
-                                          ? null
-                                          : () => _pickPhoto(ImageSource.camera),
-                                      icon: const Icon(
-                                        Icons.photo_camera_outlined,
-                                      ),
-                                      label: const Text('Camara'),
-                                    ),
-                                  ),
-                                  const SizedBox(width: 8),
-                                  Expanded(
-                                    child: OutlinedButton.icon(
-                                      onPressed: busyPhotoAction
-                                          ? null
-                                          : () => _pickPhoto(ImageSource.gallery),
-                                      icon: const Icon(
-                                        Icons.photo_library_outlined,
-                                      ),
-                                      label: const Text('Galeria'),
-                                    ),
-                                  ),
-                                ],
-                              );
-                            },
-                          ),
+                            const SizedBox(height: 12),
+                          ],
+
+                          // ── Photo preview + upload ─────────────────
                           if (_selectedPhoto != null) ...[
-                            const SizedBox(height: 8),
-                            Text(
-                              'Foto seleccionada: ${_selectedPhoto!.name} (${_fmtBytes(_selectedPhotoBytes)})',
-                              style: Theme.of(context).textTheme.bodySmall,
+                            _SectionCard(
+                              title: 'Nueva foto seleccionada',
+                              icon: Icons.photo_outlined,
+                              children: [
+                                _PhotoPreviewRow(
+                                  photoPath: _selectedPhoto!.path,
+                                  sizeLabel: _fmtBytes(_selectedPhotoBytes),
+                                  uploading: _uploadingPhoto,
+                                  onUpload: busyPhoto ? null : _uploadSelectedPhoto,
+                                  onDiscard: busyPhoto
+                                      ? null
+                                      : () => setState(() {
+                                            _selectedPhoto = null;
+                                            _selectedPhotoBytes = null;
+                                          }),
+                                ),
+                              ],
                             ),
-                            const SizedBox(height: 8),
-                            LayoutBuilder(
-                              builder: (context, constraints) {
-                                if (constraints.maxWidth < 420) {
-                                  return Column(
-                                    crossAxisAlignment:
-                                        CrossAxisAlignment.stretch,
-                                    children: [
-                                      FilledButton.icon(
-                                        onPressed: busyPhotoAction
-                                            ? null
-                                            : _uploadSelectedPhoto,
-                                        icon: const Icon(Icons.upload_outlined),
-                                        label: Text(
-                                          _uploadingPhoto
-                                              ? 'Subiendo...'
-                                              : 'Subir foto',
-                                        ),
-                                      ),
-                                      const SizedBox(height: 8),
-                                      OutlinedButton(
-                                        onPressed: busyPhotoAction
-                                            ? null
-                                            : () {
-                                                setState(() {
-                                                  _selectedPhoto = null;
-                                                  _selectedPhotoBytes = null;
-                                                });
-                                              },
-                                        child: const Text('Descartar'),
-                                      ),
-                                    ],
-                                  );
-                                }
-                                return Row(
-                                  children: [
-                                    Expanded(
-                                      child: FilledButton.icon(
-                                        onPressed: busyPhotoAction
-                                            ? null
-                                            : _uploadSelectedPhoto,
-                                        icon: const Icon(Icons.upload_outlined),
-                                        label: Text(
-                                          _uploadingPhoto
-                                              ? 'Subiendo...'
-                                              : 'Subir foto',
-                                        ),
-                                      ),
-                                    ),
-                                    const SizedBox(width: 8),
-                                    Expanded(
-                                      child: OutlinedButton(
-                                        onPressed: busyPhotoAction
-                                            ? null
-                                            : () {
-                                                setState(() {
-                                                  _selectedPhoto = null;
-                                                  _selectedPhotoBytes = null;
-                                                });
-                                              },
-                                        child: const Text('Descartar'),
-                                      ),
-                                    ),
-                                  ],
-                                );
-                              },
-                            ),
-                          ] else ...[
-                            const SizedBox(height: 8),
-                            SizedBox(
-                              width: double.infinity,
-                              child: FilledButton.tonalIcon(
-                                onPressed: (!hasRemoteFoto || busyPhotoAction)
-                                    ? null
-                                    : _deletePhoto,
-                                icon: const Icon(Icons.delete_outline),
+                            const SizedBox(height: 12),
+                          ] else if (remoteFoto.isNotEmpty) ...[
+                            Padding(
+                              padding: const EdgeInsets.only(bottom: 12),
+                              child: OutlinedButton.icon(
+                                onPressed: busyPhoto ? null : _deletePhoto,
+                                icon: Icon(
+                                  Icons.delete_outline,
+                                  color: Theme.of(context).colorScheme.error,
+                                ),
                                 label: Text(
                                   _deletingPhoto
                                       ? 'Eliminando...'
-                                      : 'Eliminar foto',
+                                      : 'Eliminar foto de perfil',
+                                  style: TextStyle(
+                                    color: Theme.of(context).colorScheme.error,
+                                  ),
+                                ),
+                                style: OutlinedButton.styleFrom(
+                                  side: BorderSide(
+                                    color: Theme.of(
+                                      context,
+                                    ).colorScheme.error,
+                                  ),
+                                  minimumSize: const Size(double.infinity, 48),
                                 ),
                               ),
                             ),
                           ],
-                        ],
-                      ),
-                    ),
-                  ),
-                  const SizedBox(height: 12),
-                  Card(
-                    child: Padding(
-                      padding: const EdgeInsets.all(14),
-                      child: Column(
-                        crossAxisAlignment: CrossAxisAlignment.start,
-                        children: [
-                          Text(
-                            'Editar datos',
-                            style: Theme.of(context).textTheme.titleSmall,
-                          ),
-                          const SizedBox(height: 10),
-                          TextField(
-                            controller: _telefonoController,
-                            decoration: const InputDecoration(
-                              labelText: 'Telefono',
-                              border: OutlineInputBorder(),
-                            ),
-                          ),
-                          const SizedBox(height: 10),
-                          TextField(
-                            controller: _direccionController,
-                            decoration: const InputDecoration(
-                              labelText: 'Direccion',
-                              border: OutlineInputBorder(),
-                            ),
+
+                          // ── Edit data ──────────────────────────────
+                          _SectionCard(
+                            title: 'Editar datos',
+                            icon: Icons.edit_outlined,
+                            children: [
+                              TextField(
+                                controller: _telefonoController,
+                                keyboardType: TextInputType.phone,
+                                decoration: const InputDecoration(
+                                  labelText: 'Telefono',
+                                  border: OutlineInputBorder(),
+                                  prefixIcon: Icon(Icons.phone_outlined),
+                                  isDense: true,
+                                ),
+                              ),
+                              const SizedBox(height: 12),
+                              TextField(
+                                controller: _direccionController,
+                                decoration: const InputDecoration(
+                                  labelText: 'Direccion',
+                                  border: OutlineInputBorder(),
+                                  prefixIcon: Icon(Icons.home_outlined),
+                                  isDense: true,
+                                ),
+                              ),
+                              const SizedBox(height: 14),
+                              FilledButton.icon(
+                                onPressed: _savingProfile ? null : _saveProfile,
+                                icon: _savingProfile
+                                    ? const SizedBox(
+                                        width: 16,
+                                        height: 16,
+                                        child: CircularProgressIndicator(
+                                          strokeWidth: 2,
+                                          valueColor: AlwaysStoppedAnimation(
+                                            Colors.white,
+                                          ),
+                                        ),
+                                      )
+                                    : const Icon(Icons.save_outlined),
+                                label: Text(
+                                  _savingProfile ? 'Guardando...' : 'Guardar',
+                                ),
+                                style: FilledButton.styleFrom(
+                                  minimumSize: const Size(double.infinity, 48),
+                                ),
+                              ),
+                            ],
                           ),
                           const SizedBox(height: 12),
-                          SizedBox(
-                            width: double.infinity,
-                            child: FilledButton.icon(
-                              onPressed: _savingProfile ? null : _saveProfile,
-                              icon: const Icon(Icons.save_outlined),
-                              label: Text(
-                                _savingProfile
-                                    ? 'Guardando...'
-                                    : 'Guardar perfil',
+
+                          // ── Change password ────────────────────────
+                          _SectionCard(
+                            title: 'Cambiar contraseña',
+                            icon: Icons.lock_outline,
+                            children: [
+                              TextField(
+                                controller: _passwordActualController,
+                                obscureText: _obscureActual,
+                                decoration: InputDecoration(
+                                  labelText: 'Contraseña actual',
+                                  border: const OutlineInputBorder(),
+                                  prefixIcon: const Icon(Icons.lock_outlined),
+                                  isDense: true,
+                                  suffixIcon: IconButton(
+                                    icon: Icon(
+                                      _obscureActual
+                                          ? Icons.visibility_off_outlined
+                                          : Icons.visibility_outlined,
+                                    ),
+                                    onPressed: () => setState(
+                                      () => _obscureActual = !_obscureActual,
+                                    ),
+                                  ),
+                                ),
                               ),
-                            ),
-                          ),
-                        ],
-                      ),
-                    ),
-                  ),
-                  const SizedBox(height: 12),
-                  Card(
-                    child: Padding(
-                      padding: const EdgeInsets.all(14),
-                      child: Column(
-                        crossAxisAlignment: CrossAxisAlignment.start,
-                        children: [
-                          Text(
-                            'Cambiar password',
-                            style: Theme.of(context).textTheme.titleSmall,
-                          ),
-                          const SizedBox(height: 10),
-                          TextField(
-                            controller: _passwordActualController,
-                            obscureText: true,
-                            decoration: const InputDecoration(
-                              labelText: 'Password actual',
-                              border: OutlineInputBorder(),
-                            ),
-                          ),
-                          const SizedBox(height: 10),
-                          TextField(
-                            controller: _passwordNuevaController,
-                            obscureText: true,
-                            decoration: const InputDecoration(
-                              labelText: 'Password nueva',
-                              border: OutlineInputBorder(),
-                            ),
-                          ),
-                          const SizedBox(height: 12),
-                          SizedBox(
-                            width: double.infinity,
-                            child: FilledButton.tonalIcon(
-                              onPressed: _savingPassword ? null : _savePassword,
-                              icon: const Icon(Icons.lock_outline),
-                              label: Text(
-                                _savingPassword
-                                    ? 'Actualizando...'
-                                    : 'Actualizar password',
+                              const SizedBox(height: 12),
+                              TextField(
+                                controller: _passwordNuevaController,
+                                obscureText: _obscureNueva,
+                                decoration: InputDecoration(
+                                  labelText: 'Nueva contraseña',
+                                  border: const OutlineInputBorder(),
+                                  prefixIcon: const Icon(Icons.lock_open_outlined),
+                                  helperText: 'Mínimo 8 caracteres',
+                                  isDense: true,
+                                  suffixIcon: IconButton(
+                                    icon: Icon(
+                                      _obscureNueva
+                                          ? Icons.visibility_off_outlined
+                                          : Icons.visibility_outlined,
+                                    ),
+                                    onPressed: () => setState(
+                                      () => _obscureNueva = !_obscureNueva,
+                                    ),
+                                  ),
+                                ),
                               ),
-                            ),
+                              const SizedBox(height: 14),
+                              FilledButton.tonal(
+                                onPressed: _savingPassword ? null : _savePassword,
+                                style: FilledButton.styleFrom(
+                                  minimumSize: const Size(double.infinity, 48),
+                                ),
+                                child: _savingPassword
+                                    ? const SizedBox(
+                                        width: 18,
+                                        height: 18,
+                                        child: CircularProgressIndicator(
+                                          strokeWidth: 2,
+                                        ),
+                                      )
+                                    : const Text('Actualizar contraseña'),
+                              ),
+                            ],
                           ),
-                        ],
-                      ),
-                    ),
-                  ),
+                          const SizedBox(height: 24),
                         ],
                       ),
                     ),
@@ -724,26 +572,412 @@ class _ProfilePageState extends State<ProfilePage> {
   }
 }
 
-class _ProfilePhotoAvatar extends StatelessWidget {
-  const _ProfilePhotoAvatar({
-    this.localPhotoPath,
-    this.remotePhotoUrl,
-    this.token,
+// ─── Profile hero ──────────────────────────────────────────────────────────────
+
+class _ProfileHero extends StatelessWidget {
+  const _ProfileHero({
+    required this.profile,
+    required this.remoteFotoUrl,
+    required this.localPhotoPath,
+    required this.token,
+    required this.busyPhoto,
+    required this.onPickCamera,
+    required this.onPickGallery,
   });
 
+  final EmployeeProfile? profile;
+  final String remoteFotoUrl;
   final String? localPhotoPath;
-  final String? remotePhotoUrl;
-  final String? token;
+  final String token;
+  final bool busyPhoto;
+  final VoidCallback onPickCamera;
+  final VoidCallback onPickGallery;
 
   @override
   Widget build(BuildContext context) {
-    return EmployeePhotoWidget(
-      photoUrl: remotePhotoUrl,
-      localPhotoPath: localPhotoPath,
-      token: token,
-      radius: 48,
-      placeholderSize: 28,
-      iconSize: 44,
+    final cs = Theme.of(context).colorScheme;
+    final p = profile;
+    final nombre = p?.nombreCompleto ?? 'Empleado';
+    final estado = (p?.estado ?? '').toLowerCase();
+    final estadoColor = estado == 'activo' ? Colors.green.shade700 : cs.error;
+
+    return Card(
+      clipBehavior: Clip.antiAlias,
+      child: Column(
+        children: [
+          // Colored banner top
+          Container(
+            height: 56,
+            decoration: BoxDecoration(
+              gradient: LinearGradient(
+                colors: [
+                  cs.primary,
+                  cs.primary.withValues(alpha: 0.7),
+                ],
+              ),
+            ),
+          ),
+          Padding(
+            padding: const EdgeInsets.fromLTRB(16, 0, 16, 16),
+            child: Column(
+              children: [
+                // Avatar overlapping the banner
+                Transform.translate(
+                  offset: const Offset(0, -36),
+                  child: Stack(
+                    clipBehavior: Clip.none,
+                    children: [
+                      Container(
+                        decoration: BoxDecoration(
+                          shape: BoxShape.circle,
+                          border: Border.all(
+                            color: cs.surface,
+                            width: 3,
+                          ),
+                        ),
+                        child: EmployeePhotoWidget(
+                          photoUrl: remoteFotoUrl,
+                          localPhotoPath: localPhotoPath,
+                          token: token,
+                          radius: 44,
+                          placeholderSize: 28,
+                          iconSize: 40,
+                        ),
+                      ),
+                      Positioned(
+                        bottom: 0,
+                        right: 0,
+                        child: PopupMenuButton<ImageSource>(
+                          onSelected: (src) => src == ImageSource.camera
+                              ? onPickCamera()
+                              : onPickGallery(),
+                          enabled: !busyPhoto,
+                          tooltip: 'Cambiar foto',
+                          offset: const Offset(0, 36),
+                          itemBuilder: (_) => const [
+                            PopupMenuItem(
+                              value: ImageSource.camera,
+                              child: ListTile(
+                                dense: true,
+                                leading: Icon(Icons.camera_alt_outlined),
+                                title: Text('Cámara'),
+                                contentPadding: EdgeInsets.zero,
+                              ),
+                            ),
+                            PopupMenuItem(
+                              value: ImageSource.gallery,
+                              child: ListTile(
+                                dense: true,
+                                leading: Icon(Icons.photo_library_outlined),
+                                title: Text('Galeria'),
+                                contentPadding: EdgeInsets.zero,
+                              ),
+                            ),
+                          ],
+                          child: Container(
+                            padding: const EdgeInsets.all(5),
+                            decoration: BoxDecoration(
+                              color: cs.primaryContainer,
+                              shape: BoxShape.circle,
+                              border: Border.all(
+                                color: cs.surface,
+                                width: 2,
+                              ),
+                            ),
+                            child: Icon(
+                              Icons.edit_outlined,
+                              size: 14,
+                              color: cs.onPrimaryContainer,
+                            ),
+                          ),
+                        ),
+                      ),
+                    ],
+                  ),
+                ),
+                // Name + estado badge (pull up to reduce gap from transform)
+                Transform.translate(
+                  offset: const Offset(0, -24),
+                  child: Column(
+                    children: [
+                      Text(
+                        nombre,
+                        style: Theme.of(context).textTheme.titleLarge?.copyWith(
+                              fontWeight: FontWeight.w700,
+                            ),
+                        textAlign: TextAlign.center,
+                      ),
+                      const SizedBox(height: 6),
+                      if (p?.estado != null)
+                        Container(
+                          padding: const EdgeInsets.symmetric(
+                            horizontal: 10,
+                            vertical: 4,
+                          ),
+                          decoration: BoxDecoration(
+                            color: estadoColor.withValues(alpha: 0.12),
+                            borderRadius: BorderRadius.circular(20),
+                            border: Border.all(
+                              color: estadoColor.withValues(alpha: 0.3),
+                            ),
+                          ),
+                          child: Row(
+                            mainAxisSize: MainAxisSize.min,
+                            children: [
+                              Container(
+                                width: 7,
+                                height: 7,
+                                decoration: BoxDecoration(
+                                  color: estadoColor,
+                                  shape: BoxShape.circle,
+                                ),
+                              ),
+                              const SizedBox(width: 5),
+                              Text(
+                                _capitalize(p!.estado!),
+                                style: TextStyle(
+                                  fontSize: 12,
+                                  fontWeight: FontWeight.w700,
+                                  color: estadoColor,
+                                ),
+                              ),
+                            ],
+                          ),
+                        ),
+                    ],
+                  ),
+                ),
+              ],
+            ),
+          ),
+        ],
+      ),
+    );
+  }
+
+  String _capitalize(String s) =>
+      s.isEmpty ? s : s[0].toUpperCase() + s.substring(1);
+}
+
+// ─── Section card ──────────────────────────────────────────────────────────────
+
+class _SectionCard extends StatelessWidget {
+  const _SectionCard({
+    required this.title,
+    required this.icon,
+    required this.children,
+  });
+
+  final String title;
+  final IconData icon;
+  final List<Widget> children;
+
+  @override
+  Widget build(BuildContext context) {
+    final cs = Theme.of(context).colorScheme;
+    return Card(
+      child: Padding(
+        padding: const EdgeInsets.all(16),
+        child: Column(
+          crossAxisAlignment: CrossAxisAlignment.start,
+          children: [
+            Row(
+              children: [
+                Icon(icon, size: 16, color: cs.primary),
+                const SizedBox(width: 6),
+                Text(
+                  title,
+                  style: Theme.of(context).textTheme.labelLarge?.copyWith(
+                        color: cs.primary,
+                        fontWeight: FontWeight.w700,
+                      ),
+                ),
+              ],
+            ),
+            const SizedBox(height: 12),
+            const Divider(height: 1),
+            const SizedBox(height: 12),
+            ...children,
+          ],
+        ),
+      ),
+    );
+  }
+}
+
+// ─── Info tile ─────────────────────────────────────────────────────────────────
+
+class _InfoTile extends StatelessWidget {
+  const _InfoTile({
+    required this.icon,
+    required this.label,
+    required this.value,
+  });
+
+  final IconData icon;
+  final String label;
+  final String value;
+
+  @override
+  Widget build(BuildContext context) {
+    final cs = Theme.of(context).colorScheme;
+    return Padding(
+      padding: const EdgeInsets.only(bottom: 10),
+      child: Row(
+        children: [
+          Icon(icon, size: 18, color: cs.onSurfaceVariant),
+          const SizedBox(width: 10),
+          Expanded(
+            child: Column(
+              crossAxisAlignment: CrossAxisAlignment.start,
+              children: [
+                Text(
+                  label,
+                  style: Theme.of(context).textTheme.labelSmall?.copyWith(
+                        color: cs.onSurfaceVariant,
+                      ),
+                ),
+                Text(
+                  value,
+                  style: Theme.of(context).textTheme.bodyMedium?.copyWith(
+                        fontWeight: FontWeight.w500,
+                      ),
+                ),
+              ],
+            ),
+          ),
+        ],
+      ),
+    );
+  }
+}
+
+// ─── Photo preview row ─────────────────────────────────────────────────────────
+
+class _PhotoPreviewRow extends StatelessWidget {
+  const _PhotoPreviewRow({
+    required this.photoPath,
+    required this.sizeLabel,
+    required this.uploading,
+    required this.onUpload,
+    required this.onDiscard,
+  });
+
+  final String photoPath;
+  final String sizeLabel;
+  final bool uploading;
+  final VoidCallback? onUpload;
+  final VoidCallback? onDiscard;
+
+  @override
+  Widget build(BuildContext context) {
+    final cs = Theme.of(context).colorScheme;
+    return Column(
+      crossAxisAlignment: CrossAxisAlignment.start,
+      children: [
+        Row(
+          children: [
+            ClipRRect(
+              borderRadius: BorderRadius.circular(8),
+              child: Image.file(
+                File(photoPath),
+                width: 64,
+                height: 64,
+                fit: BoxFit.cover,
+              ),
+            ),
+            const SizedBox(width: 12),
+            Expanded(
+              child: Column(
+                crossAxisAlignment: CrossAxisAlignment.start,
+                children: [
+                  Text(
+                    sizeLabel,
+                    style: Theme.of(context).textTheme.bodySmall?.copyWith(
+                          color: cs.onSurfaceVariant,
+                        ),
+                  ),
+                  const SizedBox(height: 8),
+                  Row(
+                    children: [
+                      Expanded(
+                        child: FilledButton.icon(
+                          onPressed: onUpload,
+                          icon: uploading
+                              ? const SizedBox(
+                                  width: 14,
+                                  height: 14,
+                                  child: CircularProgressIndicator(
+                                    strokeWidth: 2,
+                                    valueColor: AlwaysStoppedAnimation(
+                                      Colors.white,
+                                    ),
+                                  ),
+                                )
+                              : const Icon(Icons.upload_outlined, size: 16),
+                          label: Text(uploading ? 'Subiendo...' : 'Subir'),
+                          style: FilledButton.styleFrom(
+                            visualDensity: VisualDensity.compact,
+                          ),
+                        ),
+                      ),
+                      const SizedBox(width: 8),
+                      Expanded(
+                        child: OutlinedButton(
+                          onPressed: onDiscard,
+                          style: OutlinedButton.styleFrom(
+                            visualDensity: VisualDensity.compact,
+                          ),
+                          child: const Text('Descartar'),
+                        ),
+                      ),
+                    ],
+                  ),
+                ],
+              ),
+            ),
+          ],
+        ),
+      ],
+    );
+  }
+}
+
+// ─── Error banner ──────────────────────────────────────────────────────────────
+
+class _ErrorBanner extends StatelessWidget {
+  const _ErrorBanner({required this.message, required this.onRetry});
+
+  final String message;
+  final VoidCallback onRetry;
+
+  @override
+  Widget build(BuildContext context) {
+    final cs = Theme.of(context).colorScheme;
+    return Card(
+      color: cs.errorContainer,
+      child: Padding(
+        padding: const EdgeInsets.all(12),
+        child: Row(
+          children: [
+            Icon(Icons.error_outline, color: cs.onErrorContainer),
+            const SizedBox(width: 10),
+            Expanded(
+              child: Text(
+                message,
+                style: TextStyle(color: cs.onErrorContainer),
+              ),
+            ),
+            TextButton(
+              onPressed: onRetry,
+              child: Text(
+                'Reintentar',
+                style: TextStyle(color: cs.onErrorContainer),
+              ),
+            ),
+          ],
+        ),
+      ),
     );
   }
 }

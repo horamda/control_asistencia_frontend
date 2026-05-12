@@ -26,16 +26,26 @@ class PendingQueueSheet extends StatelessWidget {
 
   @override
   Widget build(BuildContext context) {
+    // Calculamos la altura disponible real restando safe-area y el padding del
+    // sheet. Sin este calculo, en pantallas < 500px de alto (landscape o
+    // celulares muy pequeños) el SizedBox puede desbordar y causar un overflow.
+    final mq = MediaQuery.of(context);
+    final availableH = mq.size.height
+        - mq.viewPadding.top
+        - mq.viewPadding.bottom
+        - 32; // padding vertical del sheet
+    final sheetH = (mq.size.height * 0.82).clamp(280.0, availableH);
+
     return SafeArea(
       child: Padding(
         padding: const EdgeInsets.all(16),
         child: SizedBox(
-          height: MediaQuery.of(context).size.height * 0.82,
+          height: sheetH,
           child: Column(
             crossAxisAlignment: CrossAxisAlignment.start,
             children: [
               Text(
-                'Bandeja de sincronizacion',
+                'Bandeja de sincronización',
                 style: Theme.of(context).textTheme.titleLarge,
               ),
               const SizedBox(height: 6),
@@ -108,14 +118,15 @@ class PendingQueueSheet extends StatelessWidget {
                       separatorBuilder: (_, __) => const SizedBox(height: 8),
                       itemBuilder: (_, index) {
                         final item = items[index];
-                        final statusColor =
-                            item.status == OfflineClockStatus.failed
-                            ? const Color(0xFFFFE0E0)
-                            : const Color(0xFFE8EEF7);
-                        final statusLabel =
-                            item.status == OfflineClockStatus.failed
-                            ? 'Error'
-                            : 'Pendiente';
+                        final cs = Theme.of(context).colorScheme;
+                        final isFailed =
+                            item.status == OfflineClockStatus.failed;
+                        final statusBg =
+                            isFailed ? cs.errorContainer : cs.secondaryContainer;
+                        final statusFg = isFailed
+                            ? cs.onErrorContainer
+                            : cs.onSecondaryContainer;
+                        final statusLabel = isFailed ? 'Error' : 'Pendiente';
                         return Card(
                           child: Padding(
                             padding: const EdgeInsets.all(12),
@@ -133,19 +144,22 @@ class PendingQueueSheet extends StatelessWidget {
                                       ),
                                     ),
                                     Chip(
-                                      label: Text(statusLabel),
-                                      backgroundColor: statusColor,
+                                      label: Text(
+                                        statusLabel,
+                                        style: TextStyle(color: statusFg),
+                                      ),
+                                      backgroundColor: statusBg,
                                     ),
                                   ],
                                 ),
                                 Text('Intentos: ${item.attempts}'),
                                 if (item.lastAttemptAt != null)
                                   Text(
-                                    'Ultimo intento: ${formatDateTime(item.lastAttemptAt!)}',
+                                    'Último intento: ${formatDateTime(item.lastAttemptAt!)}',
                                   ),
                                 if ((item.lastError ?? '').trim().isNotEmpty)
                                   Text(
-                                    'Ultimo error: ${item.lastError}',
+                                    'Último error: ${item.lastError}',
                                     style: TextStyle(
                                       color: Theme.of(context).colorScheme.error,
                                     ),
