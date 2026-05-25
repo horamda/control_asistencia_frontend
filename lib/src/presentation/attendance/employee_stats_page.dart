@@ -1033,6 +1033,7 @@ class _HorasRachaCard extends StatelessWidget {
     final kpis = stats.kpis;
     final cs = Theme.of(context).colorScheme;
 
+    final showHoras = kpis.horasPromedio < 8.0;
     final horasTxt = kpis.horasTotales > 0
         ? '${kpis.horasTotales.toStringAsFixed(1)} h'
         : '-';
@@ -1074,18 +1075,20 @@ class _HorasRachaCard extends StatelessWidget {
               builder: (context, constraints) {
                 final wide = constraints.maxWidth >= 400;
                 final tiles = [
-                  _MetricTile(
-                    icon: Icons.access_time_outlined,
-                    label: 'Horas totales',
-                    value: horasTxt,
-                    color: cs.primary,
-                  ),
-                  _MetricTile(
-                    icon: Icons.av_timer_outlined,
-                    label: 'Promedio diario',
-                    value: promTxt,
-                    color: cs.primary,
-                  ),
+                  if (showHoras)
+                    _MetricTile(
+                      icon: Icons.access_time_outlined,
+                      label: 'Horas totales',
+                      value: horasTxt,
+                      color: cs.primary,
+                    ),
+                  if (showHoras)
+                    _MetricTile(
+                      icon: Icons.av_timer_outlined,
+                      label: 'Promedio diario',
+                      value: promTxt,
+                      color: cs.primary,
+                    ),
                   _MetricTile(
                     icon: Icons.local_fire_department_outlined,
                     label: 'Racha OK',

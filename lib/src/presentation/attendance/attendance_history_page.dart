@@ -695,7 +695,6 @@ class _AsistenciaCard extends StatelessWidget {
     final isOk = (item.estado ?? '').trim().toLowerCase() == 'ok';
     final borderColor =
         isOk ? Colors.green.shade700 : cs.error;
-
     final hasEntrada = (item.horaEntrada ?? '').isNotEmpty;
     final hasSalida = (item.horaSalida ?? '').isNotEmpty;
 
@@ -751,63 +750,36 @@ class _AsistenciaCard extends StatelessWidget {
                         ),
                       ],
                     ),
-                    const SizedBox(height: 8),
-                    Row(
-                      children: [
-                        if (hasEntrada) ...[
-                          Icon(
-                            Icons.login_outlined,
-                            size: 14,
-                            color: const Color(0xFF1565C0),
-                          ),
-                          const SizedBox(width: 4),
-                          Text(
-                            item.horaEntrada!,
-                            style: Theme.of(context)
-                                .textTheme
-                                .bodySmall
-                                ?.copyWith(
-                                  fontWeight: FontWeight.w700,
-                                  color: const Color(0xFF1565C0),
-                                ),
-                          ),
-                          const SizedBox(width: 12),
+                    if (hasEntrada || hasSalida) ...[
+                      const SizedBox(height: 6),
+                      Row(
+                        children: [
+                          if (hasEntrada) ...[
+                            Icon(Icons.login_outlined, size: 13, color: const Color(0xFF1565C0)),
+                            const SizedBox(width: 3),
+                            Text(
+                              'Entrada',
+                              style: Theme.of(context).textTheme.labelSmall?.copyWith(
+                                    color: const Color(0xFF1565C0),
+                                    fontWeight: FontWeight.w600,
+                                  ),
+                            ),
+                          ],
+                          if (hasEntrada && hasSalida) const SizedBox(width: 10),
+                          if (hasSalida) ...[
+                            Icon(Icons.logout_outlined, size: 13, color: Colors.orange.shade800),
+                            const SizedBox(width: 3),
+                            Text(
+                              'Salida',
+                              style: Theme.of(context).textTheme.labelSmall?.copyWith(
+                                    color: Colors.orange.shade800,
+                                    fontWeight: FontWeight.w600,
+                                  ),
+                            ),
+                          ],
                         ],
-                        if (hasSalida) ...[
-                          Icon(
-                            Icons.logout_outlined,
-                            size: 14,
-                            color: Colors.orange.shade800,
-                          ),
-                          const SizedBox(width: 4),
-                          Text(
-                            item.horaSalida!,
-                            style: Theme.of(context)
-                                .textTheme
-                                .bodySmall
-                                ?.copyWith(
-                                  fontWeight: FontWeight.w700,
-                                  color: Colors.orange.shade800,
-                                ),
-                          ),
-                          const SizedBox(width: 12),
-                        ],
-                        if (!hasEntrada && !hasSalida)
-                          Text(
-                            'Sin horarios registrados',
-                            style: Theme.of(context)
-                                .textTheme
-                                .bodySmall
-                                ?.copyWith(color: cs.onSurfaceVariant),
-                          ),
-                        const Spacer(),
-                        Icon(
-                          Icons.chevron_right,
-                          size: 16,
-                          color: cs.outlineVariant,
-                        ),
-                      ],
-                    ),
+                      ),
+                    ],
                     if ((item.observaciones ?? '').isNotEmpty) ...[
                       const SizedBox(height: 5),
                       Text(
@@ -931,26 +903,6 @@ class _AsistenciaDetailSheet extends StatelessWidget {
                   const Divider(),
                   const SizedBox(height: 12),
 
-                  // Times row
-                  Row(
-                    children: [
-                      _TimeBlock(
-                        icon: Icons.login_outlined,
-                        label: 'Entrada',
-                        time: item.horaEntrada,
-                        color: const Color(0xFF1565C0),
-                      ),
-                      const SizedBox(width: 12),
-                      _TimeBlock(
-                        icon: Icons.logout_outlined,
-                        label: 'Salida',
-                        time: item.horaSalida,
-                        color: Colors.orange.shade800,
-                      ),
-                    ],
-                  ),
-                  const SizedBox(height: 14),
-
                   // Detail cells
                   Wrap(
                     spacing: 10,
@@ -1025,67 +977,6 @@ class _AsistenciaDetailSheet extends StatelessWidget {
 
   String _capitalize(String s) =>
       s.isEmpty ? s : s[0].toUpperCase() + s.substring(1);
-}
-
-class _TimeBlock extends StatelessWidget {
-  const _TimeBlock({
-    required this.icon,
-    required this.label,
-    required this.time,
-    required this.color,
-  });
-
-  final IconData icon;
-  final String label;
-  final String? time;
-  final Color color;
-
-  @override
-  Widget build(BuildContext context) {
-    final cs = Theme.of(context).colorScheme;
-    final hasTime = (time ?? '').isNotEmpty;
-    return Expanded(
-      child: Container(
-        padding: const EdgeInsets.symmetric(horizontal: 12, vertical: 10),
-        decoration: BoxDecoration(
-          color: hasTime
-              ? color.withValues(alpha: 0.08)
-              : cs.surfaceContainerLow,
-          borderRadius: BorderRadius.circular(10),
-          border: Border.all(
-            color: hasTime
-                ? color.withValues(alpha: 0.3)
-                : cs.outlineVariant,
-          ),
-        ),
-        child: Column(
-          crossAxisAlignment: CrossAxisAlignment.start,
-          children: [
-            Row(
-              children: [
-                Icon(icon, size: 14, color: hasTime ? color : cs.onSurfaceVariant),
-                const SizedBox(width: 4),
-                Text(
-                  label,
-                  style: Theme.of(context).textTheme.labelSmall?.copyWith(
-                        color: hasTime ? color : cs.onSurfaceVariant,
-                      ),
-                ),
-              ],
-            ),
-            const SizedBox(height: 4),
-            Text(
-              hasTime ? time! : '–',
-              style: Theme.of(context).textTheme.titleMedium?.copyWith(
-                    fontWeight: FontWeight.w800,
-                    color: hasTime ? color : cs.onSurfaceVariant,
-                  ),
-            ),
-          ],
-        ),
-      ),
-    );
-  }
 }
 
 class _DetailCell extends StatelessWidget {

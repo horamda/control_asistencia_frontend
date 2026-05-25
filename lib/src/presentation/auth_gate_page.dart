@@ -7,6 +7,7 @@ import '../core/auth/biometric_credential_cache.dart';
 import '../core/auth/offline_credentials_cache.dart';
 import '../core/auth/session_manager.dart';
 import '../core/network/mobile_api_client.dart';
+import '../core/utils/device_telemetry.dart';
 import '../core/network/pinned_http_client.dart';
 import '../core/permissions/device_permission_bootstrap.dart';
 import 'attendance/attendance_home_page.dart';
@@ -245,9 +246,13 @@ class _AuthGatePageState extends State<AuthGatePage> {
     // Fase 3: login contra la API con las credenciales guardadas
     setState(() => _biometricReauthApiLoading = true);
     try {
+      final telemetry = await buildLoginTelemetry();
       final session = await _apiClient.login(
         dni: creds.dni,
         password: creds.password,
+        platform: telemetry.platform,
+        deviceModel: telemetry.deviceModel,
+        appVersion: telemetry.appVersion,
       );
       if (!mounted) return;
       await _onLoginSuccess(session);

@@ -181,6 +181,24 @@ class AttendanceHomeActionPresenter {
           icon: Icons.bar_chart_outlined,
           enabled: historyEnabled,
         ),
+        AttendanceHomeActionSpec(
+          intent: AttendanceHomeActionIntent.openPremios,
+          label: 'Premios',
+          icon: Icons.emoji_events_outlined,
+          enabled: historyEnabled,
+        ),
+        AttendanceHomeActionSpec(
+          intent: AttendanceHomeActionIntent.openHorarios,
+          label: 'Horarios',
+          icon: Icons.calendar_today_outlined,
+          enabled: historyEnabled,
+        ),
+        AttendanceHomeActionSpec(
+          intent: AttendanceHomeActionIntent.openLinks,
+          label: 'Mis Links',
+          icon: Icons.link_rounded,
+          enabled: true,
+        ),
       ],
     );
   }
@@ -242,4 +260,7 @@ enum AttendanceHomeActionIntent {
   openLegajo,
   openPedidosMercaderia,
   openKpisSector,
+  openPremios,
+  openHorarios,
+  openLinks,
 }

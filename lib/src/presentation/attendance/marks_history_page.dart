@@ -396,15 +396,6 @@ class _MarcaCard extends StatelessWidget {
     };
   }
 
-  IconData _metodoIcon(String? metodo) {
-    return switch ((metodo ?? '').toLowerCase()) {
-      'qr' => Icons.qr_code_outlined,
-      'biometrico' || 'huella' || 'biometric' => Icons.fingerprint,
-      'manual' => Icons.edit_outlined,
-      _ => Icons.touch_app_outlined,
-    };
-  }
-
   @override
   Widget build(BuildContext context) {
     final cs = Theme.of(context).colorScheme;
@@ -462,27 +453,11 @@ class _MarcaCard extends StatelessWidget {
                             ],
                           ),
                         ),
-                        // Hora
-                        if ((item.hora ?? '').isNotEmpty)
-                          Text(
-                            item.hora!,
-                            style: Theme.of(context)
-                                .textTheme
-                                .titleMedium
-                                ?.copyWith(
-                                  fontWeight: FontWeight.w800,
-                                  color: color,
-                                  fontFeatures: const [
-                                    FontFeature.tabularFigures(),
-                                  ],
-                                ),
-                          ),
                       ],
                     ),
-                    const SizedBox(height: 8),
+                    const SizedBox(height: 6),
                     Row(
                       children: [
-                        // Estado badge
                         Container(
                           padding: const EdgeInsets.symmetric(
                             horizontal: 7,
@@ -501,30 +476,11 @@ class _MarcaCard extends StatelessWidget {
                             ),
                           ),
                         ),
-                        const SizedBox(width: 8),
-                        // Método badge
-                        if ((item.metodo ?? '').isNotEmpty) ...[
-                          Icon(
-                            _metodoIcon(item.metodo),
-                            size: 13,
-                            color: cs.onSurfaceVariant,
-                          ),
-                          const SizedBox(width: 3),
-                          Text(
-                            _capitalize(item.metodo!),
-                            style: Theme.of(context)
-                                .textTheme
-                                .labelSmall
-                                ?.copyWith(color: cs.onSurfaceVariant),
-                          ),
-                          const SizedBox(width: 8),
-                        ],
-                        // GPS chip
-                        if (item.gpsDistanciaM != null &&
-                            item.gpsToleranciaM != null) ...[
+                        if (item.gpsDistanciaM != null) ...[
+                          const SizedBox(width: 10),
                           Icon(
                             Icons.my_location_outlined,
-                            size: 12,
+                            size: 13,
                             color: cs.onSurfaceVariant,
                           ),
                           const SizedBox(width: 3),
@@ -536,16 +492,10 @@ class _MarcaCard extends StatelessWidget {
                                 ?.copyWith(color: cs.onSurfaceVariant),
                           ),
                         ],
-                        const Spacer(),
-                        Icon(
-                          Icons.chevron_right,
-                          size: 16,
-                          color: cs.outlineVariant,
-                        ),
                       ],
                     ),
                     if ((item.observaciones ?? '').isNotEmpty) ...[
-                      const SizedBox(height: 6),
+                      const SizedBox(height: 5),
                       Text(
                         item.observaciones!,
                         style: Theme.of(context).textTheme.bodySmall?.copyWith(
@@ -664,17 +614,6 @@ class _MarcaDetailSheet extends StatelessWidget {
                           ],
                         ),
                       ),
-                      if ((item.hora ?? '').isNotEmpty)
-                        Text(
-                          item.hora!,
-                          style: Theme.of(context)
-                              .textTheme
-                              .headlineSmall
-                              ?.copyWith(
-                                fontWeight: FontWeight.w800,
-                                color: color,
-                              ),
-                        ),
                     ],
                   ),
                   const SizedBox(height: 16),
@@ -682,11 +621,11 @@ class _MarcaDetailSheet extends StatelessWidget {
                   const SizedBox(height: 12),
 
                   _DetailGrid(children: [
-                    if ((item.accion ?? '').isNotEmpty)
+                    if ((item.estado ?? '').isNotEmpty)
                       _DetailCell(
-                        icon: Icons.swap_horiz_outlined,
-                        label: 'Acción',
-                        value: _capitalize(item.accion!),
+                        icon: Icons.info_outline,
+                        label: 'Estado',
+                        value: _capitalize(item.estado!),
                       ),
                     if ((item.tipoMarca ?? '').isNotEmpty)
                       _DetailCell(
@@ -700,26 +639,17 @@ class _MarcaDetailSheet extends StatelessWidget {
                         label: 'Método',
                         value: _capitalize(item.metodo!),
                       ),
-                    if ((item.estado ?? '').isNotEmpty)
-                      _DetailCell(
-                        icon: Icons.info_outline,
-                        label: 'Estado',
-                        value: _capitalize(item.estado!),
-                        valueColor: _estadoColor(context, item.estado),
-                      ),
                     if (item.gpsDistanciaM != null)
                       _DetailCell(
                         icon: Icons.my_location_outlined,
                         label: 'GPS distancia',
-                        value:
-                            '${item.gpsDistanciaM!.toStringAsFixed(1)} m',
+                        value: '${item.gpsDistanciaM!.toStringAsFixed(1)} m',
                       ),
                     if (item.gpsToleranciaM != null)
                       _DetailCell(
                         icon: Icons.radar_outlined,
                         label: 'GPS tolerancia',
-                        value:
-                            '${item.gpsToleranciaM!.toStringAsFixed(1)} m',
+                        value: '${item.gpsToleranciaM!.toStringAsFixed(1)} m',
                       ),
                     if (item.lat != null && item.lon != null)
                       _DetailCell(
@@ -729,6 +659,30 @@ class _MarcaDetailSheet extends StatelessWidget {
                             '${item.lat!.toStringAsFixed(5)}, ${item.lon!.toStringAsFixed(5)}',
                       ),
                   ]),
+                  if ((item.observaciones ?? '').isNotEmpty) ...[
+                    const SizedBox(height: 16),
+                    Text(
+                      'Observaciones',
+                      style: Theme.of(context).textTheme.labelMedium?.copyWith(
+                            color: cs.onSurfaceVariant,
+                            fontWeight: FontWeight.w600,
+                          ),
+                    ),
+                    const SizedBox(height: 6),
+                    Container(
+                      width: double.infinity,
+                      padding: const EdgeInsets.all(12),
+                      decoration: BoxDecoration(
+                        color: cs.surfaceContainerLow,
+                        borderRadius: BorderRadius.circular(10),
+                        border: Border.all(color: cs.outlineVariant),
+                      ),
+                      child: Text(
+                        item.observaciones!,
+                        style: Theme.of(context).textTheme.bodyMedium,
+                      ),
+                    ),
+                  ],
 
                   if ((item.observaciones ?? '').isNotEmpty) ...[
                     const SizedBox(height: 16),
@@ -766,15 +720,6 @@ class _MarcaDetailSheet extends StatelessWidget {
     );
   }
 
-  Color _estadoColor(BuildContext context, String? estado) {
-    final cs = Theme.of(context).colorScheme;
-    return switch ((estado ?? '').toLowerCase()) {
-      'ok' || 'valido' || 'validado' => Colors.green.shade700,
-      'rechazado' || 'error' || 'invalido' => cs.error,
-      _ => Colors.grey.shade600,
-    };
-  }
-
   String _accionLabel(String? accion) {
     return switch ((accion ?? '').toLowerCase()) {
       'entrada' => 'Entrada',
@@ -809,13 +754,11 @@ class _DetailCell extends StatelessWidget {
     required this.icon,
     required this.label,
     required this.value,
-    this.valueColor,
   });
 
   final IconData icon;
   final String label;
   final String value;
-  final Color? valueColor;
 
   @override
   Widget build(BuildContext context) {
@@ -846,7 +789,6 @@ class _DetailCell extends StatelessWidget {
             value,
             style: Theme.of(context).textTheme.bodyMedium?.copyWith(
                   fontWeight: FontWeight.w600,
-                  color: valueColor,
                 ),
           ),
         ],

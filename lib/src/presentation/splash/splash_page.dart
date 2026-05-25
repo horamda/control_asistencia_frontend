@@ -37,15 +37,14 @@ class SplashPage extends StatelessWidget {
                           crossAxisAlignment: CrossAxisAlignment.start,
                           children: [
                             Text(
-                              'Control de Asistencia',
+                              'FichaYa',
                               style: Theme.of(context).textTheme.headlineSmall,
                             ),
                             const SizedBox(height: 8),
-                            const Text('Aplicacion movil de empleados'),
+                            const Text('Informacion de configuracion'),
                             const SizedBox(height: 16),
                             const Divider(),
                             const SizedBox(height: 8),
-                            _line('API Base URL', cfg.apiBaseUrl),
                             _line('Flavor', cfg.flavorLabel),
                             _line(
                               'Contrato',

@@ -150,11 +150,7 @@ class _BiometricSettingsPageState extends State<BiometricSettingsPage> {
   }
 
   void _showMessage(String text, {bool isError = false}) {
-    showCenteredSnackBar(
-      context,
-      text: text,
-      isError: isError,
-    );
+    showCenteredSnackBar(context, text: text, isError: isError);
   }
 
   @override
@@ -178,7 +174,9 @@ class _BiometricSettingsPageState extends State<BiometricSettingsPage> {
                   : constraints.maxWidth >= 900
                   ? 760.0
                   : double.infinity;
-              final horizontalPadding = constraints.maxWidth < 600 ? 12.0 : 16.0;
+              final horizontalPadding = constraints.maxWidth < 600
+                  ? 12.0
+                  : 16.0;
               return Center(
                 child: ConstrainedBox(
                   constraints: BoxConstraints(maxWidth: maxWidth),
@@ -222,16 +220,21 @@ class _BiometricSettingsPageState extends State<BiometricSettingsPage> {
                       SizedBox(
                         height: 46,
                         child: OutlinedButton.icon(
-                          onPressed:
-                              (!available || loading) ? null : _testFingerprint,
+                          onPressed: (!available || loading)
+                              ? null
+                              : _testFingerprint,
                           icon: loading
                               ? const SizedBox(
                                   width: 16,
                                   height: 16,
-                                  child: CircularProgressIndicator(strokeWidth: 2),
+                                  child: CircularProgressIndicator(
+                                    strokeWidth: 2,
+                                  ),
                                 )
                               : const Icon(Icons.fingerprint),
-                          label: Text(loading ? 'Validando...' : 'Probar huella'),
+                          label: Text(
+                            loading ? 'Validando...' : 'Probar huella',
+                          ),
                         ),
                       ),
                       if (manager.statusMessage != null) ...[
@@ -257,53 +260,47 @@ class _BiometricSettingsPageState extends State<BiometricSettingsPage> {
                                 'Define el volumen relativo de los tonos de feedback.',
                               ),
                               const SizedBox(height: 8),
-                              RadioListTile<ClockFeedbackProfile>.adaptive(
-                                contentPadding: EdgeInsets.zero,
-                                value: ClockFeedbackProfile.subtle,
+                              RadioGroup<ClockFeedbackProfile>(
                                 groupValue: selectedSoundProfile,
-                                onChanged: loading
-                                    ? null
-                                    : (value) {
-                                        if (value != null) {
-                                          setState(() {
-                                            _selectedSoundProfile = value;
-                                          });
-                                        }
-                                      },
-                                title: const Text('Discreto'),
-                                subtitle: const Text('Más suave.'),
-                              ),
-                              RadioListTile<ClockFeedbackProfile>.adaptive(
-                                contentPadding: EdgeInsets.zero,
-                                value: ClockFeedbackProfile.balanced,
-                                groupValue: selectedSoundProfile,
-                                onChanged: loading
-                                    ? null
-                                    : (value) {
-                                        if (value != null) {
-                                          setState(() {
-                                            _selectedSoundProfile = value;
-                                          });
-                                        }
-                                      },
-                                title: const Text('Balanceado'),
-                                subtitle: const Text('Recomendado.'),
-                              ),
-                              RadioListTile<ClockFeedbackProfile>.adaptive(
-                                contentPadding: EdgeInsets.zero,
-                                value: ClockFeedbackProfile.strong,
-                                groupValue: selectedSoundProfile,
-                                onChanged: loading
-                                    ? null
-                                    : (value) {
-                                        if (value != null) {
-                                          setState(() {
-                                            _selectedSoundProfile = value;
-                                          });
-                                        }
-                                      },
-                                title: const Text('Fuerte'),
-                                subtitle: const Text('Más notorio.'),
+                                onChanged: (value) {
+                                  if (loading || value == null) {
+                                    return;
+                                  }
+                                  setState(() {
+                                    _selectedSoundProfile = value;
+                                  });
+                                },
+                                child: Column(
+                                  children: [
+                                    RadioListTile<
+                                      ClockFeedbackProfile
+                                    >.adaptive(
+                                      contentPadding: EdgeInsets.zero,
+                                      value: ClockFeedbackProfile.subtle,
+                                      enabled: !loading,
+                                      title: const Text('Discreto'),
+                                      subtitle: const Text('Más suave.'),
+                                    ),
+                                    RadioListTile<
+                                      ClockFeedbackProfile
+                                    >.adaptive(
+                                      contentPadding: EdgeInsets.zero,
+                                      value: ClockFeedbackProfile.balanced,
+                                      enabled: !loading,
+                                      title: const Text('Balanceado'),
+                                      subtitle: const Text('Recomendado.'),
+                                    ),
+                                    RadioListTile<
+                                      ClockFeedbackProfile
+                                    >.adaptive(
+                                      contentPadding: EdgeInsets.zero,
+                                      value: ClockFeedbackProfile.strong,
+                                      enabled: !loading,
+                                      title: const Text('Fuerte'),
+                                      subtitle: const Text('Más notorio.'),
+                                    ),
+                                  ],
+                                ),
                               ),
                               const SizedBox(height: 8),
                               Wrap(

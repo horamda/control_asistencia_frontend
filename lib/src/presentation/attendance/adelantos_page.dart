@@ -1,6 +1,7 @@
 import 'package:flutter/material.dart';
 
 import '../../core/network/mobile_api_client.dart';
+import 'historial_adelantos_page.dart';
 
 class AdelantosPage extends StatefulWidget {
   const AdelantosPage({
@@ -20,7 +21,7 @@ class _AdelantosPageState extends State<AdelantosPage> {
   bool _loading = true;
   bool _requesting = false;
   String? _error;
-  AdelantoEstadoResponse? _estado;
+  AdelantoResumenResponse? _estado;
 
   static const _meses = [
     '', 'Enero', 'Febrero', 'Marzo', 'Abril', 'Mayo', 'Junio',
@@ -39,7 +40,7 @@ class _AdelantosPageState extends State<AdelantosPage> {
       _error = null;
     });
     try {
-      final estado = await widget.apiClient.getAdelantoEstado(
+      final estado = await widget.apiClient.getAdelantoResumen(
         token: widget.token,
       );
       if (!mounted) return;
@@ -104,12 +105,15 @@ class _AdelantosPageState extends State<AdelantosPage> {
       if (!mounted) return;
       setState(() {
         _requesting = false;
-        _estado = AdelantoEstadoResponse(
+        _estado = AdelantoResumenResponse(
           periodo: estado.periodo,
           periodoYear: estado.periodoYear,
           periodoMonth: estado.periodoMonth,
           yaSolicitado: true,
-          adelanto: adelanto,
+          adelantoMesActual: adelanto,
+          ultimoAdelanto: estado.ultimoAdelanto,
+          totalHistorial: estado.totalHistorial,
+          pendientesTotal: estado.pendientesTotal,
         );
       });
       if (mounted) {
@@ -219,7 +223,24 @@ class _AdelantosPageState extends State<AdelantosPage> {
               onSolicitar: _solicitar,
             )
           else
-            _AdelantoCard(adelanto: estado.adelanto),
+            _AdelantoCard(adelanto: estado.adelantoMesActual),
+          if (estado.ultimoAdelanto != null &&
+              estado.ultimoAdelanto!.periodo != estado.periodo) ...[
+            const SizedBox(height: 20),
+            _UltimoAdelantoCard(adelanto: estado.ultimoAdelanto!),
+          ],
+          const SizedBox(height: 16),
+          _HistorialLink(
+            total: estado.totalHistorial,
+            onTap: () => Navigator.of(context).push(
+              MaterialPageRoute(
+                builder: (_) => HistorialAdelantosPage(
+                  apiClient: widget.apiClient,
+                  token: widget.token,
+                ),
+              ),
+            ),
+          ),
         ],
       ),
     );
@@ -435,5 +456,133 @@ class _AdelantoCard extends StatelessWidget {
       _ =>
         'Tu solicitud está siendo revisada por el área de RRHH. Te notificarán cuando haya una respuesta.',
     };
+  }
+}
+
+// ── Último adelanto (mes anterior) ───────────────────────────────────────────
+
+class _UltimoAdelantoCard extends StatelessWidget {
+  const _UltimoAdelantoCard({required this.adelanto});
+
+  final AdelantoItem adelanto;
+
+  static const _meses = [
+    '', 'Enero', 'Febrero', 'Marzo', 'Abril', 'Mayo', 'Junio',
+    'Julio', 'Agosto', 'Septiembre', 'Octubre', 'Noviembre', 'Diciembre',
+  ];
+
+  String _mesLabel(int month, int year) {
+    final nombre = (month >= 1 && month <= 12) ? _meses[month] : '—';
+    return '$nombre $year';
+  }
+
+  @override
+  Widget build(BuildContext context) {
+    final cs = Theme.of(context).colorScheme;
+    final (color, icon) = switch (adelanto.estado) {
+      'aprobado' => (Colors.green[700]!, Icons.check_circle_outline),
+      'rechazado' => (cs.error, Icons.cancel_outlined),
+      'cancelado' => (cs.onSurfaceVariant, Icons.block_outlined),
+      _ => (Colors.amber[700]!, Icons.hourglass_empty_outlined),
+    };
+    final label = switch (adelanto.estado) {
+      'aprobado' => 'Aprobado',
+      'rechazado' => 'Rechazado',
+      'cancelado' => 'Cancelado',
+      _ => 'Pendiente',
+    };
+
+    return Column(
+      crossAxisAlignment: CrossAxisAlignment.start,
+      children: [
+        Text(
+          'Último adelanto',
+          style: Theme.of(context).textTheme.labelMedium?.copyWith(
+                color: cs.onSurfaceVariant,
+                fontWeight: FontWeight.w600,
+              ),
+        ),
+        const SizedBox(height: 8),
+        Card(
+          margin: EdgeInsets.zero,
+          child: Padding(
+            padding: const EdgeInsets.symmetric(horizontal: 16, vertical: 12),
+            child: Row(
+              children: [
+                Icon(icon, color: color, size: 22),
+                const SizedBox(width: 12),
+                Expanded(
+                  child: Text(
+                    _mesLabel(adelanto.periodoMonth, adelanto.periodoYear),
+                    style: Theme.of(context).textTheme.bodyMedium?.copyWith(
+                          fontWeight: FontWeight.w600,
+                        ),
+                  ),
+                ),
+                Container(
+                  padding:
+                      const EdgeInsets.symmetric(horizontal: 10, vertical: 4),
+                  decoration: BoxDecoration(
+                    color: color.withValues(alpha: 0.12),
+                    borderRadius: BorderRadius.circular(20),
+                  ),
+                  child: Text(
+                    label,
+                    style: TextStyle(
+                      fontSize: 12,
+                      fontWeight: FontWeight.w700,
+                      color: color,
+                    ),
+                  ),
+                ),
+              ],
+            ),
+          ),
+        ),
+      ],
+    );
+  }
+}
+
+// ── Historial link ────────────────────────────────────────────────────────────
+
+class _HistorialLink extends StatelessWidget {
+  const _HistorialLink({required this.total, required this.onTap});
+
+  final int total;
+  final VoidCallback onTap;
+
+  @override
+  Widget build(BuildContext context) {
+    final cs = Theme.of(context).colorScheme;
+    return InkWell(
+      onTap: onTap,
+      borderRadius: BorderRadius.circular(12),
+      child: Container(
+        padding: const EdgeInsets.symmetric(horizontal: 16, vertical: 14),
+        decoration: BoxDecoration(
+          border: Border.all(color: cs.outlineVariant),
+          borderRadius: BorderRadius.circular(12),
+        ),
+        child: Row(
+          children: [
+            Icon(Icons.history, color: cs.primary, size: 22),
+            const SizedBox(width: 12),
+            Expanded(
+              child: Text(
+                total > 0
+                    ? 'Ver historial ($total adelanto${total == 1 ? '' : 's'})'
+                    : 'Ver historial de adelantos',
+                style: Theme.of(context).textTheme.bodyMedium?.copyWith(
+                      color: cs.primary,
+                      fontWeight: FontWeight.w600,
+                    ),
+              ),
+            ),
+            Icon(Icons.chevron_right, color: cs.primary, size: 20),
+          ],
+        ),
+      ),
+    );
   }
 }

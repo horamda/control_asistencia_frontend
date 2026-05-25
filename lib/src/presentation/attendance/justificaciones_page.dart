@@ -147,8 +147,30 @@ class _JustificacionesPageState extends State<JustificacionesPage> {
                 _deleteItem(item);
               }
             : null,
+        onEdit: item.estado == 'pendiente'
+            ? () {
+                Navigator.of(context).pop();
+                _showEditSheet(item);
+              }
+            : null,
       ),
     );
+  }
+
+  Future<void> _showEditSheet(JustificacionItem item) async {
+    final result = await showModalBottomSheet<bool>(
+      context: context,
+      isScrollControlled: true,
+      useSafeArea: true,
+      builder: (_) => _EditJustificacionSheet(
+        apiClient: widget.apiClient,
+        token: widget.token,
+        item: item,
+      ),
+    );
+    if (result == true) {
+      await _load(reset: true);
+    }
   }
 
   Future<void> _deleteItem(JustificacionItem item) async {
@@ -615,10 +637,11 @@ class _JustificacionCard extends StatelessWidget {
 // ─── Detail bottom sheet ───────────────────────────────────────────────────────
 
 class _DetailSheet extends StatelessWidget {
-  const _DetailSheet({required this.item, this.onDelete});
+  const _DetailSheet({required this.item, this.onDelete, this.onEdit});
 
   final JustificacionItem item;
   final VoidCallback? onDelete;
+  final VoidCallback? onEdit;
 
   Color _estadoColor(BuildContext context, String? estado) {
     final cs = Theme.of(context).colorScheme;
@@ -788,21 +811,34 @@ class _DetailSheet extends StatelessWidget {
                       ),
                     ),
                   ],
-                  if (onDelete != null) ...[
+                  if (onEdit != null || onDelete != null) ...[
                     const SizedBox(height: 24),
-                    OutlinedButton.icon(
-                      onPressed: onDelete,
-                      icon: Icon(Icons.delete_outline, color: cs.error),
-                      label: Text(
-                        'Eliminar justificación',
-                        style: TextStyle(color: cs.error),
+                    if (onEdit != null)
+                      FilledButton.icon(
+                        onPressed: onEdit,
+                        icon: const Icon(Icons.edit_outlined),
+                        label: const Text('Editar motivo'),
+                        style: FilledButton.styleFrom(
+                          padding: const EdgeInsets.symmetric(vertical: 14),
+                          minimumSize: const Size(double.infinity, 0),
+                        ),
                       ),
-                      style: OutlinedButton.styleFrom(
-                        side: BorderSide(color: cs.error),
-                        padding: const EdgeInsets.symmetric(vertical: 14),
-                        minimumSize: const Size(double.infinity, 0),
+                    if (onEdit != null && onDelete != null)
+                      const SizedBox(height: 10),
+                    if (onDelete != null)
+                      OutlinedButton.icon(
+                        onPressed: onDelete,
+                        icon: Icon(Icons.delete_outline, color: cs.error),
+                        label: Text(
+                          'Eliminar justificación',
+                          style: TextStyle(color: cs.error),
+                        ),
+                        style: OutlinedButton.styleFrom(
+                          side: BorderSide(color: cs.error),
+                          padding: const EdgeInsets.symmetric(vertical: 14),
+                          minimumSize: const Size(double.infinity, 0),
+                        ),
                       ),
-                    ),
                   ],
                 ],
               ),
@@ -1008,6 +1044,177 @@ class _CreateJustificacionSheetState
                           ),
                         )
                       : const Text('Guardar justificación'),
+                ),
+              ],
+            ),
+          ),
+        ],
+      ),
+    );
+  }
+}
+
+// ─── Edit bottom sheet ────────────────────────────────────────────────────────
+
+class _EditJustificacionSheet extends StatefulWidget {
+  const _EditJustificacionSheet({
+    required this.apiClient,
+    required this.token,
+    required this.item,
+  });
+
+  final MobileApiClient apiClient;
+  final String token;
+  final JustificacionItem item;
+
+  @override
+  State<_EditJustificacionSheet> createState() =>
+      _EditJustificacionSheetState();
+}
+
+class _EditJustificacionSheetState extends State<_EditJustificacionSheet> {
+  late final TextEditingController _motivoCtrl;
+  late final TextEditingController _archivoCtrl;
+  bool _saving = false;
+  String? _error;
+
+  @override
+  void initState() {
+    super.initState();
+    _motivoCtrl = TextEditingController(text: widget.item.motivo ?? '');
+    _archivoCtrl = TextEditingController(text: widget.item.archivo ?? '');
+  }
+
+  @override
+  void dispose() {
+    _motivoCtrl.dispose();
+    _archivoCtrl.dispose();
+    super.dispose();
+  }
+
+  Future<void> _submit() async {
+    final motivo = _motivoCtrl.text.trim();
+    if (motivo.isEmpty) {
+      setState(() => _error = 'El motivo es requerido.');
+      return;
+    }
+    setState(() {
+      _saving = true;
+      _error = null;
+    });
+    try {
+      await widget.apiClient.updateJustificacion(
+        token: widget.token,
+        id: widget.item.id,
+        motivo: motivo,
+        archivo: _archivoCtrl.text.trim().isEmpty
+            ? null
+            : _archivoCtrl.text.trim(),
+      );
+      if (!mounted) return;
+      Navigator.pop(context, true);
+    } on ApiException catch (e) {
+      if (!mounted) return;
+      setState(() => _error = e.message);
+    } catch (_) {
+      if (!mounted) return;
+      setState(() => _error = 'Error inesperado. Intentalo de nuevo.');
+    } finally {
+      if (mounted) setState(() => _saving = false);
+    }
+  }
+
+  @override
+  Widget build(BuildContext context) {
+    final cs = Theme.of(context).colorScheme;
+    final bottomPadding = MediaQuery.viewInsetsOf(context).bottom;
+
+    return Padding(
+      padding: EdgeInsets.only(bottom: bottomPadding),
+      child: Column(
+        mainAxisSize: MainAxisSize.min,
+        children: [
+          Padding(
+            padding: const EdgeInsets.symmetric(vertical: 10),
+            child: Container(
+              width: 36,
+              height: 4,
+              decoration: BoxDecoration(
+                color: cs.outlineVariant,
+                borderRadius: BorderRadius.circular(2),
+              ),
+            ),
+          ),
+          Padding(
+            padding: const EdgeInsets.fromLTRB(20, 0, 20, 4),
+            child: Row(
+              children: [
+                Text(
+                  'Editar justificación #${widget.item.id}',
+                  style: Theme.of(context)
+                      .textTheme
+                      .titleMedium
+                      ?.copyWith(fontWeight: FontWeight.w700),
+                ),
+                const Spacer(),
+                IconButton(
+                  onPressed: () => Navigator.pop(context, false),
+                  icon: const Icon(Icons.close),
+                ),
+              ],
+            ),
+          ),
+          SingleChildScrollView(
+            padding: const EdgeInsets.fromLTRB(20, 8, 20, 24),
+            child: Column(
+              crossAxisAlignment: CrossAxisAlignment.stretch,
+              children: [
+                TextField(
+                  controller: _motivoCtrl,
+                  maxLines: 3,
+                  maxLength: 300,
+                  decoration: const InputDecoration(
+                    labelText: 'Motivo *',
+                    border: OutlineInputBorder(),
+                    isDense: true,
+                    alignLabelWithHint: true,
+                  ),
+                ),
+                const SizedBox(height: 14),
+                TextField(
+                  controller: _archivoCtrl,
+                  keyboardType: TextInputType.url,
+                  decoration: const InputDecoration(
+                    labelText: 'URL del adjunto (opcional)',
+                    hintText: 'https://...',
+                    border: OutlineInputBorder(),
+                    isDense: true,
+                    prefixIcon: Icon(Icons.attach_file, size: 18),
+                  ),
+                ),
+                if (_error != null) ...[
+                  const SizedBox(height: 8),
+                  Text(
+                    _error!,
+                    style: TextStyle(color: cs.error, fontSize: 13),
+                  ),
+                ],
+                const SizedBox(height: 16),
+                FilledButton(
+                  onPressed: _saving ? null : _submit,
+                  style: FilledButton.styleFrom(
+                    padding: const EdgeInsets.symmetric(vertical: 16),
+                  ),
+                  child: _saving
+                      ? const SizedBox(
+                          width: 20,
+                          height: 20,
+                          child: CircularProgressIndicator(
+                            strokeWidth: 2,
+                            valueColor: AlwaysStoppedAnimation(Colors.white),
+                          ),
+                        )
+                      : const Text('Guardar cambios'),
                 ),
               ],
             ),

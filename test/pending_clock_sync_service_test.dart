@@ -126,14 +126,14 @@ void main() {
       );
 
       expect(result.synced, isFalse);
-      expect(result.message, 'Sin internet. El item sigue pendiente.');
+      expect(result.message, 'Sin internet. El ítem sigue pendiente.');
       expect(result.snapshot.total, 1);
       expect(result.snapshot.failed, 0);
 
       final saved = (await queue.readForEmployee(7)).single;
       expect(saved.status, OfflineClockStatus.pending);
       expect(saved.attempts, 1);
-      expect(saved.lastError, contains('conexion'));
+      expect(saved.lastError, contains('conexión'));
       apiClient.dispose();
     });
   });

@@ -45,7 +45,7 @@ void main() {
       expect(manager.session, isNotNull);
       expect(manager.isLocked, isTrue);
       expect(manager.currentTokenFromProvider(), isNull);
-      expect(manager.statusMessage, 'Desbloquea la sesion con huella.');
+      expect(manager.statusMessage, 'Desbloqueá la sesión con huella.');
       expect(apiClient.refreshCalls, 0);
 
       manager.dispose();

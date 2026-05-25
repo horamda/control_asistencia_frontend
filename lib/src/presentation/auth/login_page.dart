@@ -9,6 +9,7 @@ import '../../config/app_config.dart';
 import '../../core/auth/biometric_credential_cache.dart';
 import '../../core/auth/offline_credentials_cache.dart';
 import '../../core/network/mobile_api_client.dart';
+import '../../core/utils/device_telemetry.dart';
 
 class LoginPage extends StatefulWidget {
   const LoginPage({
@@ -104,9 +105,13 @@ class _LoginPageState extends State<LoginPage> {
     });
 
     try {
+      final telemetry = await buildLoginTelemetry();
       final session = await widget.apiClient.login(
         dni: _dniController.text.trim(),
         password: _passwordController.text,
+        platform: telemetry.platform,
+        deviceModel: telemetry.deviceModel,
+        appVersion: telemetry.appVersion,
       );
       // Persist credentials for offline access and biometric re-auth
       final offlineCache = widget.offlineCredentialsCache;
@@ -250,12 +255,9 @@ class _LoginPageState extends State<LoginPage> {
         children: [
           const Icon(Icons.developer_mode, size: 12, color: Colors.white60),
           const SizedBox(width: 4),
-          Flexible(
-            child: Text(
-              AppConfig.current.apiBaseUrl,
-              style: const TextStyle(color: Colors.white60, fontSize: 11),
-              overflow: TextOverflow.ellipsis,
-            ),
+          Text(
+            AppConfig.current.flavorLabel,
+            style: const TextStyle(color: Colors.white60, fontSize: 11),
           ),
         ],
       ),

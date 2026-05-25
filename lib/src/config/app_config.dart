@@ -50,7 +50,7 @@ class AppConfig {
     ),
     mobileContractVersion: String.fromEnvironment(
       'MOBILE_CONTRACT_VERSION',
-      defaultValue: '1.15.0',
+      defaultValue: '1.20.5',
     ),
     flavorLabel: _flavor,
     isProd: _isProd,

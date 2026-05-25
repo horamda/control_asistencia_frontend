@@ -7,6 +7,8 @@ import '../../core/offline/offline_clock_queue.dart';
 import '../../core/offline/pending_queue_controller.dart';
 import '../auth/biometric_settings_page.dart';
 import '../profile/profile_page.dart';
+import '../trivia/trivia_home_screen.dart';
+import 'about_page.dart';
 import 'attendance_history_page.dart';
 import 'employee_stats_page.dart';
 import 'adelantos_page.dart';
@@ -18,12 +20,39 @@ import 'justificaciones_page.dart';
 import 'marks_history_page.dart';
 import 'pedidos_mercaderia_page.dart';
 import 'kpis_sector_page.dart';
+import 'premios_page.dart';
+import 'horarios_page.dart';
 import 'qr_scan_page.dart';
 import 'security_events_page.dart';
 import 'widgets/pending_queue_sheet.dart';
 
 class AttendanceHomeCoordinator {
   const AttendanceHomeCoordinator();
+
+  Future<void> openTrivia(
+    BuildContext context, {
+    required MobileApiClient apiClient,
+    required String token,
+    required String empleadoDni,
+    required int empleadoId,
+  }) {
+    return Navigator.of(context).push(
+      MaterialPageRoute(
+        builder: (_) => TriviaHomeScreen(
+          apiClient: apiClient,
+          token: token,
+          empleadoDni: empleadoDni,
+          empleadoId: empleadoId,
+        ),
+      ),
+    );
+  }
+
+  Future<void> openAbout(BuildContext context) {
+    return Navigator.of(context).push(
+      MaterialPageRoute(builder: (_) => const AboutPage()),
+    );
+  }
 
   Future<void> openSecurityEvents(
     BuildContext context, {
@@ -159,6 +188,18 @@ class AttendanceHomeCoordinator {
     );
   }
 
+  Future<void> openPremios(
+    BuildContext context, {
+    required MobileApiClient apiClient,
+    required String token,
+  }) {
+    return Navigator.of(context).push(
+      MaterialPageRoute(
+        builder: (_) => PremiosPage(apiClient: apiClient, token: token),
+      ),
+    );
+  }
+
   Future<void> openStats(
     BuildContext context, {
     required MobileApiClient apiClient,
@@ -195,6 +236,18 @@ class AttendanceHomeCoordinator {
     return Navigator.of(context).push(
       MaterialPageRoute(
         builder: (_) => BiometricSettingsPage(sessionManager: sessionManager),
+      ),
+    );
+  }
+
+  Future<void> openHorarios(
+    BuildContext context, {
+    required MobileApiClient apiClient,
+    required String token,
+  }) {
+    return Navigator.of(context).push(
+      MaterialPageRoute(
+        builder: (_) => HorariosPage(apiClient: apiClient, token: token),
       ),
     );
   }

@@ -4,6 +4,7 @@ import 'package:connectivity_plus/connectivity_plus.dart';
 import 'package:flutter/material.dart';
 import 'package:geolocator/geolocator.dart';
 import 'package:image_picker/image_picker.dart';
+import 'package:url_launcher/url_launcher.dart';
 
 import '../../config/app_config.dart';
 import '../../core/attendance/attendance_config_cache.dart';
@@ -14,7 +15,9 @@ import '../../core/attendance/clock_metrics_tracker.dart';
 import '../../core/attendance/qr_clock_preflight_service.dart';
 import '../../core/attendance/clock_readiness_service.dart';
 import '../../core/attendance/qr_clock_submission_service.dart';
+import '../../core/feedback/app_rating_service.dart';
 import '../../core/feedback/clock_feedback_audio_service.dart';
+import '../widgets/app_rating_dialog.dart';
 import '../../core/image/clock_photo_cache.dart';
 import '../../core/image/profile_photo_cache.dart';
 import '../../core/auth/session_manager.dart';
@@ -25,6 +28,7 @@ import '../../core/offline/pending_queue_controller.dart';
 import '../../core/permissions/device_permission_bootstrap.dart';
 import '../../core/utils/app_logger.dart';
 import '../../core/utils/clock_format_utils.dart';
+import '../../core/utils/date_formatter.dart';
 import 'attendance_home_action_presenter.dart';
 import 'attendance_home_coordinator.dart';
 import 'attendance_home_view_model.dart';
@@ -89,6 +93,7 @@ class _AttendanceHomePageState extends State<AttendanceHomePage>
   bool _loadingProfile = false;
   bool _locatingGps = false;
   DashboardResponse? _dashboard;
+  HorarioEsperadoResponse? _turnoHoy;
   String? _lastQrData;
   String? _profileLoadError;
   AttendanceConfig? _config;
@@ -109,6 +114,14 @@ class _AttendanceHomePageState extends State<AttendanceHomePage>
   PendingQueueState _pendingQueue = const PendingQueueState();
   ClockReadinessSnapshot _clockReadiness = const ClockReadinessSnapshot();
   String? _clockActionPhase;
+
+  // ─── Trivia ────────────────────────────────────────────────────────────────
+  TriviaEstadoResponse? _triviaEstado;
+  List<TriviaNotificacion> _triviaNotificaciones = [];
+  int _triviaPuntosAcumulados = 0;
+
+  // ─── Rating ────────────────────────────────────────────────────────────────
+  late final AppRatingService _ratingService;
 
   @override
   void initState() {
@@ -154,12 +167,19 @@ class _AttendanceHomePageState extends State<AttendanceHomePage>
             widget.empleado.foto,
             version: widget.empleado.imagenVersion,
           );
+    _ratingService = AppRatingService(
+      apiClient: widget.apiClient,
+      token: widget.token,
+    );
     unawaited(_feedbackAudio.initialize());
     unawaited(_applyFeedbackProfileFromSession());
     unawaited(_preloadReadinessFromCache());
+    unawaited(_loadTodayLastMark());
     _loadConfig();
     _loadProfile();
     unawaited(_loadDashboard());
+    unawaited(_loadTurnoHoy());
+    unawaited(_loadTriviaEstado());
     _loadPendingQueueState();
     Future<void>.microtask(() => _warmUpClockReadiness(forceGps: true));
     Future<void>.microtask(
@@ -231,6 +251,23 @@ class _AttendanceHomePageState extends State<AttendanceHomePage>
 
   Future<void> _fichar() async {
     await _runScanAndClock();
+  }
+
+  Future<void> _openRateApp() async {
+    if (!mounted) return;
+    await showAppRatingDialog(
+      context,
+      ratingService: _ratingService,
+      pantalla: 'mas_opciones',
+    );
+  }
+
+  static final _linksUrl = Uri.parse('https://horamda.github.io/delPalacio_DPO/');
+
+  Future<void> _openLinks() async {
+    if (await canLaunchUrl(_linksUrl)) {
+      await launchUrl(_linksUrl, mode: LaunchMode.externalApplication);
+    }
   }
 
   Future<void> _openSecurityEvents() async {
@@ -311,6 +348,24 @@ class _AttendanceHomePageState extends State<AttendanceHomePage>
     );
   }
 
+  Future<void> _openPremios() async {
+    if (_submitting) return;
+    await _homeCoordinator.openPremios(
+      context,
+      apiClient: widget.apiClient,
+      token: widget.token,
+    );
+  }
+
+  Future<void> _openHorarios() async {
+    if (_submitting) return;
+    await _homeCoordinator.openHorarios(
+      context,
+      apiClient: widget.apiClient,
+      token: widget.token,
+    );
+  }
+
   Future<void> _openAttendanceHistory() async {
     if (_submitting) {
       return;
@@ -379,6 +434,41 @@ class _AttendanceHomePageState extends State<AttendanceHomePage>
     await _feedbackAudio.setProfile(widget.sessionManager.clockFeedbackProfile);
   }
 
+  Future<void> _loadTriviaEstado() async {
+    try {
+      final results = await Future.wait([
+        widget.apiClient.getTriviaEstado(token: widget.token),
+        widget.apiClient.getTriviaNotificaciones(token: widget.token),
+        widget.apiClient
+            .getMiHistorialTrivia(token: widget.token)
+            .catchError((_) => <TriviaMyHistorialItem>[]),
+      ]);
+      if (!mounted) return;
+      final historial = results[2] as List<TriviaMyHistorialItem>;
+      final pts = historial.fold<int>(0, (sum, i) => sum + (i.puntosTotal ?? 0));
+      setState(() {
+        _triviaEstado = results[0] as TriviaEstadoResponse;
+        _triviaNotificaciones = results[1] as List<TriviaNotificacion>;
+        _triviaPuntosAcumulados = pts;
+      });
+    } catch (_) {
+      // Trivia es opcional — si falla no bloqueamos el home
+    }
+  }
+
+  Future<void> _openTrivia() async {
+    if (_submitting) return;
+    await _homeCoordinator.openTrivia(
+      context,
+      apiClient: widget.apiClient,
+      token: widget.token,
+      empleadoDni: widget.empleado.dni,
+      empleadoId: widget.empleado.id,
+    );
+    if (!mounted) return;
+    unawaited(_loadTriviaEstado());
+  }
+
   Future<void> _loadDashboard() async {
     try {
       final dashboard = await widget.apiClient.getDashboard(
@@ -388,6 +478,22 @@ class _AttendanceHomePageState extends State<AttendanceHomePage>
       setState(() => _dashboard = dashboard);
     } catch (_) {
       // Dashboard es opcional — si falla no bloqueamos el home
+    }
+  }
+
+  Future<void> _loadTurnoHoy() async {
+    try {
+      final hoy = DateTime.now();
+      final fecha =
+          '${hoy.year}-${hoy.month.toString().padLeft(2, '0')}-${hoy.day.toString().padLeft(2, '0')}';
+      final turno = await widget.apiClient.getHorarioEsperado(
+        token: widget.token,
+        fecha: fecha,
+      );
+      if (!mounted) return;
+      setState(() => _turnoHoy = turno);
+    } catch (_) {
+      // Turno es opcional — si falla no bloqueamos el home
     }
   }
 
@@ -957,6 +1063,8 @@ class _AttendanceHomePageState extends State<AttendanceHomePage>
       _loadConfig(force: true),
       _loadProfile(force: true),
       _loadDashboard(),
+      _loadTurnoHoy(),
+      _loadTriviaEstado(),
       _syncPendingClocks(isBackground: true),
       _warmUpClockReadiness(forceGps: true, refreshConfig: true),
     ]);
@@ -1060,6 +1168,18 @@ class _AttendanceHomePageState extends State<AttendanceHomePage>
       case AttendanceHomeActionIntent.openKpisSector:
         return () {
           unawaited(_openKpisSector());
+        };
+      case AttendanceHomeActionIntent.openPremios:
+        return () {
+          unawaited(_openPremios());
+        };
+      case AttendanceHomeActionIntent.openHorarios:
+        return () {
+          unawaited(_openHorarios());
+        };
+      case AttendanceHomeActionIntent.openLinks:
+        return () {
+          unawaited(_openLinks());
         };
     }
   }
@@ -1209,6 +1329,51 @@ class _AttendanceHomePageState extends State<AttendanceHomePage>
         ),
       ),
     );
+  }
+
+  Future<void> _loadTodayLastMark() async {
+    final today = DateFormatter.formatApiDate(DateTime.now());
+    try {
+      final result = await widget.apiClient.getMarcas(
+        token: widget.token,
+        page: 1,
+        per: 50,
+        desde: today,
+        hasta: today,
+      );
+      if (!mounted || result.items.isEmpty) return;
+      final last = result.items.reduce(
+        (a, b) => ((a.hora ?? '').compareTo(b.hora ?? '') >= 0) ? a : b,
+      );
+      final at = _parseMarcaToDateTime(last);
+      if (at != null && mounted) {
+        setState(() {
+          _clockMetrics = _clockMetrics.copyWith(lastClockAt: at);
+        });
+      }
+    } catch (_) {
+      // silencioso — no es crítico para el funcionamiento de la app
+    }
+  }
+
+  DateTime? _parseMarcaToDateTime(MarcaItem marca) {
+    final fecha = marca.fecha;
+    final hora = marca.hora;
+    if (fecha == null || hora == null) return null;
+    try {
+      final d = fecha.split('-');
+      final t = hora.split(':');
+      if (d.length < 3) return null;
+      return DateTime(
+        int.parse(d[0]),
+        int.parse(d[1]),
+        int.parse(d[2]),
+        t.isNotEmpty ? int.parse(t[0]) : 0,
+        t.length > 1 ? int.parse(t[1]) : 0,
+      );
+    } catch (_) {
+      return null;
+    }
   }
 
   void _recordClockMetrics({
@@ -1372,6 +1537,10 @@ class _AttendanceHomePageState extends State<AttendanceHomePage>
                   await _openBiometricSettings();
                 case _HomeMenuAction.security:
                   await _openSecurityEvents();
+                case _HomeMenuAction.rateApp:
+                  await _openRateApp();
+                case _HomeMenuAction.links:
+                  await _openLinks();
                 case _HomeMenuAction.diagnostics:
                   if (mounted) {
                     _showDiagnosticsSheet(
@@ -1382,6 +1551,8 @@ class _AttendanceHomePageState extends State<AttendanceHomePage>
                   }
                 case _HomeMenuAction.lockSession:
                   await widget.onLockSession();
+                case _HomeMenuAction.about:
+                  await _homeCoordinator.openAbout(context);
                 case _HomeMenuAction.logout:
                   await widget.onLogout();
               }
@@ -1405,6 +1576,24 @@ class _AttendanceHomePageState extends State<AttendanceHomePage>
                   dense: true,
                 ),
               ),
+              const PopupMenuItem(
+                value: _HomeMenuAction.rateApp,
+                child: ListTile(
+                  leading: Icon(Icons.star_outline_rounded),
+                  title: Text('Calificá la app'),
+                  contentPadding: EdgeInsets.zero,
+                  dense: true,
+                ),
+              ),
+              const PopupMenuItem(
+                value: _HomeMenuAction.links,
+                child: ListTile(
+                  leading: Icon(Icons.link_rounded),
+                  title: Text('Acceso a mis Links'),
+                  contentPadding: EdgeInsets.zero,
+                  dense: true,
+                ),
+              ),
               if (!AppConfig.current.isProd)
                 const PopupMenuItem(
                   value: _HomeMenuAction.diagnostics,
@@ -1416,6 +1605,15 @@ class _AttendanceHomePageState extends State<AttendanceHomePage>
                   ),
                 ),
               const PopupMenuDivider(),
+              const PopupMenuItem(
+                value: _HomeMenuAction.about,
+                child: ListTile(
+                  leading: Icon(Icons.info_outline),
+                  title: Text('Acerca de'),
+                  contentPadding: EdgeInsets.zero,
+                  dense: true,
+                ),
+              ),
               const PopupMenuItem(
                 value: _HomeMenuAction.lockSession,
                 child: ListTile(
@@ -1438,7 +1636,7 @@ class _AttendanceHomePageState extends State<AttendanceHomePage>
           ),
         ],
       ),
-      floatingActionButton: FloatingActionButton.large(
+      floatingActionButton: FloatingActionButton(
         onPressed: _submitting ? null : _fichar,
         backgroundColor: _submitting ? cs.surfaceContainerHighest : const Color(0xFF00B09C),
         foregroundColor: Colors.white,
@@ -1447,14 +1645,14 @@ class _AttendanceHomePageState extends State<AttendanceHomePage>
         shape: const CircleBorder(),
         child: _submitting
             ? const SizedBox(
-                width: 28,
-                height: 28,
+                width: 22,
+                height: 22,
                 child: CircularProgressIndicator(
                   strokeWidth: 3,
                   valueColor: AlwaysStoppedAnimation(Colors.white),
                 ),
               )
-            : const Icon(Icons.qr_code_scanner, size: 34),
+            : const Icon(Icons.qr_code_scanner, size: 26),
       ),
       floatingActionButtonLocation: FloatingActionButtonLocation.centerDocked,
       bottomNavigationBar: BottomAppBar(
@@ -1574,6 +1772,10 @@ class _AttendanceHomePageState extends State<AttendanceHomePage>
                       ? () => unawaited(_openPendingQueueDetails())
                       : null,
                 ),
+                if (_turnoHoy != null && _turnoHoy!.bloques.isNotEmpty) ...[
+                  const SizedBox(height: 8),
+                  _TurnoHoyBanner(turno: _turnoHoy!),
+                ],
                 const SizedBox(height: 12),
                 // ── Stats grid (4 tiles) ───────────────────────────
                 AttendanceStatsCarousel(
@@ -1609,6 +1811,18 @@ class _AttendanceHomePageState extends State<AttendanceHomePage>
                       accent: const Color(0xFF5C3D8F),
                     ),
                   ],
+                ),
+                // ── Trivia card ────────────────────────────────────────────
+                const SizedBox(height: 12),
+                _TriviaDashboardCard(
+                  estado: _triviaEstado,
+                  notificaciones: _triviaNotificaciones,
+                  onTap: () => unawaited(_openTrivia()),
+                ),
+                const SizedBox(height: 8),
+                _TriviaPuntosCard(
+                  puntos: _triviaPuntosAcumulados,
+                  onTap: () => unawaited(_openTrivia()),
                 ),
                 // ── Readiness strip: solo visible si algo no está listo ────
                 if (!viewData.configReady ||
@@ -1664,9 +1878,86 @@ class _AttendanceHomePageState extends State<AttendanceHomePage>
 
 }
 
+// ─── Turno de hoy ────────────────────────────────────────────────────────────
+
+class _TurnoHoyBanner extends StatelessWidget {
+  const _TurnoHoyBanner({required this.turno});
+
+  final HorarioEsperadoResponse turno;
+
+  String _bloquesText() {
+    return turno.bloques
+        .map((b) => '${b.entrada} – ${b.salida}')
+        .join('  |  ');
+  }
+
+  @override
+  Widget build(BuildContext context) {
+    final cs = Theme.of(context).colorScheme;
+    return Container(
+      padding: const EdgeInsets.symmetric(horizontal: 14, vertical: 10),
+      decoration: BoxDecoration(
+        color: cs.surfaceContainerLow,
+        borderRadius: BorderRadius.circular(12),
+        border: Border.all(color: cs.outlineVariant),
+      ),
+      child: Row(
+        children: [
+          Icon(Icons.schedule_outlined, size: 18, color: cs.primary),
+          const SizedBox(width: 10),
+          Expanded(
+            child: Column(
+              crossAxisAlignment: CrossAxisAlignment.start,
+              children: [
+                Text(
+                  'Turno de hoy',
+                  style: Theme.of(context).textTheme.labelSmall?.copyWith(
+                        color: cs.onSurfaceVariant,
+                      ),
+                ),
+                Text(
+                  _bloquesText(),
+                  style: Theme.of(context).textTheme.bodyMedium?.copyWith(
+                        fontWeight: FontWeight.w600,
+                      ),
+                ),
+              ],
+            ),
+          ),
+          if (turno.tolerancia != null && turno.tolerancia! > 0) ...[
+            const SizedBox(width: 8),
+            Container(
+              padding: const EdgeInsets.symmetric(horizontal: 8, vertical: 3),
+              decoration: BoxDecoration(
+                color: cs.secondaryContainer,
+                borderRadius: BorderRadius.circular(20),
+              ),
+              child: Text(
+                '±${turno.tolerancia} min',
+                style: TextStyle(
+                  fontSize: 11,
+                  fontWeight: FontWeight.w600,
+                  color: cs.onSecondaryContainer,
+                ),
+              ),
+            ),
+          ],
+          if (turno.tieneExcepcion) ...[
+            const SizedBox(width: 6),
+            Tooltip(
+              message: 'Horario con excepción',
+              child: Icon(Icons.info_outline, size: 16, color: cs.tertiary),
+            ),
+          ],
+        ],
+      ),
+    );
+  }
+}
+
 // ─── Menu actions ────────────────────────────────────────────────────────────
 
-enum _HomeMenuAction { biometrics, security, diagnostics, lockSession, logout }
+enum _HomeMenuAction { biometrics, security, rateApp, links, diagnostics, lockSession, about, logout }
 
 // ─── Processing overlay ───────────────────────────────────────────────────────
 
@@ -1727,6 +2018,340 @@ class _ClockProcessingOverlay extends StatelessWidget {
               ],
             ),
           ),
+        ),
+      ),
+    );
+  }
+}
+
+// ─── Trivia Dashboard Card ────────────────────────────────────────────────────
+
+class _TriviaDashboardCard extends StatelessWidget {
+  const _TriviaDashboardCard({
+    required this.estado,
+    required this.notificaciones,
+    required this.onTap,
+  });
+
+  final TriviaEstadoResponse? estado;
+  final List<TriviaNotificacion> notificaciones;
+  final VoidCallback onTap;
+
+  static const _primary = Color(0xFF0E3A5B);
+  static const _gradientA = Color(0xFF6C3EB8);
+  static const _gradientB = Color(0xFF00B09C);
+
+  @override
+  Widget build(BuildContext context) {
+    final e = estado;
+    final tieneNotif = notificaciones.isNotEmpty;
+
+    // Estado destacado: trivia activa sin participar → tarjeta grande con gradiente
+    if (e != null && e.hayTriviaActiva) {
+      final trivia = e.trivia!;
+      if (trivia.estado == 'activa' && !e.yaParticipo) {
+        return _buildActivaCard(trivia, tieneNotif);
+      }
+    }
+
+    return _buildCompactCard(context, e, tieneNotif);
+  }
+
+  Widget _buildActivaCard(TriviaInfo trivia, bool tieneNotif) {
+    return GestureDetector(
+      onTap: onTap,
+      child: Container(
+        decoration: BoxDecoration(
+          gradient: const LinearGradient(
+            colors: [_gradientA, _gradientB],
+            begin: Alignment.topLeft,
+            end: Alignment.bottomRight,
+          ),
+          borderRadius: BorderRadius.circular(18),
+          boxShadow: [
+            BoxShadow(
+              color: _gradientA.withValues(alpha: 0.35),
+              blurRadius: 18,
+              offset: const Offset(0, 7),
+            ),
+          ],
+        ),
+        padding: const EdgeInsets.fromLTRB(20, 18, 20, 20),
+        child: Column(
+          crossAxisAlignment: CrossAxisAlignment.start,
+          children: [
+            Row(
+              children: [
+                Container(
+                  padding: const EdgeInsets.symmetric(horizontal: 10, vertical: 4),
+                  decoration: BoxDecoration(
+                    color: Colors.white.withValues(alpha: 0.2),
+                    borderRadius: BorderRadius.circular(20),
+                  ),
+                  child: Row(
+                    mainAxisSize: MainAxisSize.min,
+                    children: [
+                      if (tieneNotif)
+                        Container(
+                          width: 7,
+                          height: 7,
+                          margin: const EdgeInsets.only(right: 5),
+                          decoration: const BoxDecoration(
+                            color: Colors.red,
+                            shape: BoxShape.circle,
+                          ),
+                        ),
+                      const Text(
+                        '🎯  TRIVIA ACTIVA',
+                        style: TextStyle(
+                          color: Colors.white,
+                          fontSize: 11,
+                          fontWeight: FontWeight.w800,
+                          letterSpacing: 0.6,
+                        ),
+                      ),
+                    ],
+                  ),
+                ),
+                const Spacer(),
+                const Text('🏆', style: TextStyle(fontSize: 24)),
+              ],
+            ),
+            const SizedBox(height: 14),
+            Text(
+              trivia.titulo,
+              style: const TextStyle(
+                color: Colors.white,
+                fontSize: 19,
+                fontWeight: FontWeight.w800,
+                height: 1.2,
+              ),
+              maxLines: 2,
+              overflow: TextOverflow.ellipsis,
+            ),
+            const SizedBox(height: 4),
+            const Text(
+              '¡Respondé y competí por el primer lugar!',
+              style: TextStyle(color: Colors.white70, fontSize: 12),
+            ),
+            const SizedBox(height: 18),
+            SizedBox(
+              width: double.infinity,
+              child: ElevatedButton(
+                style: ElevatedButton.styleFrom(
+                  backgroundColor: Colors.white,
+                  foregroundColor: _gradientA,
+                  padding: const EdgeInsets.symmetric(vertical: 13),
+                  shape: RoundedRectangleBorder(
+                    borderRadius: BorderRadius.circular(12),
+                  ),
+                  elevation: 0,
+                  textStyle: const TextStyle(
+                    fontSize: 15,
+                    fontWeight: FontWeight.w800,
+                  ),
+                ),
+                onPressed: onTap,
+                child: const Text('Jugar ahora →'),
+              ),
+            ),
+          ],
+        ),
+      ),
+    );
+  }
+
+  Widget _buildCompactCard(
+    BuildContext context,
+    TriviaEstadoResponse? e,
+    bool tieneNotif,
+  ) {
+    final cs = Theme.of(context).colorScheme;
+
+    final String titulo;
+    final String subtitulo;
+    final Color badgeColor;
+    final IconData icono;
+    final String? botonLabel;
+
+    if (e == null) {
+      titulo = 'Trivia';
+      subtitulo = 'Demostrá tu conocimiento';
+      badgeColor = _primary;
+      icono = Icons.quiz_outlined;
+      botonLabel = 'Abrir';
+    } else if (!e.hayTriviaActiva) {
+      titulo = 'Trivia';
+      subtitulo = tieneNotif
+          ? notificaciones.first.mensaje ?? 'Sin trivias activas'
+          : 'No hay trivias activas por el momento';
+      badgeColor = Colors.grey.shade500;
+      icono = Icons.history_outlined;
+      botonLabel = 'Ver historial';
+    } else {
+      final trivia = e.trivia!;
+      final est = trivia.estado;
+      if (est == 'programada') {
+        titulo = 'Próxima trivia';
+        subtitulo = trivia.titulo;
+        badgeColor = const Color(0xFF315D52);
+        icono = Icons.schedule_outlined;
+        botonLabel = null;
+      } else if (est == 'activa' && e.yaParticipo) {
+        final pts = e.participacion?.puntosTotal;
+        titulo = 'Ya participaste';
+        subtitulo = pts != null ? '${trivia.titulo} · $pts pts' : trivia.titulo;
+        badgeColor = const Color(0xFF2A789E);
+        icono = Icons.check_circle_outline;
+        botonLabel = 'Ver ranking';
+      } else {
+        titulo = 'Trivia';
+        subtitulo = trivia.titulo;
+        badgeColor = Colors.grey.shade500;
+        icono = Icons.history_outlined;
+        botonLabel = 'Ver historial';
+      }
+    }
+
+    return GestureDetector(
+      onTap: onTap,
+      child: Container(
+        decoration: BoxDecoration(
+          color: cs.surface,
+          borderRadius: BorderRadius.circular(14),
+          border: Border.all(color: cs.outlineVariant),
+        ),
+        padding: const EdgeInsets.symmetric(horizontal: 14, vertical: 12),
+        child: Row(
+          children: [
+            Stack(
+              clipBehavior: Clip.none,
+              children: [
+                Container(
+                  padding: const EdgeInsets.all(10),
+                  decoration: BoxDecoration(
+                    color: badgeColor.withValues(alpha: 0.1),
+                    borderRadius: BorderRadius.circular(12),
+                  ),
+                  child: Icon(icono, color: badgeColor, size: 24),
+                ),
+                if (tieneNotif)
+                  Positioned(
+                    top: -3,
+                    right: -3,
+                    child: Container(
+                      width: 12,
+                      height: 12,
+                      decoration: const BoxDecoration(
+                        color: Colors.red,
+                        shape: BoxShape.circle,
+                      ),
+                    ),
+                  ),
+              ],
+            ),
+            const SizedBox(width: 12),
+            Expanded(
+              child: Column(
+                crossAxisAlignment: CrossAxisAlignment.start,
+                children: [
+                  Container(
+                    padding: const EdgeInsets.symmetric(horizontal: 8, vertical: 2),
+                    decoration: BoxDecoration(
+                      color: badgeColor.withValues(alpha: 0.1),
+                      borderRadius: BorderRadius.circular(20),
+                    ),
+                    child: Text(
+                      titulo,
+                      style: TextStyle(
+                        fontSize: 11,
+                        fontWeight: FontWeight.w700,
+                        color: badgeColor,
+                      ),
+                    ),
+                  ),
+                  const SizedBox(height: 3),
+                  Text(
+                    subtitulo,
+                    style: Theme.of(context).textTheme.bodySmall?.copyWith(
+                          color: cs.onSurfaceVariant,
+                        ),
+                    maxLines: 1,
+                    overflow: TextOverflow.ellipsis,
+                  ),
+                ],
+              ),
+            ),
+            if (botonLabel != null) ...[
+              const SizedBox(width: 8),
+              FilledButton(
+                style: FilledButton.styleFrom(
+                  backgroundColor: badgeColor,
+                  padding: const EdgeInsets.symmetric(horizontal: 14, vertical: 8),
+                  minimumSize: Size.zero,
+                  tapTargetSize: MaterialTapTargetSize.shrinkWrap,
+                  shape: RoundedRectangleBorder(
+                    borderRadius: BorderRadius.circular(10),
+                  ),
+                  textStyle: const TextStyle(
+                    fontSize: 12,
+                    fontWeight: FontWeight.w600,
+                  ),
+                ),
+                onPressed: onTap,
+                child: Text(botonLabel),
+              ),
+            ] else
+              Icon(Icons.chevron_right, color: cs.onSurfaceVariant),
+          ],
+        ),
+      ),
+    );
+  }
+}
+
+// ─── Trivia Puntos Card ───────────────────────────────────────────────────────
+
+class _TriviaPuntosCard extends StatelessWidget {
+  const _TriviaPuntosCard({required this.puntos, required this.onTap});
+
+  final int puntos;
+  final VoidCallback onTap;
+
+  @override
+  Widget build(BuildContext context) {
+    return GestureDetector(
+      onTap: onTap,
+      child: Container(
+        padding: const EdgeInsets.symmetric(horizontal: 16, vertical: 11),
+        decoration: BoxDecoration(
+          color: const Color(0xFF0E3A5B),
+          borderRadius: BorderRadius.circular(12),
+        ),
+        child: Row(
+          children: [
+            const Text('⭐', style: TextStyle(fontSize: 16)),
+            const SizedBox(width: 10),
+            const Text(
+              'Mis Puntos Trivia',
+              style: TextStyle(
+                color: Colors.white70,
+                fontSize: 13,
+                fontWeight: FontWeight.w500,
+              ),
+            ),
+            const Spacer(),
+            Text(
+              '$puntos pts',
+              style: const TextStyle(
+                color: Colors.white,
+                fontSize: 15,
+                fontWeight: FontWeight.w800,
+              ),
+            ),
+            const SizedBox(width: 6),
+            const Icon(Icons.chevron_right, color: Colors.white38, size: 20),
+          ],
         ),
       ),
     );

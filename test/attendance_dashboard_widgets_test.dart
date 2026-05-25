@@ -35,7 +35,7 @@ void main() {
       );
 
       expect(find.text('Pendientes: 2 | Con error: 1'), findsOneWidget);
-      expect(find.text('Ultima sincronizacion: 09:45'), findsOneWidget);
+      expect(find.text('Última sincronización: 09:45'), findsOneWidget);
       expect(find.text('Hay una ficha rechazada.'), findsOneWidget);
 
       await tester.tap(find.text('Abrir bandeja'));
@@ -92,10 +92,10 @@ void main() {
         ),
       );
 
-      expect(find.text('Preparacion de fichada'), findsOneWidget);
+      expect(find.text('Preparación de fichada'), findsOneWidget);
       expect(find.text('Enviando fichada...'), findsOneWidget);
       expect(find.text('GPS: -34.60370, -58.38160'), findsOneWidget);
-      expect(find.text('Ultimo QR: qr-demo'), findsOneWidget);
+      expect(find.text('Último QR: qr-demo'), findsOneWidget);
       expect(find.byType(CircularProgressIndicator), findsWidgets);
 
       await tester.tap(find.text('Escanear QR y fichar'));
@@ -159,13 +159,13 @@ void main() {
       await tester.pump();
       expect(enabledTapCalls, 1);
 
-      await tester.tap(find.text('Diagnostico y reglas'));
+      await tester.tap(find.text('Diagnóstico y reglas'));
       await tester.pumpAndSettle();
 
       expect(find.text('Rendimiento de fichada'), findsOneWidget);
       expect(find.text('Promedio total: 6s'), findsOneWidget);
       expect(find.text('Promedio API: 2s'), findsOneWidget);
-      expect(find.text('Ultimo QR: qr-demo'), findsOneWidget);
+      expect(find.text('Último QR: qr-demo'), findsOneWidget);
       expect(find.text('QR: requerido'), findsOneWidget);
       expect(find.text('Cooldown: 30s'), findsOneWidget);
     });

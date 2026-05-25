@@ -1,5 +1,97 @@
+import 'dart:convert';
+
 import 'package:flutter/material.dart';
 import 'package:mobile_scanner/mobile_scanner.dart';
+
+const _qrTokenKeys = <String>['qr_token', 'token', 'qr'];
+final _jwtCompactPattern = RegExp(
+  r'^[A-Za-z0-9_-]+\.[A-Za-z0-9_-]+\.[A-Za-z0-9_-]+$',
+);
+
+String normalizeQrScanValue(String raw) {
+  final value = raw.trim();
+  if (value.isEmpty) {
+    return value;
+  }
+
+  if (value.toLowerCase().startsWith('bearer ')) {
+    return normalizeQrScanValue(value.substring(7));
+  }
+  if (_jwtCompactPattern.hasMatch(value)) {
+    return value;
+  }
+
+  if (value.startsWith('{')) {
+    try {
+      final decoded = jsonDecode(value);
+      if (decoded is Map) {
+        final token = _extractTokenFromMap(decoded);
+        if (token != null) {
+          return normalizeQrScanValue(token);
+        }
+      }
+    } catch (_) {
+      // Keep the original value; the backend will return a structured error.
+    }
+  }
+
+  final uri = Uri.tryParse(value);
+  if (uri != null) {
+    final token = _extractTokenFromMap(uri.queryParameters);
+    if (token != null) {
+      return normalizeQrScanValue(token);
+    }
+
+    final fragment = uri.fragment.trim();
+    if (fragment.isNotEmpty) {
+      final fragmentUri = Uri.tryParse(fragment);
+      final fragmentToken = fragmentUri == null
+          ? null
+          : _extractTokenFromMap(fragmentUri.queryParameters);
+      if (fragmentToken != null) {
+        return normalizeQrScanValue(fragmentToken);
+      }
+
+      final queryIndex = fragment.indexOf('?');
+      if (queryIndex >= 0 && queryIndex < fragment.length - 1) {
+        final queryToken = _extractTokenFromQuery(
+          fragment.substring(queryIndex + 1),
+        );
+        if (queryToken != null) {
+          return normalizeQrScanValue(queryToken);
+        }
+      }
+    }
+  }
+
+  final queryToken = _extractTokenFromQuery(value);
+  if (queryToken != null) {
+    return normalizeQrScanValue(queryToken);
+  }
+
+  return value;
+}
+
+String? _extractTokenFromMap(Map<dynamic, dynamic> map) {
+  for (final key in _qrTokenKeys) {
+    final value = map[key] ?? map[key.replaceAll('_', '-')];
+    if (value is String && value.trim().isNotEmpty) {
+      return value.trim();
+    }
+  }
+  return null;
+}
+
+String? _extractTokenFromQuery(String rawQuery) {
+  if (!rawQuery.contains('=')) {
+    return null;
+  }
+  try {
+    return _extractTokenFromMap(Uri.splitQueryString(rawQuery));
+  } catch (_) {
+    return null;
+  }
+}
 
 class QrScanPage extends StatefulWidget {
   const QrScanPage({
@@ -49,7 +141,7 @@ class _QrScanPageState extends State<QrScanPage> {
           return;
         }
         try {
-          Navigator.of(context).pop(value);
+          Navigator.of(context).pop(normalizeQrScanValue(value));
         } catch (_) {
           if (mounted) {
             setState(() {
@@ -169,9 +261,10 @@ class _ScannerViewfinderOverlayState extends State<_ScannerViewfinderOverlay>
       vsync: this,
       duration: const Duration(milliseconds: 1600),
     )..repeat(reverse: true);
-    _scanLine = Tween<double>(begin: 0.06, end: 0.94).animate(
-      CurvedAnimation(parent: _controller, curve: Curves.easeInOut),
-    );
+    _scanLine = Tween<double>(
+      begin: 0.06,
+      end: 0.94,
+    ).animate(CurvedAnimation(parent: _controller, curve: Curves.easeInOut));
   }
 
   @override
@@ -225,7 +318,9 @@ class _ViewfinderPainter extends CustomPainter {
     final overlayPaint = Paint()..color = overlayColor;
     canvas.drawRect(Rect.fromLTWH(0, 0, size.width, t), overlayPaint);
     canvas.drawRect(
-        Rect.fromLTWH(0, b, size.width, size.height - b), overlayPaint);
+      Rect.fromLTWH(0, b, size.width, size.height - b),
+      overlayPaint,
+    );
     canvas.drawRect(Rect.fromLTWH(0, t, l, side), overlayPaint);
     canvas.drawRect(Rect.fromLTWH(r, t, size.width - r, side), overlayPaint);
 
@@ -275,11 +370,7 @@ class _ViewfinderPainter extends CustomPainter {
         ).createShader(Rect.fromLTWH(l, scanY - 1, side, 2))
         ..strokeWidth = 2.0
         ..strokeCap = StrokeCap.round;
-      canvas.drawLine(
-        Offset(l + 12, scanY),
-        Offset(r - 12, scanY),
-        linePaint,
-      );
+      canvas.drawLine(Offset(l + 12, scanY), Offset(r - 12, scanY), linePaint);
     }
   }
 
@@ -323,7 +414,11 @@ class _InstructionBadge extends StatelessWidget {
           ),
           if (requiresPhoto) ...[
             const SizedBox(width: 10),
-            const Icon(Icons.camera_alt_outlined, color: Colors.white54, size: 16),
+            const Icon(
+              Icons.camera_alt_outlined,
+              color: Colors.white54,
+              size: 16,
+            ),
           ],
         ],
       ),

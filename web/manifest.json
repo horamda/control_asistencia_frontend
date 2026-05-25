@@ -1,11 +1,11 @@
 {
-    "name": "FicharQR",
-    "short_name": "FicharQR",
+    "name": "FichaYa",
+    "short_name": "FichaYa",
     "start_url": ".",
     "display": "standalone",
-    "background_color": "#0175C2",
-    "theme_color": "#0175C2",
-    "description": "A new Flutter project.",
+    "background_color": "#0E3A5B",
+    "theme_color": "#0E3A5B",
+    "description": "Aplicacion movil de control de asistencia.",
     "orientation": "portrait-primary",
     "prefer_related_applications": false,
     "icons": [

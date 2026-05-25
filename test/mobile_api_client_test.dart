@@ -112,6 +112,203 @@ void main() {
     );
     apiClient.dispose();
   });
+
+  test('getLegajoEventos envia filtros del contrato 1.18', () async {
+    final client = _QueuedClient([
+      _QueuedReply(
+        statusCode: 200,
+        body: const <String, dynamic>{
+          'ok': true,
+          'items': [
+            {
+              'id': 45,
+              'tipo_codigo': 'llamado_atencion',
+              'adjuntos_count': 1,
+            }
+          ],
+          'total': 1,
+          'page': 2,
+          'per_page': 10,
+          'pagination': {
+            'page': 2,
+            'per_page': 10,
+            'total': 1,
+            'has_more': false,
+          },
+        },
+        inspect: (request) {
+          expect(request.method, 'GET');
+          expect(request.url.path, '/api/v1/mobile/me/legajo/eventos');
+          expect(request.url.queryParameters['tipo_id'], '3');
+          expect(request.url.queryParameters['estado'], 'vigente');
+          expect(request.url.queryParameters['severidad'], 'leve');
+          expect(request.url.queryParameters['desde'], '2026-01-01');
+          expect(request.url.queryParameters['hasta'], '2026-12-31');
+          expect(request.url.queryParameters['q'], 'tarde');
+        },
+      ),
+    ]);
+
+    final apiClient = MobileApiClient(
+      baseUrl: 'https://example.com',
+      httpClient: client,
+    );
+
+    final result = await apiClient.getLegajoEventos(
+      token: 'abc',
+      page: 2,
+      per: 10,
+      tipoId: 3,
+      estado: 'vigente',
+      severidad: 'leve',
+      desde: '2026-01-01',
+      hasta: '2026-12-31',
+      queryText: 'tarde',
+    );
+
+    expect(result.ok, isTrue);
+    expect(result.items.single.tipoCodigo, 'llamado_atencion');
+    expect(result.page, 2);
+    expect(result.perPage, 10);
+    expect(result.hasMore, isFalse);
+    apiClient.dispose();
+  });
+
+  test('getLegajoEventoDetalle parsea campos basicos de LegajoEventoItem', () async {
+    final client = _QueuedClient([
+      _QueuedReply(
+        statusCode: 200,
+        body: const <String, dynamic>{
+          'ok': true,
+          'id': 45,
+          'tipo_nombre': 'Llamado de atencion',
+          'tipo_codigo': 'llamado_atencion',
+          'estado': 'vigente',
+          'severidad': 'leve',
+        },
+        inspect: (request) {
+          expect(request.method, 'GET');
+          expect(request.url.path, '/api/v1/mobile/me/legajo/eventos/45');
+        },
+      ),
+    ]);
+
+    final apiClient = MobileApiClient(
+      baseUrl: 'https://example.com',
+      httpClient: client,
+    );
+
+    final evento = await apiClient.getLegajoEventoDetalle(token: 'abc', id: 45);
+
+    expect(evento.id, 45);
+    expect(evento.tipoNombre, 'Llamado de atencion');
+    expect(evento.estado, 'vigente');
+    expect(evento.severidad, 'leve');
+    apiClient.dispose();
+  });
+
+  test('login envia telemetria cuando se proporcionan los campos', () async {
+    final client = _QueuedClient([
+      _QueuedReply(
+        statusCode: 200,
+        body: const <String, dynamic>{
+          'token': 'jwt-abc',
+          'empleado': {
+            'id': 5,
+            'dni': '30111222',
+            'nombre': 'Ana',
+            'apellido': 'Lopez',
+          },
+        },
+        inspect: (request) {
+          expect(request.method, 'POST');
+          expect(request.url.path, '/api/v1/mobile/auth/login');
+          final body = jsonDecode((request as http.Request).body) as Map;
+          expect(body['dni'], '30111222');
+          expect(body['platform'], 'android');
+          expect(body['device_model'], 'Samsung Galaxy S23');
+          expect(body['app_version'], '1.20.4');
+        },
+      ),
+    ]);
+
+    final apiClient = MobileApiClient(
+      baseUrl: 'https://example.com',
+      httpClient: client,
+    );
+
+    final session = await apiClient.login(
+      dni: '30111222',
+      password: 'secret',
+      platform: 'android',
+      deviceModel: 'Samsung Galaxy S23',
+      appVersion: '1.20.4',
+    );
+
+    expect(session.token, 'jwt-abc');
+    expect(session.empleado.id, 5);
+    apiClient.dispose();
+  });
+
+  test('login omite telemetria cuando los campos son null', () async {
+    final client = _QueuedClient([
+      _QueuedReply(
+        statusCode: 200,
+        body: const <String, dynamic>{
+          'token': 'jwt-xyz',
+          'empleado': {
+            'id': 7,
+            'dni': '20999888',
+            'nombre': 'Carlos',
+            'apellido': null,
+          },
+        },
+        inspect: (request) {
+          final body = jsonDecode((request as http.Request).body) as Map;
+          expect(body.containsKey('platform'), isFalse);
+          expect(body.containsKey('device_model'), isFalse);
+          expect(body.containsKey('app_version'), isFalse);
+        },
+      ),
+    ]);
+
+    final apiClient = MobileApiClient(
+      baseUrl: 'https://example.com',
+      httpClient: client,
+    );
+
+    final session = await apiClient.login(dni: '20999888', password: 'pass');
+
+    expect(session.token, 'jwt-xyz');
+    apiClient.dispose();
+  });
+
+  test('marcarTodasNotificacionesTriviaLeidas POST al endpoint correcto', () async {
+    final client = _QueuedClient([
+      _QueuedReply(
+        statusCode: 200,
+        body: const <String, dynamic>{'ok': true},
+        inspect: (request) {
+          expect(request.method, 'POST');
+          expect(
+            request.url.path,
+            '/api/v1/trivia/notificaciones/leer-todas',
+          );
+          expect(request.headers['Authorization'], 'Bearer my-token');
+        },
+      ),
+    ]);
+
+    final apiClient = MobileApiClient(
+      baseUrl: 'https://example.com',
+      httpClient: client,
+    );
+
+    await apiClient.marcarTodasNotificacionesTriviaLeidas(token: 'my-token');
+
+    expect(client.callCount, 1);
+    apiClient.dispose();
+  });
 }
 
 class _QueuedClient extends http.BaseClient {

@@ -3,6 +3,7 @@ import 'dart:async';
 import 'package:flutter/material.dart';
 
 import '../../core/network/mobile_api_client.dart';
+import '../../core/utils/date_formatter.dart';
 
 class VacacionesPage extends StatefulWidget {
   const VacacionesPage({
@@ -20,12 +21,18 @@ class VacacionesPage extends StatefulWidget {
 
 class _VacacionesPageState extends State<VacacionesPage> {
   bool _loading = true;
+  bool _requesting = false;
   String? _error;
-  List<VacacionItem> _items = [];
-  int _page = 1;
-  int _total = 0;
-  bool _loadingMore = false;
-  static const _per = 20;
+  int _anio = DateTime.now().year;
+  VacacionesResumenResponse? _resumen;
+  List<VacacionesMovimiento> _movimientos = [];
+
+  bool get _puedeSolicitar {
+    final resumen = _resumen?.vacaciones;
+    if (resumen == null) return false;
+    return _anio >= DateTime.now().year &&
+        resumen.diasDisponiblesConPendientes > 0;
+  }
 
   @override
   void initState() {
@@ -37,20 +44,20 @@ class _VacacionesPageState extends State<VacacionesPage> {
     setState(() {
       _loading = true;
       _error = null;
-      _page = 1;
-      _items = [];
     });
     try {
-      final result = await widget.apiClient.getVacaciones(
-        token: widget.token,
-        page: 1,
-        per: _per,
-      );
+      final results = await Future.wait([
+        widget.apiClient.getVacacionesResumen(token: widget.token, anio: _anio),
+        widget.apiClient.getVacacionesMovimientos(
+          token: widget.token,
+          anio: _anio,
+        ),
+      ]);
       if (!mounted) return;
       setState(() {
-        _items = result.items;
-        _total = result.total;
-        _page = 1;
+        _resumen = results[0] as VacacionesResumenResponse;
+        _movimientos =
+            (results[1] as VacacionesMovimientosResponse).movimientos;
         _loading = false;
       });
     } on ApiException catch (e) {
@@ -62,109 +69,64 @@ class _VacacionesPageState extends State<VacacionesPage> {
     } catch (_) {
       if (!mounted) return;
       setState(() {
-        _error = 'Error inesperado al cargar las vacaciones.';
+        _error = 'Error inesperado al cargar vacaciones.';
         _loading = false;
       });
     }
   }
 
-  Future<void> _loadMore() async {
-    if (_loadingMore || _items.length >= _total) return;
-    setState(() => _loadingMore = true);
-    try {
-      final result = await widget.apiClient.getVacaciones(
-        token: widget.token,
-        page: _page + 1,
-        per: _per,
-      );
-      if (!mounted) return;
-      setState(() {
-        _items = [..._items, ...result.items];
-        _page++;
-        _loadingMore = false;
-      });
-    } catch (_) {
-      if (!mounted) return;
-      setState(() => _loadingMore = false);
-    }
+  Future<void> _changeYear(int delta) async {
+    final next = _anio + delta;
+    if (next < 2000 || next > 2100 || _loading) return;
+    setState(() => _anio = next);
+    await _load();
   }
 
   Future<void> _solicitar() async {
+    if (!_puedeSolicitar || _requesting) return;
     final result = await showDialog<_VacacionFormResult>(
       context: context,
-      builder: (ctx) => const _VacacionFormDialog(),
+      builder: (ctx) => _VacacionFormDialog(
+        anio: _anio,
+        saldoDisponible: _resumen!.vacaciones.diasDisponiblesConPendientes,
+      ),
     );
     if (result == null || !mounted) return;
 
+    setState(() => _requesting = true);
     try {
-      await widget.apiClient.createVacacion(
+      final response = await widget.apiClient.solicitarVacaciones(
         token: widget.token,
         fechaDesde: result.fechaDesde,
         fechaHasta: result.fechaHasta,
-        observaciones: result.observaciones,
+        observacion: result.observacion,
       );
       if (!mounted) return;
+      setState(() => _requesting = false);
+      final dias = response.solicitud.diasSolicitados;
       ScaffoldMessenger.of(context).showSnackBar(
-        const SnackBar(content: Text('Solicitud de vacaciones enviada.')),
+        SnackBar(
+          content: Text(
+            dias > 0
+                ? 'Solicitud enviada ($dias dia${dias == 1 ? '' : 's'}).'
+                : 'Solicitud de vacaciones enviada.',
+          ),
+        ),
       );
       unawaited(_load());
     } on ApiException catch (e) {
       if (!mounted) return;
+      setState(() => _requesting = false);
       ScaffoldMessenger.of(context).showSnackBar(
-        SnackBar(
-          content: Text(e.message),
-          backgroundColor: Colors.red[700],
-        ),
+        SnackBar(content: Text(e.message), backgroundColor: Colors.red[700]),
       );
     } catch (_) {
       if (!mounted) return;
+      setState(() => _requesting = false);
       ScaffoldMessenger.of(context).showSnackBar(
         const SnackBar(
           content: Text('No se pudo enviar la solicitud.'),
           backgroundColor: Colors.red,
-        ),
-      );
-    }
-  }
-
-  Future<void> _cancelar(VacacionItem item) async {
-    final confirmed = await showDialog<bool>(
-      context: context,
-      builder: (ctx) => AlertDialog(
-        title: const Text('Cancelar solicitud'),
-        content: const Text(
-          '¿Confirmás la cancelación de esta solicitud de vacaciones?',
-        ),
-        actions: [
-          TextButton(
-            onPressed: () => Navigator.of(ctx).pop(false),
-            child: const Text('No'),
-          ),
-          FilledButton(
-            onPressed: () => Navigator.of(ctx).pop(true),
-            child: const Text('Cancelar solicitud'),
-          ),
-        ],
-      ),
-    );
-    if (confirmed != true || !mounted) return;
-
-    try {
-      await widget.apiClient.deleteVacacion(
-        token: widget.token,
-        id: item.id,
-      );
-      if (!mounted) return;
-      ScaffoldMessenger.of(context).showSnackBar(
-        const SnackBar(content: Text('Solicitud cancelada.')),
-      );
-      unawaited(_load());
-    } on ApiException catch (e) {
-      if (!mounted) return;
-      ScaffoldMessenger.of(context).showSnackBar(
-        SnackBar(
-          content: Text(e.message),
-          backgroundColor: Colors.red[700],
         ),
       );
     }
@@ -193,15 +155,20 @@ class _VacacionesPageState extends State<VacacionesPage> {
             ),
         ],
       ),
-      floatingActionButton: FloatingActionButton.extended(
-        onPressed: _solicitar,
-        icon: const Icon(Icons.add),
-        label: const Text('Solicitar'),
-      ),
-      body: RefreshIndicator(
-        onRefresh: _load,
-        child: _buildBody(),
-      ),
+      floatingActionButton: _puedeSolicitar
+          ? FloatingActionButton.extended(
+              onPressed: _requesting ? null : _solicitar,
+              icon: _requesting
+                  ? const SizedBox(
+                      width: 18,
+                      height: 18,
+                      child: CircularProgressIndicator(strokeWidth: 2),
+                    )
+                  : const Icon(Icons.add),
+              label: Text(_requesting ? 'Enviando...' : 'Solicitar'),
+            )
+          : null,
+      body: RefreshIndicator(onRefresh: _load, child: _buildBody()),
     );
   }
 
@@ -232,52 +199,100 @@ class _VacacionesPageState extends State<VacacionesPage> {
       );
     }
 
-    if (_items.isEmpty) {
-      return const Center(
-        child: Text('No hay solicitudes de vacaciones.'),
-      );
+    final resumen = _resumen;
+    if (resumen == null) {
+      return const Center(child: Text('Sin datos de vacaciones.'));
     }
 
-    return NotificationListener<ScrollNotification>(
-      onNotification: (n) {
-        if (n.metrics.pixels >= n.metrics.maxScrollExtent - 100) {
-          _loadMore();
-        }
-        return false;
-      },
-      child: ListView.builder(
-        physics: const AlwaysScrollableScrollPhysics(),
-        padding: const EdgeInsets.fromLTRB(16, 12, 16, 88),
-        itemCount: _items.length + (_loadingMore ? 1 : 0),
-        itemBuilder: (context, index) {
-          if (index == _items.length) {
-            return const Padding(
-              padding: EdgeInsets.all(16),
-              child: Center(child: CircularProgressIndicator(strokeWidth: 2)),
-            );
-          }
-          final item = _items[index];
-          return _VacacionCard(
-            item: item,
-            onCancelar: () => _cancelar(item),
-          );
-        },
-      ),
+    return ListView(
+      physics: const AlwaysScrollableScrollPhysics(),
+      padding: EdgeInsets.fromLTRB(16, 12, 16, _puedeSolicitar ? 88 : 20),
+      children: [
+        _YearSelector(
+          anio: _anio,
+          onPrevious: () => _changeYear(-1),
+          onNext: () => _changeYear(1),
+        ),
+        const SizedBox(height: 12),
+        _SaldoResumenCard(resumen: resumen, puedeSolicitar: _puedeSolicitar),
+        const SizedBox(height: 18),
+        _SectionTitle(
+          title: 'Movimientos',
+          subtitle: _movimientos.isEmpty
+              ? 'No hay movimientos en $_anio.'
+              : '${_movimientos.length} movimiento${_movimientos.length == 1 ? '' : 's'}',
+        ),
+        const SizedBox(height: 8),
+        if (_movimientos.isEmpty)
+          const _EmptyMovimientos()
+        else
+          ..._movimientos.map((m) => _MovimientoCard(movimiento: m)),
+      ],
     );
   }
 }
 
-class _VacacionCard extends StatelessWidget {
-  const _VacacionCard({required this.item, this.onCancelar});
+class _YearSelector extends StatelessWidget {
+  const _YearSelector({
+    required this.anio,
+    required this.onPrevious,
+    required this.onNext,
+  });
 
-  final VacacionItem item;
-  final VoidCallback? onCancelar;
+  final int anio;
+  final VoidCallback onPrevious;
+  final VoidCallback onNext;
 
   @override
   Widget build(BuildContext context) {
     final cs = Theme.of(context).colorScheme;
+    return Row(
+      children: [
+        IconButton(
+          icon: const Icon(Icons.chevron_left),
+          tooltip: 'Anio anterior',
+          onPressed: anio > 2000 ? onPrevious : null,
+        ),
+        Expanded(
+          child: Row(
+            mainAxisAlignment: MainAxisAlignment.center,
+            children: [
+              Icon(Icons.calendar_month_outlined, size: 18, color: cs.primary),
+              const SizedBox(width: 8),
+              Text(
+                '$anio',
+                style: Theme.of(
+                  context,
+                ).textTheme.titleMedium?.copyWith(fontWeight: FontWeight.w700),
+              ),
+            ],
+          ),
+        ),
+        IconButton(
+          icon: const Icon(Icons.chevron_right),
+          tooltip: 'Anio siguiente',
+          onPressed: anio < 2100 ? onNext : null,
+        ),
+      ],
+    );
+  }
+}
+
+class _SaldoResumenCard extends StatelessWidget {
+  const _SaldoResumenCard({
+    required this.resumen,
+    required this.puedeSolicitar,
+  });
+
+  final VacacionesResumenResponse resumen;
+  final bool puedeSolicitar;
+
+  @override
+  Widget build(BuildContext context) {
+    final cs = Theme.of(context).colorScheme;
+    final saldo = resumen.vacaciones;
     return Card(
-      margin: const EdgeInsets.only(bottom: 10),
+      margin: EdgeInsets.zero,
       child: Padding(
         padding: const EdgeInsets.all(16),
         child: Column(
@@ -285,40 +300,459 @@ class _VacacionCard extends StatelessWidget {
           children: [
             Row(
               children: [
-                const Icon(Icons.beach_access_outlined, size: 22),
-                const SizedBox(width: 8),
+                Icon(Icons.beach_access_outlined, color: cs.primary),
+                const SizedBox(width: 10),
                 Expanded(
                   child: Text(
-                    '${item.fechaDesde ?? '—'} → ${item.fechaHasta ?? '—'}',
-                    style: const TextStyle(fontWeight: FontWeight.w600),
+                    resumen.empleado.nombre ?? 'Resumen anual',
+                    style: Theme.of(context).textTheme.titleMedium?.copyWith(
+                      fontWeight: FontWeight.w700,
+                    ),
                   ),
                 ),
               ],
             ),
-            if (item.observaciones != null) ...[
-              const SizedBox(height: 6),
-              Text(
-                item.observaciones!,
-                style: Theme.of(context).textTheme.bodySmall?.copyWith(
+            const SizedBox(height: 14),
+            Wrap(
+              spacing: 8,
+              runSpacing: 8,
+              children: [
+                _MetricPill(
+                  label: 'Disponible',
+                  value: _formatDias(saldo.diasDisponiblesConPendientes),
+                  color: saldo.diasDisponiblesConPendientes > 0
+                      ? Colors.green.shade700
+                      : cs.error,
+                ),
+                _MetricPill(
+                  label: 'Pendiente',
+                  value: _formatDias(saldo.diasPendientes),
+                  color: Colors.amber.shade800,
+                ),
+                _MetricPill(
+                  label: 'Tomado',
+                  value: _formatDias(saldo.diasTomados),
+                  color: cs.primary,
+                ),
+                _MetricPill(
+                  label: 'Corresponde',
+                  value: _formatDias(saldo.diasCorresponden),
                   color: cs.onSurfaceVariant,
                 ),
+              ],
+            ),
+            const SizedBox(height: 14),
+            if (saldo.desgloseCorresponde.isNotEmpty)
+              _DesgloseCorresponde(desglose: saldo.desgloseCorresponde)
+            else ...[
+              _ResumenLine(
+                label: 'Base calculada',
+                value: '${_formatDias(saldo.diasBase)} dias',
               ),
-            ],
-            if (onCancelar != null) ...[
-              const SizedBox(height: 12),
-              Align(
-                alignment: Alignment.centerRight,
-                child: TextButton.icon(
-                  onPressed: onCancelar,
-                  icon: const Icon(Icons.close, size: 18),
-                  label: const Text('Cancelar solicitud'),
-                  style: TextButton.styleFrom(
-                    foregroundColor: Colors.red[700],
-                  ),
+              if (saldo.diasCompensatorios + saldo.diasAjustes != 0)
+                _ResumenLine(
+                  label: 'Compensatorios y ajustes',
+                  value:
+                      '${_formatDias(saldo.diasCompensatorios + saldo.diasAjustes)} dias',
                 ),
+            ],
+            _ResumenLine(
+              label: 'Antiguedad al 31/12',
+              value: '${saldo.antiguedadAl3112} anios',
+            ),
+            _ResumenLine(
+              label: 'Dias trabajados',
+              value: saldo.diasTrabajadosPorcentaje != null
+                  ? '${saldo.diasTrabajadosAnio} de ${saldo.diasHabilesAnio} (${saldo.diasTrabajadosPorcentaje!.toStringAsFixed(1)}%)'
+                  : '${saldo.diasTrabajadosAnio}/${saldo.diasHabilesAnio}',
+            ),
+            if (saldo.aplicaControlProporcional && !saldo.calculoProporcional)
+              Padding(
+                padding: const EdgeInsets.only(top: 8),
+                child: _InfoBanner(
+                  text:
+                      'Tenes menos de 1 anio de antiguedad. Si trabajas menos del ${saldo.umbralProporcionalPct.toStringAsFixed(0)}% de los dias habiles, el saldo se recalcula proporcionalmente.',
+                  icon: Icons.info_outline,
+                  color: cs.primaryContainer,
+                  onColor: cs.onPrimaryContainer,
+                ),
+              ),
+            if (saldo.calculoProporcional)
+              Padding(
+                padding: const EdgeInsets.only(top: 8),
+                child: _InfoBanner(
+                  text:
+                      'El saldo se calculo proporcionalmente por dias trabajados.',
+                  icon: Icons.info_outline,
+                  color: cs.primaryContainer,
+                  onColor: cs.onPrimaryContainer,
+                ),
+              ),
+            if (!puedeSolicitar) ...[
+              const SizedBox(height: 10),
+              _InfoBanner(
+                text: saldo.diasDisponiblesConPendientes <= 0
+                    ? 'No hay saldo disponible para nuevas solicitudes.'
+                    : 'Solo se pueden crear solicitudes para el anio actual o posterior.',
+                icon: Icons.lock_outline,
+                color: cs.surfaceContainerHighest,
+                onColor: cs.onSurfaceVariant,
               ),
             ],
           ],
+        ),
+      ),
+    );
+  }
+}
+
+class _MetricPill extends StatelessWidget {
+  const _MetricPill({
+    required this.label,
+    required this.value,
+    required this.color,
+  });
+
+  final String label;
+  final String value;
+  final Color color;
+
+  @override
+  Widget build(BuildContext context) {
+    final cs = Theme.of(context).colorScheme;
+    return Container(
+      width: 142,
+      padding: const EdgeInsets.symmetric(horizontal: 12, vertical: 10),
+      decoration: BoxDecoration(
+        color: cs.surfaceContainerHighest,
+        borderRadius: BorderRadius.circular(8),
+      ),
+      child: Column(
+        crossAxisAlignment: CrossAxisAlignment.center,
+        mainAxisSize: MainAxisSize.min,
+        children: [
+          Text(
+            label,
+            textAlign: TextAlign.center,
+            style: Theme.of(
+              context,
+            ).textTheme.labelSmall?.copyWith(color: cs.onSurfaceVariant),
+          ),
+          const SizedBox(height: 4),
+          Text(
+            '$value dias',
+            textAlign: TextAlign.center,
+            style: Theme.of(context).textTheme.titleMedium?.copyWith(
+              color: color,
+              fontWeight: FontWeight.w800,
+            ),
+          ),
+        ],
+      ),
+    );
+  }
+}
+
+class _DesgloseCorresponde extends StatelessWidget {
+  const _DesgloseCorresponde({required this.desglose});
+  final List<VacacionesDesgloseDia> desglose;
+
+  @override
+  Widget build(BuildContext context) {
+    final cs = Theme.of(context).colorScheme;
+    final partes = desglose.map((d) => '${_formatDias(d.dias)} ${d.concepto}').join('  +  ');
+    final total = desglose.fold<double>(0, (s, d) => s + d.dias);
+    return Padding(
+      padding: const EdgeInsets.symmetric(vertical: 4),
+      child: Row(
+        children: [
+          Expanded(
+            child: Text(
+              'Corresponde',
+              style: Theme.of(context).textTheme.bodySmall?.copyWith(
+                color: cs.onSurfaceVariant,
+              ),
+            ),
+          ),
+          const SizedBox(width: 12),
+          Flexible(
+            child: Text(
+              desglose.length > 1
+                  ? '$partes  =  ${_formatDias(total)} dias'
+                  : '${_formatDias(total)} dias',
+              textAlign: TextAlign.end,
+              style: Theme.of(context).textTheme.bodySmall?.copyWith(
+                fontWeight: FontWeight.w600,
+              ),
+            ),
+          ),
+        ],
+      ),
+    );
+  }
+}
+
+class _ResumenLine extends StatelessWidget {
+  const _ResumenLine({required this.label, required this.value});
+
+  final String label;
+  final String value;
+
+  @override
+  Widget build(BuildContext context) {
+    final cs = Theme.of(context).colorScheme;
+    return Padding(
+      padding: const EdgeInsets.symmetric(vertical: 3),
+      child: Row(
+        children: [
+          Expanded(
+            child: Text(
+              label,
+              style: Theme.of(
+                context,
+              ).textTheme.bodySmall?.copyWith(color: cs.onSurfaceVariant),
+            ),
+          ),
+          const SizedBox(width: 12),
+          Text(
+            value,
+            style: Theme.of(
+              context,
+            ).textTheme.bodySmall?.copyWith(fontWeight: FontWeight.w600),
+          ),
+        ],
+      ),
+    );
+  }
+}
+
+class _InfoBanner extends StatelessWidget {
+  const _InfoBanner({
+    required this.text,
+    required this.icon,
+    required this.color,
+    required this.onColor,
+  });
+
+  final String text;
+  final IconData icon;
+  final Color color;
+  final Color onColor;
+
+  @override
+  Widget build(BuildContext context) {
+    return Container(
+      padding: const EdgeInsets.symmetric(horizontal: 12, vertical: 10),
+      decoration: BoxDecoration(
+        color: color,
+        borderRadius: BorderRadius.circular(8),
+      ),
+      child: Row(
+        children: [
+          Icon(icon, size: 18, color: onColor),
+          const SizedBox(width: 8),
+          Expanded(
+            child: Text(
+              text,
+              style: Theme.of(
+                context,
+              ).textTheme.bodySmall?.copyWith(color: onColor),
+            ),
+          ),
+        ],
+      ),
+    );
+  }
+}
+
+class _SectionTitle extends StatelessWidget {
+  const _SectionTitle({required this.title, required this.subtitle});
+
+  final String title;
+  final String subtitle;
+
+  @override
+  Widget build(BuildContext context) {
+    final cs = Theme.of(context).colorScheme;
+    return Row(
+      children: [
+        Expanded(
+          child: Text(
+            title,
+            style: Theme.of(
+              context,
+            ).textTheme.titleSmall?.copyWith(fontWeight: FontWeight.w700),
+          ),
+        ),
+        Text(
+          subtitle,
+          style: Theme.of(
+            context,
+          ).textTheme.bodySmall?.copyWith(color: cs.onSurfaceVariant),
+        ),
+      ],
+    );
+  }
+}
+
+class _EmptyMovimientos extends StatelessWidget {
+  const _EmptyMovimientos();
+
+  @override
+  Widget build(BuildContext context) {
+    final cs = Theme.of(context).colorScheme;
+    return Container(
+      padding: const EdgeInsets.symmetric(horizontal: 16, vertical: 28),
+      decoration: BoxDecoration(
+        border: Border.all(color: cs.outlineVariant),
+        borderRadius: BorderRadius.circular(8),
+      ),
+      child: Column(
+        children: [
+          Icon(Icons.event_available_outlined, size: 34, color: cs.primary),
+          const SizedBox(height: 10),
+          Text(
+            'Sin movimientos de vacaciones.',
+            style: Theme.of(
+              context,
+            ).textTheme.bodyMedium?.copyWith(color: cs.onSurfaceVariant),
+          ),
+        ],
+      ),
+    );
+  }
+}
+
+class _MovimientoCard extends StatelessWidget {
+  const _MovimientoCard({required this.movimiento});
+
+  final VacacionesMovimiento movimiento;
+
+  @override
+  Widget build(BuildContext context) {
+    final cs = Theme.of(context).colorScheme;
+    final esReversion = movimiento.esReversion;
+    final afectaSaldo = movimiento.afectaSaldo;
+    final opacity = afectaSaldo ? 1.0 : 0.55;
+
+    return Opacity(
+      opacity: opacity,
+      child: Card(
+        margin: const EdgeInsets.only(bottom: 10),
+        shape: esReversion
+            ? RoundedRectangleBorder(
+                borderRadius: BorderRadius.circular(12),
+                side: BorderSide(
+                  color: cs.outlineVariant,
+                  style: BorderStyle.solid,
+                ),
+              )
+            : null,
+        color: esReversion ? cs.surfaceContainerHighest : null,
+        child: Padding(
+          padding: const EdgeInsets.all(16),
+          child: Column(
+            crossAxisAlignment: CrossAxisAlignment.start,
+            children: [
+              Row(
+                children: [
+                  Icon(
+                    esReversion ? Icons.undo : _tipoIcon(movimiento.tipo),
+                    size: 22,
+                    color: esReversion ? cs.onSurfaceVariant : cs.primary,
+                  ),
+                  const SizedBox(width: 8),
+                  Expanded(
+                    child: Text(
+                      esReversion
+                          ? 'Reversión'
+                          : _tipoLabel(movimiento.tipo),
+                      style: TextStyle(
+                        fontWeight: FontWeight.w700,
+                        color: esReversion ? cs.onSurfaceVariant : null,
+                      ),
+                    ),
+                  ),
+                  if (!esReversion) _EstadoChip(estado: movimiento.estado),
+                ],
+              ),
+              const SizedBox(height: 10),
+              Row(
+                children: [
+                  Icon(Icons.date_range_outlined, size: 16, color: cs.outline),
+                  const SizedBox(width: 6),
+                  Expanded(
+                    child: Text(
+                      _dateRange(movimiento.fechaDesde, movimiento.fechaHasta),
+                      style: Theme.of(context).textTheme.bodySmall?.copyWith(
+                        color: cs.onSurfaceVariant,
+                      ),
+                    ),
+                  ),
+                  Text(
+                    '${_formatDias(movimiento.dias)} dia${movimiento.dias == 1 ? '' : 's'}',
+                    style: Theme.of(context).textTheme.bodySmall?.copyWith(
+                      fontWeight: FontWeight.w700,
+                    ),
+                  ),
+                ],
+              ),
+              if (movimiento.observacion != null) ...[
+                const SizedBox(height: 8),
+                Text(
+                  movimiento.observacion!,
+                  style: Theme.of(context).textTheme.bodySmall?.copyWith(
+                    color: cs.onSurfaceVariant,
+                  ),
+                ),
+              ],
+              if (!afectaSaldo) ...[
+                const SizedBox(height: 8),
+                Row(
+                  children: [
+                    Icon(Icons.info_outline, size: 14, color: cs.onSurfaceVariant),
+                    const SizedBox(width: 4),
+                    Text(
+                      'No afecta tu saldo',
+                      style: Theme.of(context).textTheme.labelSmall?.copyWith(
+                        color: cs.onSurfaceVariant,
+                      ),
+                    ),
+                  ],
+                ),
+              ],
+            ],
+          ),
+        ),
+      ),
+    );
+  }
+}
+
+class _EstadoChip extends StatelessWidget {
+  const _EstadoChip({this.estado});
+
+  final String? estado;
+
+  @override
+  Widget build(BuildContext context) {
+    final cs = Theme.of(context).colorScheme;
+    final (label, bg, fg) = switch (estado) {
+      'aprobado' => ('Aprobado', Colors.green.shade100, Colors.green.shade900),
+      'rechazado' => ('Rechazado', cs.errorContainer, cs.onErrorContainer),
+      _ => ('Pendiente', cs.primaryContainer, cs.onPrimaryContainer),
+    };
+    return Container(
+      padding: const EdgeInsets.symmetric(horizontal: 8, vertical: 3),
+      decoration: BoxDecoration(
+        color: bg,
+        borderRadius: BorderRadius.circular(12),
+      ),
+      child: Text(
+        label,
+        style: Theme.of(context).textTheme.labelSmall?.copyWith(
+          color: fg,
+          fontWeight: FontWeight.w700,
         ),
       ),
     );
@@ -329,16 +763,22 @@ class _VacacionFormResult {
   const _VacacionFormResult({
     required this.fechaDesde,
     required this.fechaHasta,
-    this.observaciones,
+    this.observacion,
   });
 
   final String fechaDesde;
   final String fechaHasta;
-  final String? observaciones;
+  final String? observacion;
 }
 
 class _VacacionFormDialog extends StatefulWidget {
-  const _VacacionFormDialog();
+  const _VacacionFormDialog({
+    required this.anio,
+    required this.saldoDisponible,
+  });
+
+  final int anio;
+  final double saldoDisponible;
 
   @override
   State<_VacacionFormDialog> createState() => _VacacionFormDialogState();
@@ -347,27 +787,36 @@ class _VacacionFormDialog extends StatefulWidget {
 class _VacacionFormDialogState extends State<_VacacionFormDialog> {
   DateTime? _inicio;
   DateTime? _fin;
-  final _observacionesCtrl = TextEditingController();
+  final _observacionCtrl = TextEditingController();
 
   @override
   void dispose() {
-    _observacionesCtrl.dispose();
+    _observacionCtrl.dispose();
     super.dispose();
   }
 
-  String _formatDate(DateTime d) =>
-      '${d.year}-${d.month.toString().padLeft(2, '0')}-${d.day.toString().padLeft(2, '0')}';
+  DateTime get _firstDate {
+    final yearStart = DateTime(widget.anio);
+    final today = DateTime.now();
+    final normalizedToday = DateTime(today.year, today.month, today.day);
+    if (widget.anio == normalizedToday.year &&
+        normalizedToday.isAfter(yearStart)) {
+      return normalizedToday;
+    }
+    return yearStart;
+  }
 
-  String _displayDate(DateTime d) =>
-      '${d.day.toString().padLeft(2, '0')}/${d.month.toString().padLeft(2, '0')}/${d.year}';
+  DateTime get _lastDate => DateTime(widget.anio, 12, 31);
 
   Future<void> _pickDate({required bool isInicio}) async {
-    final now = DateTime.now();
+    final first = _firstDate;
+    final last = _lastDate;
+    final initial = isInicio ? (_inicio ?? first) : (_fin ?? _inicio ?? first);
     final picked = await showDatePicker(
       context: context,
-      initialDate: now,
-      firstDate: now,
-      lastDate: DateTime(now.year + 2),
+      initialDate: initial.isAfter(last) ? last : initial,
+      firstDate: first,
+      lastDate: last,
     );
     if (picked == null) return;
     setState(() {
@@ -380,39 +829,81 @@ class _VacacionFormDialogState extends State<_VacacionFormDialog> {
     });
   }
 
+  int get _diasSeleccionados {
+    final inicio = _inicio;
+    final fin = _fin;
+    if (inicio == null || fin == null || fin.isBefore(inicio)) return 0;
+    return fin.difference(inicio).inDays + 1;
+  }
+
   @override
   Widget build(BuildContext context) {
-    final canSubmit = _inicio != null && _fin != null && !_fin!.isBefore(_inicio!);
+    final cs = Theme.of(context).colorScheme;
+    final dias = _diasSeleccionados;
+    final saldo = widget.saldoDisponible;
+    final excedeSaldo = dias > 0 && dias > saldo;
+    final canSubmit = dias > 0 && !excedeSaldo;
 
     return AlertDialog(
       title: const Text('Solicitar vacaciones'),
-      content: Column(
-        mainAxisSize: MainAxisSize.min,
-        children: [
-          ListTile(
-            contentPadding: EdgeInsets.zero,
-            leading: const Icon(Icons.calendar_today_outlined),
-            title: const Text('Fecha inicio'),
-            subtitle: Text(_inicio != null ? _displayDate(_inicio!) : 'Sin seleccionar'),
-            onTap: () => _pickDate(isInicio: true),
-          ),
-          ListTile(
-            contentPadding: EdgeInsets.zero,
-            leading: const Icon(Icons.calendar_today_outlined),
-            title: const Text('Fecha fin'),
-            subtitle: Text(_fin != null ? _displayDate(_fin!) : 'Sin seleccionar'),
-            onTap: () => _pickDate(isInicio: false),
-          ),
-          const SizedBox(height: 8),
-          TextField(
-            controller: _observacionesCtrl,
-            decoration: const InputDecoration(
-              labelText: 'Observaciones (opcional)',
-              border: OutlineInputBorder(),
+      content: SingleChildScrollView(
+        child: Column(
+          mainAxisSize: MainAxisSize.min,
+          children: [
+            _InfoBanner(
+              text: 'Saldo disponible: ${_formatDias(saldo)} dias',
+              icon: Icons.beach_access_outlined,
+              color: cs.surfaceContainerHighest,
+              onColor: cs.onSurfaceVariant,
             ),
-            maxLines: 2,
-          ),
-        ],
+            const SizedBox(height: 10),
+            ListTile(
+              contentPadding: EdgeInsets.zero,
+              leading: const Icon(Icons.calendar_today_outlined),
+              title: const Text('Fecha inicio'),
+              subtitle: Text(_displayDate(_inicio)),
+              onTap: () => _pickDate(isInicio: true),
+            ),
+            ListTile(
+              contentPadding: EdgeInsets.zero,
+              leading: const Icon(Icons.calendar_today_outlined),
+              title: const Text('Fecha fin'),
+              subtitle: Text(_displayDate(_fin)),
+              onTap: () => _pickDate(isInicio: false),
+            ),
+            if (dias > 0) ...[
+              const SizedBox(height: 4),
+              Align(
+                alignment: Alignment.centerLeft,
+                child: Text(
+                  '$dias dia${dias == 1 ? '' : 's'} seleccionados',
+                  style: Theme.of(context).textTheme.bodySmall?.copyWith(
+                    color: excedeSaldo ? cs.error : cs.onSurfaceVariant,
+                    fontWeight: FontWeight.w600,
+                  ),
+                ),
+              ),
+            ],
+            if (excedeSaldo) ...[
+              const SizedBox(height: 8),
+              _InfoBanner(
+                text: 'La solicitud supera el saldo disponible.',
+                icon: Icons.error_outline,
+                color: cs.errorContainer,
+                onColor: cs.onErrorContainer,
+              ),
+            ],
+            const SizedBox(height: 12),
+            TextField(
+              controller: _observacionCtrl,
+              decoration: const InputDecoration(
+                labelText: 'Observacion (opcional)',
+                border: OutlineInputBorder(),
+              ),
+              maxLines: 2,
+            ),
+          ],
+        ),
       ),
       actions: [
         TextButton(
@@ -422,19 +913,55 @@ class _VacacionFormDialogState extends State<_VacacionFormDialog> {
         FilledButton(
           onPressed: canSubmit
               ? () => Navigator.of(context).pop(
-                    _VacacionFormResult(
-                      fechaDesde: _formatDate(_inicio!),
-                      fechaHasta: _formatDate(_fin!),
-                      observaciones: _observacionesCtrl.text.trim().isEmpty
-                          ? null
-                          : _observacionesCtrl.text.trim(),
-                    ),
-                  )
+                  _VacacionFormResult(
+                    fechaDesde: DateFormatter.formatApiDate(_inicio!),
+                    fechaHasta: DateFormatter.formatApiDate(_fin!),
+                    observacion: _observacionCtrl.text.trim().isEmpty
+                        ? null
+                        : _observacionCtrl.text.trim(),
+                  ),
+                )
               : null,
-          child: const Text('Solicitar'),
+          child: const Text('Enviar'),
         ),
       ],
     );
   }
+
+  String _displayDate(DateTime? date) {
+    if (date == null) return 'Sin seleccionar';
+    return DateFormatter.formatDisplayDate(date);
+  }
 }
 
+String _formatDias(double value) {
+  if (value == value.roundToDouble()) {
+    return value.toStringAsFixed(0);
+  }
+  return value.toStringAsFixed(1);
+}
+
+String _dateRange(String? desde, String? hasta) {
+  final start = DateFormatter.formatApiDateForDisplay(desde);
+  final end = DateFormatter.formatApiDateForDisplay(hasta);
+  if (start == '-' && end == '-') return 'Sin rango de fechas';
+  if (start == end || end == '-') return start;
+  if (start == '-') return end;
+  return '$start - $end';
+}
+
+String _tipoLabel(String? tipo) {
+  return switch (tipo) {
+    'compensatorio' => 'Compensatorio',
+    'ajuste' => 'Ajuste',
+    _ => 'Vacaciones tomadas',
+  };
+}
+
+IconData _tipoIcon(String? tipo) {
+  return switch (tipo) {
+    'compensatorio' => Icons.add_circle_outline,
+    'ajuste' => Icons.tune_outlined,
+    _ => Icons.beach_access_outlined,
+  };
+}

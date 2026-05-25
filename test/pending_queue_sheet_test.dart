@@ -31,7 +31,7 @@ void main() {
         ),
       );
 
-      expect(find.text('Bandeja de sincronizacion'), findsOneWidget);
+      expect(find.text('Bandeja de sincronización'), findsOneWidget);
       expect(find.text('No hay fichadas pendientes.'), findsOneWidget);
 
       await tester.tap(find.text('Sincronizar ahora'));
@@ -95,8 +95,8 @@ void main() {
       expect(find.text('Hay items pendientes.'), findsOneWidget);
       expect(find.text('Fecha: 2026-03-17 08:15'), findsOneWidget);
       expect(find.text('Intentos: 2'), findsOneWidget);
-      expect(find.text('Ultimo intento: 2026-03-17 08:20'), findsOneWidget);
-      expect(find.text('Ultimo error: Sin conectividad.'), findsOneWidget);
+      expect(find.text('Último intento: 2026-03-17 08:20'), findsOneWidget);
+      expect(find.text('Último error: Sin conectividad.'), findsOneWidget);
       expect(find.text('Error'), findsOneWidget);
 
       await tester.tap(find.text('Reintentar'));

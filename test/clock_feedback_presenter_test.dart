@@ -72,6 +72,45 @@ void main() {
       expect(presentation.notice.message, contains('7 segundos'));
     });
 
+    test('presenta QR de otro ambiente con mensaje accionable', () {
+      final result = QrClockSubmissionResult(
+        status: QrClockSubmissionStatus.apiFailure,
+        totalDuration: const Duration(seconds: 1),
+        apiError: ApiException(
+          message: 'QR invalido.',
+          code: 'qr_token_invalid_signature',
+        ),
+      );
+
+      final presentation = presenter.presentSubmissionResult(
+        result,
+        formatDuration: (_) => '1s',
+      );
+
+      expect(presentation.notice.isError, isTrue);
+      expect(presentation.notice.effectiveTone, ClockFeedbackTone.warning);
+      expect(presentation.notice.message, contains('otro ambiente'));
+      expect(presentation.notice.message, contains('panel actual'));
+    });
+
+    test('presenta QR inactivo con mensaje accionable', () {
+      final result = QrClockSubmissionResult(
+        status: QrClockSubmissionStatus.apiFailure,
+        totalDuration: const Duration(seconds: 1),
+        apiError: ApiException(message: 'QR inactivo.', code: 'qr_inactive'),
+      );
+
+      final presentation = presenter.presentSubmissionResult(
+        result,
+        formatDuration: (_) => '1s',
+      );
+
+      expect(presentation.notice.isError, isTrue);
+      expect(presentation.notice.effectiveTone, ClockFeedbackTone.warning);
+      expect(presentation.notice.message, contains('QR inactivo'));
+      expect(presentation.notice.message, contains('panel'));
+    });
+
     test('presenta cola offline llena con mensaje de limite', () {
       final result = QrClockSubmissionResult(
         status: QrClockSubmissionStatus.offlineQueueFull,

@@ -2,6 +2,7 @@ import 'package:flutter/material.dart';
 
 import 'config/app_config.dart';
 import 'presentation/auth_gate_page.dart';
+import 'presentation/version/app_version_gate.dart';
 
 class EmployeeAttendanceApp extends StatelessWidget {
   const EmployeeAttendanceApp({super.key});
@@ -10,7 +11,7 @@ class EmployeeAttendanceApp extends StatelessWidget {
   Widget build(BuildContext context) {
     const baseColor = Color(0xFF0E3A5B);
     return MaterialApp(
-      title: 'Control Asistencia',
+      title: 'FichaYa',
       debugShowCheckedModeBanner: false,
       theme: ThemeData(
         colorScheme: ColorScheme.fromSeed(
@@ -34,7 +35,7 @@ class EmployeeAttendanceApp extends StatelessWidget {
         ),
         useMaterial3: true,
       ),
-      home: const AuthGatePage(),
+      home: const AppVersionGate(child: AuthGatePage()),
       builder: (context, child) {
         final cfg = AppConfig.current;
         return Banner(

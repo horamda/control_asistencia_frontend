@@ -6,10 +6,7 @@ class ClockFeedbackPresenter {
   const ClockFeedbackPresenter();
 
   ClockUserNotice invalidQr() {
-    return const ClockUserNotice(
-      message: 'QR invalido.',
-      isError: true,
-    );
+    return const ClockUserNotice(message: 'QR invalido.', isError: true);
   }
 
   ClockUserNotice missingConfig() {
@@ -21,7 +18,8 @@ class ClockFeedbackPresenter {
 
   ClockUserNotice qrDisabled() {
     return const ClockUserNotice(
-      message: 'El metodo QR no esta habilitado para tu empresa en este momento.',
+      message:
+          'El metodo QR no esta habilitado para tu empresa en este momento.',
       isError: true,
     );
   }
@@ -113,6 +111,11 @@ class ClockFeedbackPresenter {
       );
     }
 
+    final qrNotice = _qrFailureNotice(error);
+    if (qrNotice != null) {
+      return qrNotice;
+    }
+
     if (error.alertaFraude == true) {
       final eventSuffix = error.eventoId != null
           ? ' Evento #${error.eventoId}.'
@@ -127,9 +130,58 @@ class ClockFeedbackPresenter {
       );
     }
 
+    return ClockUserNotice(message: error.message, isError: true);
+  }
+
+  ClockUserNotice? _qrFailureNotice(ApiException error) {
+    final code = error.code?.trim();
+    final isQrCode =
+        code != null &&
+        (code.startsWith('qr_') || code.startsWith('qr_token_'));
+    final loweredMessage = error.message.toLowerCase();
+    final isLegacyQrError =
+        loweredMessage.contains('token invalido') ||
+        loweredMessage.contains('token inválido') ||
+        loweredMessage.contains('qr invalido') ||
+        loweredMessage.contains('qr inválido');
+    if (!isQrCode && !isLegacyQrError) {
+      return null;
+    }
+
+    var message = error.message;
+    switch (code) {
+      case 'qr_token_invalid_signature':
+        message =
+            'QR generado en otro ambiente. Pedi que generen uno nuevo desde el panel actual.';
+        break;
+      case 'qr_token_expired':
+        message = 'QR vencido. Pedi que generen uno nuevo.';
+        break;
+      case 'qr_inactive':
+        message = 'QR inactivo. Pedi que generen uno nuevo desde el panel.';
+        break;
+      case 'qr_not_registered':
+        message =
+            'QR no registrado. Pedi que generen uno nuevo desde el panel.';
+        break;
+      case 'qr_wrong_empresa':
+        message = 'Este QR pertenece a otra empresa.';
+        break;
+      case 'qr_wrong_empleado':
+        message = 'Este QR no corresponde a tu usuario.';
+        break;
+      case 'qr_token_malformed':
+      case 'qr_token_invalid':
+      case 'qr_token_wrong_type':
+        message = 'QR invalido. Escanea un QR generado por el sistema.';
+        break;
+    }
+
     return ClockUserNotice(
-      message: error.message,
+      message: message,
       isError: true,
+      tone: ClockFeedbackTone.warning,
+      duration: const Duration(seconds: 5),
     );
   }
 }

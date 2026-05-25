@@ -125,8 +125,8 @@ void main() {
 
       expect(data.sessionText, 'Sesion activa');
       expect(data.configPrepText, 'Config lista');
-      expect(data.cameraPrepText, 'Camara OK');
-      expect(data.locationPrepText, 'Ubicacion OK');
+      expect(data.cameraPrepText, 'Cámara OK');
+      expect(data.locationPrepText, 'Ubicación OK');
       expect(data.gpsPrepText, 'GPS fresco');
       expect(data.readinessSummary, 'Listo para fichar sin esperas largas.');
       expect(data.nextStepTitle, 'Jornada en curso');
