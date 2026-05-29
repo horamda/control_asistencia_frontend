@@ -28,7 +28,10 @@ class _AppVersionGateState extends State<AppVersionGate> {
   }
 
   Future<void> _check() async {
-    final result = await AppVersionService.check();
+    final result = await AppVersionService.check().timeout(
+      const Duration(seconds: 10),
+      onTimeout: () => null,
+    );
     if (!mounted) return;
 
     setState(() => _checked = true);
@@ -79,8 +82,8 @@ class _AppVersionGateState extends State<AppVersionGate> {
               )
             else
               FilledButton(
-                onPressed: () {},
-                child: const Text('Actualizar'),
+                onPressed: () => Navigator.of(ctx).pop(),
+                child: const Text('Entendido'),
               ),
           ],
         ),

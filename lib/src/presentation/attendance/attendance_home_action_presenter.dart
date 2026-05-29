@@ -197,7 +197,7 @@ class AttendanceHomeActionPresenter {
           intent: AttendanceHomeActionIntent.openLinks,
           label: 'Mis Links',
           icon: Icons.link_rounded,
-          enabled: true,
+          enabled: historyEnabled,
         ),
       ],
     );

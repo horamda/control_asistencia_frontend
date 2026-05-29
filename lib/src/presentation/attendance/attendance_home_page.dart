@@ -62,8 +62,8 @@ class _AttendanceHomePageState extends State<AttendanceHomePage>
   static final _log = AppLogger.get('AttendanceHomePage');
 
   static const Duration _configCacheTtl = Duration(minutes: 3);
-  static const Duration _gpsCacheTtl = Duration(minutes: 2);
-  static const Duration _clockReadinessRefreshInterval = Duration(seconds: 75);
+  static const Duration _gpsCacheTtl = Duration(minutes: 5);
+  static const Duration _clockReadinessRefreshInterval = Duration(minutes: 3);
 
   final ImagePicker _imagePicker = ImagePicker();
   final ClockPhotoCache _clockPhotoCache = ClockPhotoCache();
@@ -188,28 +188,36 @@ class _AttendanceHomePageState extends State<AttendanceHomePage>
       ),
     );
     Future<void>.microtask(() => _syncPendingClocks(isBackground: true));
-    _pendingSyncTicker = Timer.periodic(const Duration(seconds: 45), (_) {
-      if (!mounted || !_pendingQueue.hasPending || _pendingQueue.syncing || _submitting) {
-        return;
-      }
-      _syncPendingClocks(isBackground: true);
-    });
-    _clockReadinessTicker = Timer.periodic(_clockReadinessRefreshInterval, (_) {
-      if (!mounted || _submitting || _locatingGps) {
-        return;
-      }
-      unawaited(_warmUpClockReadiness());
-    });
+    _startTimers();
     _connectivitySubscription = Connectivity().onConnectivityChanged.listen(
       _onConnectivityChanged,
     );
   }
 
+  void _startTimers() {
+    _pendingSyncTicker?.cancel();
+    _clockReadinessTicker?.cancel();
+    _pendingSyncTicker = Timer.periodic(const Duration(minutes: 2), (_) {
+      if (!mounted || !_pendingQueue.hasPending || _pendingQueue.syncing || _submitting) return;
+      _syncPendingClocks(isBackground: true);
+    });
+    _clockReadinessTicker = Timer.periodic(_clockReadinessRefreshInterval, (_) {
+      if (!mounted || _submitting || _locatingGps) return;
+      unawaited(_warmUpClockReadiness());
+    });
+  }
+
+  void _stopTimers() {
+    _pendingSyncTicker?.cancel();
+    _clockReadinessTicker?.cancel();
+    _pendingSyncTicker = null;
+    _clockReadinessTicker = null;
+  }
+
   @override
   void dispose() {
     WidgetsBinding.instance.removeObserver(this);
-    _pendingSyncTicker?.cancel();
-    _clockReadinessTicker?.cancel();
+    _stopTimers();
     _connectivitySubscription?.cancel();
     unawaited(_feedbackAudio.dispose());
     super.dispose();
@@ -245,7 +253,10 @@ class _AttendanceHomePageState extends State<AttendanceHomePage>
   @override
   void didChangeAppLifecycleState(AppLifecycleState state) {
     if (state == AppLifecycleState.resumed) {
+      _startTimers();
       unawaited(_warmUpClockReadiness(forceGps: true, refreshConfig: true));
+    } else if (state == AppLifecycleState.paused) {
+      _stopTimers();
     }
   }
 
@@ -542,14 +553,16 @@ class _AttendanceHomePageState extends State<AttendanceHomePage>
         return;
       }
       setState(() {
-        _profileLoadError = e.message;
+        _profileLoadError = _shouldShowProfileLoadError(e) ? e.message : null;
       });
     } catch (_) {
       if (!mounted) {
         return;
       }
       setState(() {
-        _profileLoadError = 'No se pudo cargar el perfil/foto.';
+        _profileLoadError = _profile == null
+            ? null
+            : 'No se pudo cargar el perfil/foto.';
       });
     } finally {
       if (mounted) {
@@ -558,6 +571,13 @@ class _AttendanceHomePageState extends State<AttendanceHomePage>
         });
       }
     }
+  }
+
+  bool _shouldShowProfileLoadError(ApiException error) {
+    if (error.statusCode == 401 || error.statusCode == 403) {
+      return true;
+    }
+    return _profile != null;
   }
 
   bool _hasFreshConfig() {

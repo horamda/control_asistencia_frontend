@@ -7,70 +7,75 @@ import 'package:http/http.dart' as http;
 import 'package:ficharqr/src/core/network/mobile_api_client.dart';
 
 void main() {
-  test('updatePerfilConFotoFile refresca token y reintenta upload multipart', () async {
-    final sourceRoot = await Directory.systemTemp.createTemp(
-      'mobile-api-client-upload-',
-    );
-
-    try {
-      final file = File('${sourceRoot.path}${Platform.pathSeparator}profile.jpg');
-      await file.writeAsBytes(const <int>[1, 2, 3, 4]);
-
-      final client = _QueuedClient([
-        _QueuedReply(
-          statusCode: 401,
-          body: const <String, dynamic>{'error': 'Sesion vencida.'},
-          inspect: (request) {
-            expect(request.method, 'PUT');
-            expect(request.url.path, '/api/v1/mobile/me/perfil');
-            expect(request.headers['Authorization'], 'Bearer expired-token');
-          },
-        ),
-        _QueuedReply(
-          statusCode: 200,
-          body: const <String, dynamic>{
-            'id': 7,
-            'telefono': '1234',
-            'direccion': 'Calle 1',
-          },
-          inspect: (request) {
-            expect(request.method, 'PUT');
-            expect(request.url.path, '/api/v1/mobile/me/perfil');
-            expect(request.headers['Authorization'], 'Bearer fresh-token');
-          },
-        ),
-      ]);
-
-      final apiClient = MobileApiClient(
-        baseUrl: 'https://example.com',
-        httpClient: client,
-      );
-      String? refreshedToken;
-      apiClient.configureAuth(
-        onUnauthorizedRefresh: (expiredToken) async {
-          refreshedToken = expiredToken;
-          return 'fresh-token';
-        },
+  test(
+    'updatePerfilConFotoFile refresca token y reintenta upload multipart',
+    () async {
+      final sourceRoot = await Directory.systemTemp.createTemp(
+        'mobile-api-client-upload-',
       );
 
-      final result = await apiClient.updatePerfilConFotoFile(
-        token: 'expired-token',
-        fotoPath: file.path,
-        telefono: '1234',
-        direccion: 'Calle 1',
-      );
+      try {
+        final file = File(
+          '${sourceRoot.path}${Platform.pathSeparator}profile.jpg',
+        );
+        await file.writeAsBytes(const <int>[1, 2, 3, 4]);
 
-      expect(refreshedToken, 'expired-token');
-      expect(result.id, 7);
-      expect(result.telefono, '1234');
-      expect(client.callCount, 2);
-      apiClient.dispose();
-    } finally {
-      if (await sourceRoot.exists()) {
-        await sourceRoot.delete(recursive: true);
+        final client = _QueuedClient([
+          _QueuedReply(
+            statusCode: 401,
+            body: const <String, dynamic>{'error': 'Sesion vencida.'},
+            inspect: (request) {
+              expect(request.method, 'PUT');
+              expect(request.url.path, '/api/v1/mobile/me/perfil');
+              expect(request.headers['Authorization'], 'Bearer expired-token');
+            },
+          ),
+          _QueuedReply(
+            statusCode: 200,
+            body: const <String, dynamic>{
+              'id': 7,
+              'telefono': '1234',
+              'direccion': 'Calle 1',
+            },
+            inspect: (request) {
+              expect(request.method, 'PUT');
+              expect(request.url.path, '/api/v1/mobile/me/perfil');
+              expect(request.headers['Authorization'], 'Bearer fresh-token');
+            },
+          ),
+        ]);
+
+        final apiClient = MobileApiClient(
+          baseUrl: 'https://example.com',
+          httpClient: client,
+        );
+        String? refreshedToken;
+        apiClient.configureAuth(
+          onUnauthorizedRefresh: (expiredToken) async {
+            refreshedToken = expiredToken;
+            return 'fresh-token';
+          },
+        );
+
+        final result = await apiClient.updatePerfilConFotoFile(
+          token: 'expired-token',
+          fotoPath: file.path,
+          telefono: '1234',
+          direccion: 'Calle 1',
+        );
+
+        expect(refreshedToken, 'expired-token');
+        expect(result.id, 7);
+        expect(result.telefono, '1234');
+        expect(client.callCount, 2);
+        apiClient.dispose();
+      } finally {
+        if (await sourceRoot.exists()) {
+          await sourceRoot.delete(recursive: true);
+        }
       }
-    }
-  });
+    },
+  );
 
   test('usa el prefijo movil configurable para construir endpoints', () async {
     final client = _QueuedClient([
@@ -104,12 +109,12 @@ void main() {
       httpClient: _QueuedClient(const <_QueuedReply>[]),
     );
 
-    final imageUrl = apiClient.buildEmpleadoImagenUrl(dni: '30111222', version: 3);
-
-    expect(
-      imageUrl,
-      'https://example.com/empleados/imagen/30111222?v=3',
+    final imageUrl = apiClient.buildEmpleadoImagenUrl(
+      dni: '30111222',
+      version: 3,
     );
+
+    expect(imageUrl, 'https://example.com/empleados/imagen/30111222?v=3');
     apiClient.dispose();
   });
 
@@ -120,11 +125,7 @@ void main() {
         body: const <String, dynamic>{
           'ok': true,
           'items': [
-            {
-              'id': 45,
-              'tipo_codigo': 'llamado_atencion',
-              'adjuntos_count': 1,
-            }
+            {'id': 45, 'tipo_codigo': 'llamado_atencion', 'adjuntos_count': 1},
           ],
           'total': 1,
           'page': 2,
@@ -174,38 +175,44 @@ void main() {
     apiClient.dispose();
   });
 
-  test('getLegajoEventoDetalle parsea campos basicos de LegajoEventoItem', () async {
-    final client = _QueuedClient([
-      _QueuedReply(
-        statusCode: 200,
-        body: const <String, dynamic>{
-          'ok': true,
-          'id': 45,
-          'tipo_nombre': 'Llamado de atencion',
-          'tipo_codigo': 'llamado_atencion',
-          'estado': 'vigente',
-          'severidad': 'leve',
-        },
-        inspect: (request) {
-          expect(request.method, 'GET');
-          expect(request.url.path, '/api/v1/mobile/me/legajo/eventos/45');
-        },
-      ),
-    ]);
+  test(
+    'getLegajoEventoDetalle parsea campos basicos de LegajoEventoItem',
+    () async {
+      final client = _QueuedClient([
+        _QueuedReply(
+          statusCode: 200,
+          body: const <String, dynamic>{
+            'ok': true,
+            'id': 45,
+            'tipo_nombre': 'Llamado de atencion',
+            'tipo_codigo': 'llamado_atencion',
+            'estado': 'vigente',
+            'severidad': 'leve',
+          },
+          inspect: (request) {
+            expect(request.method, 'GET');
+            expect(request.url.path, '/api/v1/mobile/me/legajo/eventos/45');
+          },
+        ),
+      ]);
 
-    final apiClient = MobileApiClient(
-      baseUrl: 'https://example.com',
-      httpClient: client,
-    );
+      final apiClient = MobileApiClient(
+        baseUrl: 'https://example.com',
+        httpClient: client,
+      );
 
-    final evento = await apiClient.getLegajoEventoDetalle(token: 'abc', id: 45);
+      final evento = await apiClient.getLegajoEventoDetalle(
+        token: 'abc',
+        id: 45,
+      );
 
-    expect(evento.id, 45);
-    expect(evento.tipoNombre, 'Llamado de atencion');
-    expect(evento.estado, 'vigente');
-    expect(evento.severidad, 'leve');
-    apiClient.dispose();
-  });
+      expect(evento.id, 45);
+      expect(evento.tipoNombre, 'Llamado de atencion');
+      expect(evento.estado, 'vigente');
+      expect(evento.severidad, 'leve');
+      apiClient.dispose();
+    },
+  );
 
   test('login envia telemetria cuando se proporcionan los campos', () async {
     final client = _QueuedClient([
@@ -283,18 +290,92 @@ void main() {
     apiClient.dispose();
   });
 
-  test('marcarTodasNotificacionesTriviaLeidas POST al endpoint correcto', () async {
+  test('getKpisSectorResumen usa contrato 1.21 y parsea vistas', () async {
     final client = _QueuedClient([
       _QueuedReply(
         statusCode: 200,
-        body: const <String, dynamic>{'ok': true},
+        body: const <String, dynamic>{
+          'anio': 2026,
+          'sector': {'id': 3, 'nombre': 'Entrega'},
+          'vista_actual': {
+            'kpis': [
+              {
+                'kpi_id': 1,
+                'codigo': 'BULTOS_ENT',
+                'nombre': 'Bultos entregados',
+                'unidad': 'bultos',
+                'tipo_acumulacion': 'suma',
+                'mayor_es_mejor': true,
+                'condicion': 'gte',
+                'condicion_simbolo': '>=',
+                'objetivo_anual': 1200.0,
+                'resultado_acumulado': 450.0,
+                'progreso_pct': 37.5,
+                'progreso_esperado_pct': 30.0,
+                'semaforo': 'verde',
+              },
+            ],
+          },
+          'ultimo_cargado': {
+            'kpi_id': 1,
+            'codigo': 'BULTOS_ENT',
+            'nombre': 'Bultos entregados',
+            'unidad': 'bultos',
+            'tipo_acumulacion': 'suma',
+            'objetivo_anual': 1200.0,
+            'objetivo_periodo': 98.6,
+            'resultado': 38.0,
+            'valor': 38.0,
+            'progreso_pct': 38.5,
+            'semaforo': 'verde',
+            'fecha_resultado': '2026-04-30',
+            'cargado_at': '2026-05-01T08:15:00',
+          },
+          'meses_cerrados': [
+            {
+              'periodo': '2026-04',
+              'periodo_year': 2026,
+              'periodo_month': 4,
+              'mes_nombre': 'Abril',
+              'desde': '2026-04-01',
+              'hasta': '2026-04-30',
+              'cerrado': true,
+              'resumen': {
+                'total': 1,
+                'verde': 1,
+                'amarillo': 0,
+                'rojo': 0,
+                'gris': 0,
+              },
+              'kpis': [
+                {
+                  'kpi_id': 1,
+                  'codigo': 'BULTOS_ENT',
+                  'nombre': 'Bultos entregados',
+                  'unidad': 'bultos',
+                  'tipo_acumulacion': 'suma',
+                  'mayor_es_mejor': true,
+                  'condicion': 'gte',
+                  'condicion_simbolo': '>=',
+                  'objetivo_anual': 1200.0,
+                  'objetivo_mes': 98.6,
+                  'resultado_mes': 120.0,
+                  'progreso_pct': 121.7,
+                  'semaforo': 'verde',
+                  'registros': 20,
+                  'fecha_ultimo_resultado': '2026-04-30',
+                },
+              ],
+            },
+          ],
+          'meta': {'limit_meses': 3},
+        },
         inspect: (request) {
-          expect(request.method, 'POST');
-          expect(
-            request.url.path,
-            '/api/v1/trivia/notificaciones/leer-todas',
-          );
-          expect(request.headers['Authorization'], 'Bearer my-token');
+          expect(request.method, 'GET');
+          expect(request.url.path, '/api/v1/mobile/me/kpis-sector/resumen');
+          expect(request.url.queryParameters['anio'], '2026');
+          expect(request.url.queryParameters['limit_meses'], '3');
+          expect(request.headers['Authorization'], 'Bearer abc');
         },
       ),
     ]);
@@ -304,11 +385,52 @@ void main() {
       httpClient: client,
     );
 
-    await apiClient.marcarTodasNotificacionesTriviaLeidas(token: 'my-token');
+    final result = await apiClient.getKpisSectorResumen(
+      token: 'abc',
+      anio: 2026,
+      limitMeses: 3,
+    );
 
-    expect(client.callCount, 1);
+    expect(result.anio, 2026);
+    expect(result.sector.nombre, 'Entrega');
+    expect(result.kpis.single.codigo, 'BULTOS_ENT');
+    expect(result.ultimoCargado?.resultado, 38.0);
+    expect(result.ultimoCargado?.fechaResultado, '2026-04-30');
+    expect(result.mesesCerrados.single.resumen.verde, 1);
+    expect(result.historyFor(1).single.resultadoMes, 120.0);
+    expect(result.limitMeses, 3);
     apiClient.dispose();
   });
+
+  test(
+    'marcarTodasNotificacionesTriviaLeidas POST al endpoint correcto',
+    () async {
+      final client = _QueuedClient([
+        _QueuedReply(
+          statusCode: 200,
+          body: const <String, dynamic>{'ok': true},
+          inspect: (request) {
+            expect(request.method, 'POST');
+            expect(
+              request.url.path,
+              '/api/v1/trivia/notificaciones/leer-todas',
+            );
+            expect(request.headers['Authorization'], 'Bearer my-token');
+          },
+        ),
+      ]);
+
+      final apiClient = MobileApiClient(
+        baseUrl: 'https://example.com',
+        httpClient: client,
+      );
+
+      await apiClient.marcarTodasNotificacionesTriviaLeidas(token: 'my-token');
+
+      expect(client.callCount, 1);
+      apiClient.dispose();
+    },
+  );
 }
 
 class _QueuedClient extends http.BaseClient {
@@ -320,7 +442,9 @@ class _QueuedClient extends http.BaseClient {
   @override
   Future<http.StreamedResponse> send(http.BaseRequest request) async {
     if (callCount >= replies.length) {
-      throw StateError('No hay respuesta preparada para ${request.method} ${request.url}');
+      throw StateError(
+        'No hay respuesta preparada para ${request.method} ${request.url}',
+      );
     }
     final reply = replies[callCount];
     callCount += 1;

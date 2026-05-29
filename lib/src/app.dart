@@ -38,10 +38,11 @@ class EmployeeAttendanceApp extends StatelessWidget {
       home: const AppVersionGate(child: AuthGatePage()),
       builder: (context, child) {
         final cfg = AppConfig.current;
+        if (cfg.isProd) return child ?? const SizedBox.shrink();
         return Banner(
           message: cfg.flavorLabel,
           location: BannerLocation.topStart,
-          color: cfg.isProd ? Colors.green : Colors.orange,
+          color: Colors.orange,
           textStyle: const TextStyle(fontSize: 10),
           child: child ?? const SizedBox.shrink(),
         );

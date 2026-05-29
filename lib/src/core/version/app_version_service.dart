@@ -1,3 +1,4 @@
+import 'dart:async';
 import 'dart:convert';
 import 'dart:io';
 
@@ -35,9 +36,13 @@ class AppVersionCheckResult {
 }
 
 class AppVersionService {
+  static const _platformInfoTimeout = Duration(seconds: 2);
+
   static Future<AppVersionCheckResult?> check() async {
     try {
-      final info = await PackageInfo.fromPlatform();
+      final info = await PackageInfo.fromPlatform().timeout(
+        _platformInfoTimeout,
+      );
       final currentVersion = info.version; // e.g. "1.2.3"
 
       final platform = kIsWeb ? 'android' : (Platform.isIOS ? 'ios' : 'android');

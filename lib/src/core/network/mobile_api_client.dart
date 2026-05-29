@@ -952,7 +952,9 @@ class MobileApiClient {
         if (raw is Map<String, dynamic>) {
           items.add(LegajoHistorialPorTipoItem.fromJson(raw));
         } else if (raw is Map) {
-          items.add(LegajoHistorialPorTipoItem.fromJson(Map<String, dynamic>.from(raw)));
+          items.add(
+            LegajoHistorialPorTipoItem.fromJson(Map<String, dynamic>.from(raw)),
+          );
         }
       }
     }
@@ -1611,6 +1613,63 @@ class MobileApiClient {
     return KpisSectorialResponse.fromJson(_decodeObject(response.body));
   }
 
+  Future<KpisSectorResumenResponse> getKpisSectorResumen({
+    required String token,
+    int? anio,
+    int? limitMeses,
+    bool includeSeries = false,
+    int? seriesDias,
+  }) async {
+    final query = <String, String>{
+      if (anio != null) 'anio': '$anio',
+      if (limitMeses != null) 'limit_meses': '$limitMeses',
+      if (includeSeries) 'include_series': 'true',
+      if (seriesDias != null) 'series_dias': '$seriesDias',
+    };
+    final response = await _safeGet(
+      _uri(
+        '/me/kpis-sector/resumen',
+      ).replace(queryParameters: query.isEmpty ? null : query),
+      headers: _headers(token: token),
+      actionLabel: 'obtener resumen de KPIs sectoriales',
+    );
+    if (response.statusCode != 200) {
+      final error = _extractApiError(
+        response,
+        fallback: 'No se pudieron obtener las vistas de KPIs.',
+      );
+      throw ApiException(
+        message: error.message,
+        statusCode: response.statusCode,
+        code: error.code,
+      );
+    }
+    return KpisSectorResumenResponse.fromJson(_decodeObject(response.body));
+  }
+
+  Future<KpisSectorDiaResponse> getKpisSectorDia({
+    required String token,
+    required String fecha,
+  }) async {
+    final response = await _safeGet(
+      _uri('/me/kpis-sector/dia').replace(queryParameters: {'fecha': fecha}),
+      headers: _headers(token: token),
+      actionLabel: 'obtener KPIs del día',
+    );
+    if (response.statusCode != 200) {
+      final error = _extractApiError(
+        response,
+        fallback: 'No se pudieron obtener los KPIs del día.',
+      );
+      throw ApiException(
+        message: error.message,
+        statusCode: response.statusCode,
+        code: error.code,
+      );
+    }
+    return KpisSectorDiaResponse.fromJson(_decodeObject(response.body));
+  }
+
   // ─── Horario esperado ────────────────────────────────────────────────────────
 
   Future<HorarioEsperadoResponse?> getHorarioEsperado({
@@ -1712,8 +1771,15 @@ class MobileApiClient {
       actionLabel: 'consultar estado de trivia',
     );
     if (response.statusCode != 200) {
-      final error = _extractApiError(response, fallback: 'No se pudo consultar la trivia.');
-      throw ApiException(message: error.message, statusCode: response.statusCode, code: error.code);
+      final error = _extractApiError(
+        response,
+        fallback: 'No se pudo consultar la trivia.',
+      );
+      throw ApiException(
+        message: error.message,
+        statusCode: response.statusCode,
+        code: error.code,
+      );
     }
     return TriviaEstadoResponse.fromJson(_decodeObject(response.body));
   }
@@ -1725,8 +1791,15 @@ class MobileApiClient {
       actionLabel: 'consultar trivia activa',
     );
     if (response.statusCode != 200) {
-      final error = _extractApiError(response, fallback: 'No hay trivia activa.');
-      throw ApiException(message: error.message, statusCode: response.statusCode, code: error.code);
+      final error = _extractApiError(
+        response,
+        fallback: 'No hay trivia activa.',
+      );
+      throw ApiException(
+        message: error.message,
+        statusCode: response.statusCode,
+        code: error.code,
+      );
     }
     final json = _decodeObject(response.body);
     final raw = json['data'];
@@ -1742,8 +1815,15 @@ class MobileApiClient {
       actionLabel: 'iniciar trivia',
     );
     if (response.statusCode != 200) {
-      final error = _extractApiError(response, fallback: 'No se pudo iniciar la trivia.');
-      throw ApiException(message: error.message, statusCode: response.statusCode, code: error.code);
+      final error = _extractApiError(
+        response,
+        fallback: 'No se pudo iniciar la trivia.',
+      );
+      throw ApiException(
+        message: error.message,
+        statusCode: response.statusCode,
+        code: error.code,
+      );
     }
     return TriviaIniciarResponse.fromJson(_decodeObject(response.body));
   }
@@ -1763,8 +1843,15 @@ class MobileApiClient {
       actionLabel: 'finalizar trivia',
     );
     if (response.statusCode != 200) {
-      final error = _extractApiError(response, fallback: 'No se pudo finalizar la trivia.');
-      throw ApiException(message: error.message, statusCode: response.statusCode, code: error.code);
+      final error = _extractApiError(
+        response,
+        fallback: 'No se pudo finalizar la trivia.',
+      );
+      throw ApiException(
+        message: error.message,
+        statusCode: response.statusCode,
+        code: error.code,
+      );
     }
     return TriviaFinalizarResponse.fromJson(_decodeObject(response.body));
   }
@@ -1779,8 +1866,15 @@ class MobileApiClient {
       actionLabel: 'consultar ranking de trivia',
     );
     if (response.statusCode != 200) {
-      final error = _extractApiError(response, fallback: 'No se pudo obtener el ranking.');
-      throw ApiException(message: error.message, statusCode: response.statusCode, code: error.code);
+      final error = _extractApiError(
+        response,
+        fallback: 'No se pudo obtener el ranking.',
+      );
+      throw ApiException(
+        message: error.message,
+        statusCode: response.statusCode,
+        code: error.code,
+      );
     }
     return TriviaRankingResponse.fromJson(_decodeObject(response.body));
   }
@@ -1791,7 +1885,10 @@ class MobileApiClient {
     int perPage = 10,
   }) async {
     final uri = _triviaUri('/historial').replace(
-      queryParameters: {'page': page.toString(), 'per_page': perPage.toString()},
+      queryParameters: {
+        'page': page.toString(),
+        'per_page': perPage.toString(),
+      },
     );
     final response = await _safeGet(
       uri,
@@ -1799,21 +1896,37 @@ class MobileApiClient {
       actionLabel: 'consultar historial de trivias',
     );
     if (response.statusCode != 200) {
-      final error = _extractApiError(response, fallback: 'No se pudo obtener el historial.');
-      throw ApiException(message: error.message, statusCode: response.statusCode, code: error.code);
+      final error = _extractApiError(
+        response,
+        fallback: 'No se pudo obtener el historial.',
+      );
+      throw ApiException(
+        message: error.message,
+        statusCode: response.statusCode,
+        code: error.code,
+      );
     }
     return TriviaHistorialResponse.fromJson(_decodeObject(response.body));
   }
 
-  Future<List<TriviaMyHistorialItem>> getMiHistorialTrivia({required String token}) async {
+  Future<List<TriviaMyHistorialItem>> getMiHistorialTrivia({
+    required String token,
+  }) async {
     final response = await _safeGet(
       _triviaUri('/mi-historial'),
       headers: _headers(token: token),
       actionLabel: 'consultar mi historial de trivias',
     );
     if (response.statusCode != 200) {
-      final error = _extractApiError(response, fallback: 'No se pudo obtener tu historial.');
-      throw ApiException(message: error.message, statusCode: response.statusCode, code: error.code);
+      final error = _extractApiError(
+        response,
+        fallback: 'No se pudo obtener tu historial.',
+      );
+      throw ApiException(
+        message: error.message,
+        statusCode: response.statusCode,
+        code: error.code,
+      );
     }
     final json = _decodeObject(response.body);
     final rawData = json['data'];
@@ -1821,7 +1934,9 @@ class MobileApiClient {
     if (rawData is List) {
       for (final item in rawData) {
         if (item is Map) {
-          items.add(TriviaMyHistorialItem.fromJson(Map<String, dynamic>.from(item)));
+          items.add(
+            TriviaMyHistorialItem.fromJson(Map<String, dynamic>.from(item)),
+          );
         }
       }
     }
@@ -1838,8 +1953,15 @@ class MobileApiClient {
       actionLabel: 'consultar ganador de trivia',
     );
     if (response.statusCode != 200) {
-      final error = _extractApiError(response, fallback: 'No se pudo obtener el ganador.');
-      throw ApiException(message: error.message, statusCode: response.statusCode, code: error.code);
+      final error = _extractApiError(
+        response,
+        fallback: 'No se pudo obtener el ganador.',
+      );
+      throw ApiException(
+        message: error.message,
+        statusCode: response.statusCode,
+        code: error.code,
+      );
     }
     return TriviaGanadorResponse.fromJson(_decodeObject(response.body));
   }
@@ -1854,8 +1976,15 @@ class MobileApiClient {
       actionLabel: 'consultar ranking anual de trivia',
     );
     if (response.statusCode != 200) {
-      final error = _extractApiError(response, fallback: 'No se pudo obtener el ranking anual.');
-      throw ApiException(message: error.message, statusCode: response.statusCode, code: error.code);
+      final error = _extractApiError(
+        response,
+        fallback: 'No se pudo obtener el ranking anual.',
+      );
+      throw ApiException(
+        message: error.message,
+        statusCode: response.statusCode,
+        code: error.code,
+      );
     }
     return TriviaRankingAnualResponse.fromJson(_decodeObject(response.body));
   }
@@ -1870,13 +1999,22 @@ class MobileApiClient {
       actionLabel: 'consultar ganador anual de trivia',
     );
     if (response.statusCode != 200) {
-      final error = _extractApiError(response, fallback: 'No se pudo obtener el ganador anual.');
-      throw ApiException(message: error.message, statusCode: response.statusCode, code: error.code);
+      final error = _extractApiError(
+        response,
+        fallback: 'No se pudo obtener el ganador anual.',
+      );
+      throw ApiException(
+        message: error.message,
+        statusCode: response.statusCode,
+        code: error.code,
+      );
     }
     return TriviaGanadorAnualResponse.fromJson(_decodeObject(response.body));
   }
 
-  Future<List<TriviaNotificacion>> getTriviaNotificaciones({required String token}) async {
+  Future<List<TriviaNotificacion>> getTriviaNotificaciones({
+    required String token,
+  }) async {
     try {
       final response = await _safeGet(
         _triviaUri('/notificaciones'),
@@ -1890,7 +2028,9 @@ class MobileApiClient {
       if (rawData is List) {
         for (final item in rawData) {
           if (item is Map) {
-            items.add(TriviaNotificacion.fromJson(Map<String, dynamic>.from(item)));
+            items.add(
+              TriviaNotificacion.fromJson(Map<String, dynamic>.from(item)),
+            );
           }
         }
       }
@@ -1939,9 +2079,11 @@ class MobileApiClient {
         headers: _headers(token: token),
         body: jsonEncode({
           'puntuacion': puntuacion,
-          if (comentario != null && comentario.isNotEmpty) 'comentario': comentario,
+          if (comentario != null && comentario.isNotEmpty)
+            'comentario': comentario,
           if (pantalla != null && pantalla.isNotEmpty) 'pantalla': pantalla,
-          if (versionApp != null && versionApp.isNotEmpty) 'version_app': versionApp,
+          if (versionApp != null && versionApp.isNotEmpty)
+            'version_app': versionApp,
         }),
         actionLabel: 'calificar app',
       );
@@ -5063,7 +5205,543 @@ class KpisSectorialResponse {
   }
 }
 
-// ─── Horario esperado — modelos ──────────────────────────────────────────────
+// --- KPIs sectoriales resumen models ----------------------------------------
+
+class KpisSectorResumenResponse {
+  KpisSectorResumenResponse({
+    required this.anio,
+    required this.sector,
+    required this.vistaActual,
+    this.ultimoCargado,
+    required this.mesesCerrados,
+    required this.limitMeses,
+    this.seriesDiaria,
+  });
+
+  final int anio;
+  final KpisSectorialSector sector;
+  final KpisSectorVistaActual vistaActual;
+  final KpiSectorUltimoCargado? ultimoCargado;
+  final List<KpisSectorMesCerrado> mesesCerrados;
+  final int limitMeses;
+  final List<KpiSectorSerieDiaria>? seriesDiaria;
+
+  List<KpiSectorialItem> get kpis => vistaActual.kpis;
+
+  List<KpiSectorMesItem> historyFor(int kpiId) {
+    final items = <KpiSectorMesItem>[];
+    for (final mes in mesesCerrados) {
+      for (final kpi in mes.kpis) {
+        if (kpi.kpiId == kpiId) {
+          items.add(kpi);
+        }
+      }
+    }
+    return items;
+  }
+
+  factory KpisSectorResumenResponse.fromJson(Map<String, dynamic> json) {
+    final rawSector = json['sector'];
+    final sector = rawSector is Map
+        ? KpisSectorialSector.fromJson(Map<String, dynamic>.from(rawSector))
+        : KpisSectorialSector(id: null, nombre: null);
+
+    final rawVista = json['vista_actual'];
+    final vistaActual = rawVista is Map
+        ? KpisSectorVistaActual.fromJson(Map<String, dynamic>.from(rawVista))
+        : KpisSectorVistaActual.fromJson(json);
+
+    final rawUltimo = json['ultimo_cargado'];
+    final ultimoCargado = rawUltimo is Map
+        ? KpiSectorUltimoCargado.fromJson(Map<String, dynamic>.from(rawUltimo))
+        : null;
+
+    final meses = <KpisSectorMesCerrado>[];
+    final rawMeses = json['meses_cerrados'];
+    if (rawMeses is List) {
+      for (final item in rawMeses) {
+        if (item is Map) {
+          meses.add(
+            KpisSectorMesCerrado.fromJson(Map<String, dynamic>.from(item)),
+          );
+        }
+      }
+    }
+
+    final rawMeta = json['meta'];
+    final meta = rawMeta is Map ? Map<String, dynamic>.from(rawMeta) : null;
+
+    final seriesDiaria = <KpiSectorSerieDiaria>[];
+    final rawSeries = json['series_diaria'];
+    if (rawSeries is List) {
+      for (final item in rawSeries) {
+        if (item is Map) {
+          seriesDiaria.add(
+            KpiSectorSerieDiaria.fromJson(Map<String, dynamic>.from(item)),
+          );
+        }
+      }
+    }
+
+    return KpisSectorResumenResponse(
+      anio: _jsonInt(json['anio']) ?? 0,
+      sector: sector,
+      vistaActual: vistaActual,
+      ultimoCargado: ultimoCargado,
+      mesesCerrados: meses,
+      limitMeses: _jsonInt(meta?['limit_meses']) ?? meses.length,
+      seriesDiaria: seriesDiaria.isEmpty ? null : seriesDiaria,
+    );
+  }
+}
+
+class KpisSectorVistaActual {
+  const KpisSectorVistaActual({required this.kpis});
+
+  final List<KpiSectorialItem> kpis;
+
+  factory KpisSectorVistaActual.fromJson(Map<String, dynamic> json) {
+    final kpis = <KpiSectorialItem>[];
+    final rawKpis = json['kpis'];
+    if (rawKpis is List) {
+      for (final item in rawKpis) {
+        if (item is Map) {
+          kpis.add(KpiSectorialItem.fromJson(Map<String, dynamic>.from(item)));
+        }
+      }
+    }
+    return KpisSectorVistaActual(kpis: kpis);
+  }
+}
+
+class KpiSectorUltimoCargado {
+  const KpiSectorUltimoCargado({
+    required this.kpiId,
+    required this.codigo,
+    required this.nombre,
+    this.unidad,
+    this.tipoAcumulacion,
+    this.mayorEsMejor = true,
+    this.condicion,
+    this.condicionSimbolo,
+    required this.objetivoAnual,
+    required this.objetivoPeriodo,
+    this.valorMin,
+    this.valorMax,
+    required this.resultado,
+    required this.valor,
+    required this.progresoPct,
+    required this.semaforo,
+    this.recomendacion,
+    this.fechaResultado,
+    this.cargadoAt,
+  });
+
+  final int kpiId;
+  final String codigo;
+  final String nombre;
+  final String? unidad;
+  final String? tipoAcumulacion;
+  final bool mayorEsMejor;
+  final String? condicion;
+  final String? condicionSimbolo;
+  final double objetivoAnual;
+  final double objetivoPeriodo;
+  final double? valorMin;
+  final double? valorMax;
+  final double resultado;
+  final double valor;
+  final double progresoPct;
+  final String semaforo;
+  final String? recomendacion;
+  final String? fechaResultado;
+  final String? cargadoAt;
+
+  factory KpiSectorUltimoCargado.fromJson(Map<String, dynamic> json) {
+    final resultado =
+        _jsonDouble(json['resultado']) ?? _jsonDouble(json['valor']) ?? 0;
+    return KpiSectorUltimoCargado(
+      kpiId: _jsonInt(json['kpi_id']) ?? 0,
+      codigo: _jsonString(json['codigo']) ?? '',
+      nombre: _jsonString(json['nombre']) ?? '',
+      unidad: _jsonString(json['unidad']),
+      tipoAcumulacion: _jsonString(json['tipo_acumulacion']),
+      mayorEsMejor: json['mayor_es_mejor'] != false,
+      condicion: _jsonString(json['condicion']),
+      condicionSimbolo: _jsonString(json['condicion_simbolo']),
+      objetivoAnual: _jsonDouble(json['objetivo_anual']) ?? 0,
+      objetivoPeriodo: _jsonDouble(json['objetivo_periodo']) ?? 0,
+      valorMin: _jsonDouble(json['valor_min']),
+      valorMax: _jsonDouble(json['valor_max']),
+      resultado: resultado,
+      valor: _jsonDouble(json['valor']) ?? resultado,
+      progresoPct: _jsonDouble(json['progreso_pct']) ?? 0,
+      semaforo: _jsonString(json['semaforo']) ?? 'gris',
+      recomendacion: _jsonString(json['recomendacion']),
+      fechaResultado: _jsonString(json['fecha_resultado']),
+      cargadoAt: _jsonString(json['cargado_at']),
+    );
+  }
+}
+
+class KpisSectorMesCerrado {
+  const KpisSectorMesCerrado({
+    required this.periodo,
+    required this.periodoYear,
+    required this.periodoMonth,
+    this.mesNombre,
+    this.desde,
+    this.hasta,
+    this.cerrado = true,
+    required this.resumen,
+    required this.kpis,
+  });
+
+  final String periodo;
+  final int periodoYear;
+  final int periodoMonth;
+  final String? mesNombre;
+  final String? desde;
+  final String? hasta;
+  final bool cerrado;
+  final KpisSectorMesResumen resumen;
+  final List<KpiSectorMesItem> kpis;
+
+  factory KpisSectorMesCerrado.fromJson(Map<String, dynamic> json) {
+    final rawResumen = json['resumen'];
+    final resumen = rawResumen is Map
+        ? KpisSectorMesResumen.fromJson(Map<String, dynamic>.from(rawResumen))
+        : const KpisSectorMesResumen();
+
+    final kpis = <KpiSectorMesItem>[];
+    final rawKpis = json['kpis'];
+    if (rawKpis is List) {
+      for (final item in rawKpis) {
+        if (item is Map) {
+          kpis.add(KpiSectorMesItem.fromJson(Map<String, dynamic>.from(item)));
+        }
+      }
+    }
+
+    return KpisSectorMesCerrado(
+      periodo: _jsonString(json['periodo']) ?? '',
+      periodoYear: _jsonInt(json['periodo_year']) ?? 0,
+      periodoMonth: _jsonInt(json['periodo_month']) ?? 0,
+      mesNombre: _jsonString(json['mes_nombre']),
+      desde: _jsonString(json['desde']),
+      hasta: _jsonString(json['hasta']),
+      cerrado: _jsonBool(json['cerrado']) ?? true,
+      resumen: resumen,
+      kpis: kpis,
+    );
+  }
+}
+
+class KpisSectorMesResumen {
+  const KpisSectorMesResumen({
+    this.total = 0,
+    this.verde = 0,
+    this.amarillo = 0,
+    this.rojo = 0,
+    this.gris = 0,
+  });
+
+  final int total;
+  final int verde;
+  final int amarillo;
+  final int rojo;
+  final int gris;
+
+  factory KpisSectorMesResumen.fromJson(Map<String, dynamic> json) {
+    return KpisSectorMesResumen(
+      total: _jsonInt(json['total']) ?? 0,
+      verde: _jsonInt(json['verde']) ?? 0,
+      amarillo: _jsonInt(json['amarillo']) ?? 0,
+      rojo: _jsonInt(json['rojo']) ?? 0,
+      gris: _jsonInt(json['gris']) ?? 0,
+    );
+  }
+}
+
+class KpiSectorMesItem {
+  const KpiSectorMesItem({
+    required this.kpiId,
+    required this.codigo,
+    required this.nombre,
+    this.unidad,
+    this.tipoAcumulacion,
+    this.mayorEsMejor = true,
+    this.condicion,
+    this.condicionSimbolo,
+    required this.objetivoAnual,
+    required this.objetivoMes,
+    this.valorMin,
+    this.valorMax,
+    this.resultadoMes,
+    required this.progresoPct,
+    required this.semaforo,
+    this.recomendacion,
+    required this.registros,
+    this.fechaUltimoResultado,
+  });
+
+  final int kpiId;
+  final String codigo;
+  final String nombre;
+  final String? unidad;
+  final String? tipoAcumulacion;
+  final bool mayorEsMejor;
+  final String? condicion;
+  final String? condicionSimbolo;
+  final double objetivoAnual;
+  final double objetivoMes;
+  final double? valorMin;
+  final double? valorMax;
+  final double? resultadoMes;
+  final double progresoPct;
+  final String semaforo;
+  final String? recomendacion;
+  final int registros;
+  final String? fechaUltimoResultado;
+
+  factory KpiSectorMesItem.fromJson(Map<String, dynamic> json) {
+    return KpiSectorMesItem(
+      kpiId: _jsonInt(json['kpi_id']) ?? 0,
+      codigo: _jsonString(json['codigo']) ?? '',
+      nombre: _jsonString(json['nombre']) ?? '',
+      unidad: _jsonString(json['unidad']),
+      tipoAcumulacion: _jsonString(json['tipo_acumulacion']),
+      mayorEsMejor: json['mayor_es_mejor'] != false,
+      condicion: _jsonString(json['condicion']),
+      condicionSimbolo: _jsonString(json['condicion_simbolo']),
+      objetivoAnual: _jsonDouble(json['objetivo_anual']) ?? 0,
+      objetivoMes: _jsonDouble(json['objetivo_mes']) ?? 0,
+      valorMin: _jsonDouble(json['valor_min']),
+      valorMax: _jsonDouble(json['valor_max']),
+      resultadoMes: _jsonDouble(json['resultado_mes']),
+      progresoPct: _jsonDouble(json['progreso_pct']) ?? 0,
+      semaforo: _jsonString(json['semaforo']) ?? 'gris',
+      recomendacion: _jsonString(json['recomendacion']),
+      registros: _jsonInt(json['registros']) ?? 0,
+      fechaUltimoResultado: _jsonString(json['fecha_ultimo_resultado']),
+    );
+  }
+}
+
+// ─── KPIs sector — series diaria y snapshot por día ─────────────────────────
+
+class KpiSectorPuntoDiario {
+  const KpiSectorPuntoDiario({
+    required this.fecha,
+    this.resultadoDia,
+    this.objetivoDia,
+    this.resultadoAcumuladoAFecha,
+    this.objetivoAcumuladoAFecha,
+    required this.progresoDiaPct,
+    required this.progresoAcumuladoPct,
+    required this.semaforoDia,
+    required this.semaforoAcumulado,
+  });
+
+  final String fecha;
+  final double? resultadoDia;
+  final double? objetivoDia;
+  final double? resultadoAcumuladoAFecha;
+  final double? objetivoAcumuladoAFecha;
+  final double progresoDiaPct;
+  final double progresoAcumuladoPct;
+  final String semaforoDia;
+  final String semaforoAcumulado;
+
+  factory KpiSectorPuntoDiario.fromJson(Map<String, dynamic> json) {
+    return KpiSectorPuntoDiario(
+      fecha: _jsonString(json['fecha']) ?? '',
+      resultadoDia: _jsonDouble(json['resultado_dia']),
+      objetivoDia: _jsonDouble(json['objetivo_dia']),
+      resultadoAcumuladoAFecha: _jsonDouble(json['resultado_acumulado_a_fecha']),
+      objetivoAcumuladoAFecha: _jsonDouble(json['objetivo_acumulado_a_fecha']),
+      progresoDiaPct: _jsonDouble(json['progreso_dia_pct']) ?? 0,
+      progresoAcumuladoPct: _jsonDouble(json['progreso_acumulado_pct']) ?? 0,
+      semaforoDia: _jsonString(json['semaforo_dia']) ?? 'gris',
+      semaforoAcumulado: _jsonString(json['semaforo_acumulado']) ?? 'gris',
+    );
+  }
+}
+
+class KpiSectorSerieDiaria {
+  const KpiSectorSerieDiaria({
+    required this.kpiId,
+    required this.codigo,
+    required this.nombre,
+    this.unidad,
+    this.tipoAcumulacion,
+    this.condicion,
+    this.condicionSimbolo,
+    required this.objetivoAnual,
+    this.valorMin,
+    this.valorMax,
+    this.periodoDe,
+    this.periodoHasta,
+    required this.puntos,
+  });
+
+  final int kpiId;
+  final String codigo;
+  final String nombre;
+  final String? unidad;
+  final String? tipoAcumulacion;
+  final String? condicion;
+  final String? condicionSimbolo;
+  final double objetivoAnual;
+  final double? valorMin;
+  final double? valorMax;
+  final String? periodoDe;
+  final String? periodoHasta;
+  final List<KpiSectorPuntoDiario> puntos;
+
+  bool get isBetween => condicion == 'between';
+
+  factory KpiSectorSerieDiaria.fromJson(Map<String, dynamic> json) {
+    final puntos = <KpiSectorPuntoDiario>[];
+    final rawPuntos = json['puntos'];
+    if (rawPuntos is List) {
+      for (final p in rawPuntos) {
+        if (p is Map) {
+          puntos.add(
+            KpiSectorPuntoDiario.fromJson(Map<String, dynamic>.from(p)),
+          );
+        }
+      }
+    }
+    return KpiSectorSerieDiaria(
+      kpiId: _jsonInt(json['kpi_id']) ?? 0,
+      codigo: _jsonString(json['codigo']) ?? '',
+      nombre: _jsonString(json['nombre']) ?? '',
+      unidad: _jsonString(json['unidad']),
+      tipoAcumulacion: _jsonString(json['tipo_acumulacion']),
+      condicion: _jsonString(json['condicion']),
+      condicionSimbolo: _jsonString(json['condicion_simbolo']),
+      objetivoAnual: _jsonDouble(json['objetivo_anual']) ?? 0,
+      valorMin: _jsonDouble(json['valor_min']),
+      valorMax: _jsonDouble(json['valor_max']),
+      periodoDe: _jsonString(json['periodo_desde']),
+      periodoHasta: _jsonString(json['periodo_hasta']),
+      puntos: puntos,
+    );
+  }
+}
+
+class KpisSectorDiaItem {
+  const KpisSectorDiaItem({
+    required this.kpiId,
+    required this.codigo,
+    required this.nombre,
+    this.unidad,
+    this.tipoAcumulacion,
+    this.mayorEsMejor = true,
+    this.condicion,
+    this.condicionSimbolo,
+    required this.objetivoAnual,
+    this.valorMin,
+    this.valorMax,
+    required this.tieneResultado,
+    this.resultadoDia,
+    this.objetivoDia,
+    this.resultadoAcumuladoAFecha,
+    this.objetivoAcumuladoAFecha,
+    required this.progresoDiaPct,
+    required this.progresoAcumuladoPct,
+    required this.semaforoDia,
+    required this.semaforoAcumulado,
+  });
+
+  final int kpiId;
+  final String codigo;
+  final String nombre;
+  final String? unidad;
+  final String? tipoAcumulacion;
+  final bool mayorEsMejor;
+  final String? condicion;
+  final String? condicionSimbolo;
+  final double objetivoAnual;
+  final double? valorMin;
+  final double? valorMax;
+  final bool tieneResultado;
+  final double? resultadoDia;
+  final double? objetivoDia;
+  final double? resultadoAcumuladoAFecha;
+  final double? objetivoAcumuladoAFecha;
+  final double progresoDiaPct;
+  final double progresoAcumuladoPct;
+  final String semaforoDia;
+  final String semaforoAcumulado;
+
+  bool get isBetween => condicion == 'between';
+
+  factory KpisSectorDiaItem.fromJson(Map<String, dynamic> json) {
+    return KpisSectorDiaItem(
+      kpiId: _jsonInt(json['kpi_id']) ?? 0,
+      codigo: _jsonString(json['codigo']) ?? '',
+      nombre: _jsonString(json['nombre']) ?? '',
+      unidad: _jsonString(json['unidad']),
+      tipoAcumulacion: _jsonString(json['tipo_acumulacion']),
+      mayorEsMejor: json['mayor_es_mejor'] != false,
+      condicion: _jsonString(json['condicion']),
+      condicionSimbolo: _jsonString(json['condicion_simbolo']),
+      objetivoAnual: _jsonDouble(json['objetivo_anual']) ?? 0,
+      valorMin: _jsonDouble(json['valor_min']),
+      valorMax: _jsonDouble(json['valor_max']),
+      tieneResultado: _jsonBool(json['tiene_resultado']) ?? false,
+      resultadoDia: _jsonDouble(json['resultado_dia']),
+      objetivoDia: _jsonDouble(json['objetivo_dia']),
+      resultadoAcumuladoAFecha: _jsonDouble(json['resultado_acumulado_a_fecha']),
+      objetivoAcumuladoAFecha: _jsonDouble(json['objetivo_acumulado_a_fecha']),
+      progresoDiaPct: _jsonDouble(json['progreso_dia_pct']) ?? 0,
+      progresoAcumuladoPct: _jsonDouble(json['progreso_acumulado_pct']) ?? 0,
+      semaforoDia: _jsonString(json['semaforo_dia']) ?? 'gris',
+      semaforoAcumulado: _jsonString(json['semaforo_acumulado']) ?? 'gris',
+    );
+  }
+}
+
+class KpisSectorDiaResponse {
+  const KpisSectorDiaResponse({
+    required this.fecha,
+    required this.sector,
+    required this.kpis,
+  });
+
+  final String fecha;
+  final KpisSectorialSector sector;
+  final List<KpisSectorDiaItem> kpis;
+
+  factory KpisSectorDiaResponse.fromJson(Map<String, dynamic> json) {
+    final rawSector = json['sector'];
+    final sector = rawSector is Map
+        ? KpisSectorialSector.fromJson(Map<String, dynamic>.from(rawSector))
+        : KpisSectorialSector(id: null, nombre: null);
+
+    final kpis = <KpisSectorDiaItem>[];
+    final rawKpis = json['kpis'];
+    if (rawKpis is List) {
+      for (final item in rawKpis) {
+        if (item is Map) {
+          kpis.add(
+            KpisSectorDiaItem.fromJson(Map<String, dynamic>.from(item)),
+          );
+        }
+      }
+    }
+
+    return KpisSectorDiaResponse(
+      fecha: _jsonString(json['fecha']) ?? '',
+      sector: sector,
+      kpis: kpis,
+    );
+  }
+}
+
+// --- Horario esperado models -------------------------------------------------
 
 class HorarioEsperadoBloque {
   const HorarioEsperadoBloque({required this.entrada, required this.salida});
@@ -5375,8 +6053,8 @@ class TriviaEstadoResponse {
     final data = rawData is Map<String, dynamic>
         ? rawData
         : rawData is Map
-            ? Map<String, dynamic>.from(rawData)
-            : json;
+        ? Map<String, dynamic>.from(rawData)
+        : json;
     final rawTrivia = data['trivia'];
     final rawParticipacion = data['participacion'];
     return TriviaEstadoResponse(
@@ -5387,7 +6065,9 @@ class TriviaEstadoResponse {
       yaParticipo: _jsonBool(data['ya_participo']) ?? false,
       enProgreso: _jsonBool(data['en_progreso']) ?? false,
       participacion: rawParticipacion is Map
-          ? TriviaParticipacion.fromJson(Map<String, dynamic>.from(rawParticipacion))
+          ? TriviaParticipacion.fromJson(
+              Map<String, dynamic>.from(rawParticipacion),
+            )
           : null,
     );
   }
@@ -5446,8 +6126,8 @@ class TriviaIniciarResponse {
     final data = rawData is Map<String, dynamic>
         ? rawData
         : rawData is Map
-            ? Map<String, dynamic>.from(rawData)
-            : json;
+        ? Map<String, dynamic>.from(rawData)
+        : json;
     final rawPreguntas = data['preguntas'];
     final preguntas = <TriviaQuestion>[];
     if (rawPreguntas is List) {
@@ -5494,6 +6174,7 @@ class TriviaFinalizarResponse {
     this.incorrectas,
     this.tiempoTotalSegundos,
     this.posicion,
+    this.siguienteTriviaDisponible,
   });
 
   final int? puntosTotal;
@@ -5501,20 +6182,50 @@ class TriviaFinalizarResponse {
   final int? incorrectas;
   final int? tiempoTotalSegundos;
   final int? posicion;
+  final TriviaSiguiente? siguienteTriviaDisponible;
 
   factory TriviaFinalizarResponse.fromJson(Map<String, dynamic> json) {
     final rawData = json['data'];
     final data = rawData is Map<String, dynamic>
         ? rawData
         : rawData is Map
-            ? Map<String, dynamic>.from(rawData)
-            : json;
+        ? Map<String, dynamic>.from(rawData)
+        : json;
+    final sigRaw = data['siguiente_trivia_disponible'];
+    TriviaSiguiente? siguiente;
+    if (sigRaw is Map) {
+      siguiente = TriviaSiguiente.fromJson(Map<String, dynamic>.from(sigRaw));
+    }
     return TriviaFinalizarResponse(
       puntosTotal: _jsonInt(data['puntos_total']),
       correctas: _jsonInt(data['correctas']),
       incorrectas: _jsonInt(data['incorrectas']),
       tiempoTotalSegundos: _jsonInt(data['tiempo_total_segundos']),
       posicion: _jsonInt(data['posicion']),
+      siguienteTriviaDisponible: siguiente,
+    );
+  }
+}
+
+class TriviaSiguiente {
+  const TriviaSiguiente({
+    required this.triviaId,
+    required this.titulo,
+    this.descripcion,
+    this.fechaFin,
+  });
+
+  final int triviaId;
+  final String titulo;
+  final String? descripcion;
+  final String? fechaFin;
+
+  factory TriviaSiguiente.fromJson(Map<String, dynamic> json) {
+    return TriviaSiguiente(
+      triviaId: _jsonInt(json['trivia_id']) ?? 0,
+      titulo: (json['titulo'] as String?) ?? '',
+      descripcion: json['descripcion'] as String?,
+      fechaFin: json['fecha_fin'] as String?,
     );
   }
 }
@@ -5562,8 +6273,8 @@ class TriviaRankingResponse {
     final data = rawData is Map<String, dynamic>
         ? rawData
         : rawData is Map
-            ? Map<String, dynamic>.from(rawData)
-            : json;
+        ? Map<String, dynamic>.from(rawData)
+        : json;
     final rawTrivia = data['trivia'];
     final rawRanking = data['ranking'];
     final ranking = <TriviaRankingItem>[];
@@ -5640,7 +6351,9 @@ class TriviaHistorialResponse {
     if (rawData is List) {
       for (final item in rawData) {
         if (item is Map) {
-          items.add(TriviaHistorialItem.fromJson(Map<String, dynamic>.from(item)));
+          items.add(
+            TriviaHistorialItem.fromJson(Map<String, dynamic>.from(item)),
+          );
         }
       }
     }
@@ -5739,8 +6452,8 @@ class TriviaGanadorResponse {
     final data = rawData is Map<String, dynamic>
         ? rawData
         : rawData is Map
-            ? Map<String, dynamic>.from(rawData)
-            : json;
+        ? Map<String, dynamic>.from(rawData)
+        : json;
     return TriviaGanadorResponse(
       triviaId: _jsonInt(data['trivia_id']) ?? 0,
       titulo: _jsonString(data['titulo']),
@@ -5806,7 +6519,9 @@ class TriviaRankingAnualResponse {
     if (rawData is List) {
       for (final item in rawData) {
         if (item is Map) {
-          items.add(TriviaRankingAnualItem.fromJson(Map<String, dynamic>.from(item)));
+          items.add(
+            TriviaRankingAnualItem.fromJson(Map<String, dynamic>.from(item)),
+          );
         }
       }
     }
@@ -5843,8 +6558,8 @@ class TriviaGanadorAnualResponse {
     final data = rawData is Map<String, dynamic>
         ? rawData
         : rawData is Map
-            ? Map<String, dynamic>.from(rawData)
-            : json;
+        ? Map<String, dynamic>.from(rawData)
+        : json;
     return TriviaGanadorAnualResponse(
       anio: _jsonInt(data['anio']),
       empleadoId: _jsonInt(data['empleado_id']),

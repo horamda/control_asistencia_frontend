@@ -1,12 +1,13 @@
 import 'package:flutter/material.dart';
 
 import '../../core/network/mobile_api_client.dart';
+import 'trivia_play_screen.dart';
 import 'trivia_ranking_screen.dart';
 
 const _kPrimary = Color(0xFF0E3A5B);
 const _kAccent = Color(0xFF00B09C);
 
-class TriviaResultScreen extends StatelessWidget {
+class TriviaResultScreen extends StatefulWidget {
   const TriviaResultScreen({
     super.key,
     required this.apiClient,
@@ -23,12 +24,69 @@ class TriviaResultScreen extends StatelessWidget {
   final String empleadoDni;
 
   @override
+  State<TriviaResultScreen> createState() => _TriviaResultScreenState();
+}
+
+class _TriviaResultScreenState extends State<TriviaResultScreen> {
+  bool _iniciandoSiguiente = false;
+
+  Future<void> _iniciarSiguiente(TriviaSiguiente siguiente) async {
+    if (_iniciandoSiguiente) return;
+    setState(() => _iniciandoSiguiente = true);
+    try {
+      final resp = await widget.apiClient.iniciarTrivia(token: widget.token);
+      if (!mounted) return;
+      setState(() => _iniciandoSiguiente = false);
+
+      if (resp.preguntas.isEmpty) {
+        ScaffoldMessenger.of(context).showSnackBar(
+          const SnackBar(
+            content: Text('No hay preguntas disponibles en este momento.'),
+            behavior: SnackBarBehavior.floating,
+          ),
+        );
+        return;
+      }
+
+      await Navigator.of(context).pushReplacement(
+        MaterialPageRoute(
+          builder: (_) => TriviaPlayScreen(
+            apiClient: widget.apiClient,
+            token: widget.token,
+            triviaId: resp.triviaId,
+            titulo: resp.titulo ?? siguiente.titulo,
+            preguntas: resp.preguntas,
+            empleadoDni: widget.empleadoDni,
+          ),
+        ),
+      );
+    } on ApiException catch (e) {
+      if (!mounted) return;
+      setState(() => _iniciandoSiguiente = false);
+      ScaffoldMessenger.of(context).showSnackBar(
+        SnackBar(content: Text(e.message), behavior: SnackBarBehavior.floating),
+      );
+    } catch (_) {
+      if (!mounted) return;
+      setState(() => _iniciandoSiguiente = false);
+      ScaffoldMessenger.of(context).showSnackBar(
+        const SnackBar(
+          content: Text('Error al iniciar la siguiente trivia. Intentá nuevamente.'),
+          behavior: SnackBarBehavior.floating,
+        ),
+      );
+    }
+  }
+
+  @override
   Widget build(BuildContext context) {
+    final resultado = widget.resultado;
     final pts = resultado.puntosTotal ?? 0;
     final correctas = resultado.correctas ?? 0;
     final incorrectas = resultado.incorrectas ?? 0;
     final posicion = resultado.posicion;
     final tiempo = resultado.tiempoTotalSegundos;
+    final siguiente = resultado.siguienteTriviaDisponible;
 
     return Scaffold(
       backgroundColor: const Color(0xFFF2F5F8),
@@ -143,9 +201,89 @@ class TriviaResultScreen extends StatelessWidget {
               ),
             ),
           ),
-          const SizedBox(height: 24),
+          const SizedBox(height: 16),
+
+          // ── Siguiente trivia disponible ─────────────────────────────────
+          if (siguiente != null) ...[
+            Card(
+              elevation: 1,
+              color: _kAccent.withValues(alpha: 0.06),
+              shape: RoundedRectangleBorder(
+                borderRadius: BorderRadius.circular(16),
+                side: BorderSide(color: _kAccent.withValues(alpha: 0.3)),
+              ),
+              child: Padding(
+                padding: const EdgeInsets.all(16),
+                child: Row(
+                  children: [
+                    Container(
+                      padding: const EdgeInsets.all(8),
+                      decoration: BoxDecoration(
+                        color: _kAccent.withValues(alpha: 0.15),
+                        borderRadius: BorderRadius.circular(10),
+                      ),
+                      child: const Icon(Icons.quiz_outlined, color: _kAccent, size: 24),
+                    ),
+                    const SizedBox(width: 12),
+                    Expanded(
+                      child: Column(
+                        crossAxisAlignment: CrossAxisAlignment.start,
+                        children: [
+                          const Text(
+                            'Siguiente trivia disponible',
+                            style: TextStyle(
+                              fontSize: 11,
+                              fontWeight: FontWeight.w700,
+                              color: _kAccent,
+                            ),
+                          ),
+                          const SizedBox(height: 2),
+                          Text(
+                            siguiente.titulo,
+                            style: const TextStyle(
+                              fontSize: 14,
+                              fontWeight: FontWeight.w600,
+                              color: _kPrimary,
+                            ),
+                          ),
+                        ],
+                      ),
+                    ),
+                  ],
+                ),
+              ),
+            ),
+            const SizedBox(height: 8),
+          ],
+
+          const SizedBox(height: 8),
 
           // ── Botones ─────────────────────────────────────────────────────
+          if (siguiente != null) ...[
+            SizedBox(
+              width: double.infinity,
+              child: FilledButton.icon(
+                style: FilledButton.styleFrom(
+                  backgroundColor: _kAccent,
+                  padding: const EdgeInsets.symmetric(vertical: 16),
+                  shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(12)),
+                ),
+                icon: _iniciandoSiguiente
+                    ? const SizedBox(
+                        width: 18,
+                        height: 18,
+                        child: CircularProgressIndicator(color: Colors.white, strokeWidth: 2),
+                      )
+                    : const Icon(Icons.play_arrow_rounded, size: 24),
+                label: Text(
+                  _iniciandoSiguiente ? 'Cargando...' : 'Jugar siguiente trivia',
+                  style: const TextStyle(fontSize: 16, fontWeight: FontWeight.w700),
+                ),
+                onPressed: _iniciandoSiguiente ? null : () => _iniciarSiguiente(siguiente),
+              ),
+            ),
+            const SizedBox(height: 10),
+          ],
           FilledButton.icon(
             style: FilledButton.styleFrom(
               backgroundColor: _kPrimary,
@@ -157,10 +295,10 @@ class TriviaResultScreen extends StatelessWidget {
             onPressed: () {
               Navigator.of(context).push(MaterialPageRoute(
                 builder: (_) => TriviaRankingScreen(
-                  apiClient: apiClient,
-                  token: token,
-                  triviaId: triviaId,
-                  empleadoDni: empleadoDni,
+                  apiClient: widget.apiClient,
+                  token: widget.token,
+                  triviaId: widget.triviaId,
+                  empleadoDni: widget.empleadoDni,
                 ),
               ));
             },
@@ -174,7 +312,6 @@ class TriviaResultScreen extends StatelessWidget {
             icon: const Icon(Icons.home_outlined),
             label: const Text('Volver al inicio', style: TextStyle(fontSize: 15)),
             onPressed: () {
-              // Volver hasta la raíz del módulo trivia (pop de play + result)
               int count = 0;
               Navigator.of(context).popUntil((_) => count++ >= 2);
             },

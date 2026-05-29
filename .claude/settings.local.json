@@ -5,7 +5,13 @@
       "Bash(flutter analyze:*)",
       "Bash(grep -rn \"dart-define\\\\|API_BASE_URL\\\\|apiBaseUrl\" 'c:/Users/horac/Desktop/Proyectos WEB/control_asistencia/frontend_flutter/' --include=*.json --include=*.sh --include=*.yaml --include=*.yml --include=launch.json)",
       "Bash(flutter pub:*)",
-      "Bash(dart analyze *)"
+      "Bash(dart analyze *)",
+      "Bash(python -c \"from werkzeug.security import generate_password_hash; print\\(generate_password_hash\\('5707'\\)\\)\")",
+      "Bash(Get-ChildItem -Path \"c:\\\\Users\\\\horac\\\\Desktop\\\\Proyectos WEB\\\\control_asistencia\\\\frontend_flutter\" -Recurse -Directory)",
+      "Bash(dir /s /b \"c:\\\\Users\\\\horac\\\\Desktop\\\\Proyectos WEB\\\\control_asistencia\\\\frontend_flutter\\\\lib\")",
+      "PowerShell(Get-ChildItem -Path \"c:\\\\Users\\\\horac\\\\Desktop\\\\Proyectos WEB\\\\control_asistencia\\\\frontend_flutter\\\\lib\\\\src\" -Recurse -Directory | ForEach-Object { $_.FullName.Replace\\('c:\\\\Users\\\\horac\\\\Desktop\\\\Proyectos WEB\\\\control_asistencia\\\\frontend_flutter\\\\', ''\\) } | Sort-Object)",
+      "Bash(Get-ChildItem -Path \"c:\\\\Users\\\\horac\\\\Desktop\\\\Proyectos WEB\\\\control_asistencia\\\\frontend_flutter\\\\lib\\\\src\" -Recurse -Directory)",
+      "Bash(dir \"c:\\\\Users\\\\horac\\\\Desktop\\\\Proyectos WEB\\\\control_asistencia\\\\frontend_flutter\\\\lib\\\\src\" /s /b /ad)"
     ]
   }
 }
