@@ -39,7 +39,10 @@ void main() {
         AttendanceHomeActionIntent.openPendingQueue,
       );
       expect(data.bannerPrimary.label, 'Abrir bandeja');
-      expect(data.bannerSecondary.intent, AttendanceHomeActionIntent.syncPending);
+      expect(
+        data.bannerSecondary.intent,
+        AttendanceHomeActionIntent.syncPending,
+      );
       expect(
         data.nextStepPrimary.intent,
         AttendanceHomeActionIntent.openPendingQueue,
@@ -69,24 +72,27 @@ void main() {
       expect(data.bannerPrimary.label, 'Sincronizando...');
       expect(data.bannerPrimary.loading, isTrue);
       expect(data.bannerPrimary.enabled, isFalse);
-      expect(data.nextStepPrimary.intent, AttendanceHomeActionIntent.syncPending);
+      expect(
+        data.nextStepPrimary.intent,
+        AttendanceHomeActionIntent.syncPending,
+      );
       expect(data.nextStepPrimary.loading, isTrue);
       expect(data.clockSecondary.last.enabled, isFalse);
     });
 
     test('habilita fichada y deshabilita accesos rapidos durante submit', () {
       final data = presenter.build(
-        viewData: _viewData(
-          hasClockToday: true,
-          hasFreshGps: true,
-        ),
+        viewData: _viewData(hasClockToday: true, hasFreshGps: true),
         pendingQueue: const PendingQueueState(),
         submitting: true,
         locatingGps: false,
         isBusy: true,
       );
 
-      expect(data.nextStepPrimary.intent, AttendanceHomeActionIntent.startClock);
+      expect(
+        data.nextStepPrimary.intent,
+        AttendanceHomeActionIntent.startClock,
+      );
       expect(data.nextStepPrimary.label, 'Nueva fichada');
       expect(data.nextStepPrimary.enabled, isFalse);
       expect(data.clockMain.loading, isTrue);
@@ -97,6 +103,12 @@ void main() {
       );
       expect(data.nextStepSecondary.enabled, isFalse);
       expect(data.quickActions.every((item) => !item.enabled), isTrue);
+      expect(
+        data.quickActions.any(
+          (item) => item.intent == AttendanceHomeActionIntent.openGpsLocation,
+        ),
+        isTrue,
+      );
     });
   });
 }

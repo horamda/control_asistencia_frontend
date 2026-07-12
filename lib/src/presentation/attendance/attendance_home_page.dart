@@ -7,6 +7,7 @@ import 'package:image_picker/image_picker.dart';
 import 'package:url_launcher/url_launcher.dart';
 
 import '../../config/app_config.dart';
+import '../../core/alerts/employee_alerts_repository.dart';
 import '../../core/attendance/attendance_config_cache.dart';
 import '../../core/attendance/clock_readiness_cache.dart';
 import '../../core/attendance/clock_feedback_presenter.dart';
@@ -85,6 +86,7 @@ class _AttendanceHomePageState extends State<AttendanceHomePage>
   late final QrClockPreflightService _qrClockPreflightService;
   late final QrClockSubmissionService _qrClockSubmissionService;
   late final PendingQueueController _pendingQueueController;
+  late final EmployeeAlertsRepository _alertsRepository;
 
   int _selectedTab = 0;
 
@@ -114,6 +116,8 @@ class _AttendanceHomePageState extends State<AttendanceHomePage>
   PendingQueueState _pendingQueue = const PendingQueueState();
   ClockReadinessSnapshot _clockReadiness = const ClockReadinessSnapshot();
   String? _clockActionPhase;
+  int? _alertsCount;
+  bool _alertsLoading = false;
 
   // ─── Trivia ────────────────────────────────────────────────────────────────
   TriviaEstadoResponse? _triviaEstado;
@@ -154,6 +158,7 @@ class _AttendanceHomePageState extends State<AttendanceHomePage>
     _pendingQueueController = PendingQueueController(
       syncService: _pendingClockSyncService,
     );
+    _alertsRepository = EmployeeAlertsRepository(widget.apiClient);
     // Inicializar URL de foto usando el endpoint canonico /empleados/imagen/{dni}.
     // No usar el campo `foto` de EmployeeSummary como primario porque el backend
     // puede devolverlo como URL relativa (sin esquema), que CachedNetworkImage
@@ -180,6 +185,7 @@ class _AttendanceHomePageState extends State<AttendanceHomePage>
     unawaited(_loadDashboard());
     unawaited(_loadTurnoHoy());
     unawaited(_loadTriviaEstado());
+    unawaited(_loadAlertsOverview());
     _loadPendingQueueState();
     Future<void>.microtask(() => _warmUpClockReadiness(forceGps: true));
     Future<void>.microtask(
@@ -198,7 +204,12 @@ class _AttendanceHomePageState extends State<AttendanceHomePage>
     _pendingSyncTicker?.cancel();
     _clockReadinessTicker?.cancel();
     _pendingSyncTicker = Timer.periodic(const Duration(minutes: 2), (_) {
-      if (!mounted || !_pendingQueue.hasPending || _pendingQueue.syncing || _submitting) return;
+      if (!mounted ||
+          !_pendingQueue.hasPending ||
+          _pendingQueue.syncing ||
+          _submitting) {
+        return;
+      }
       _syncPendingClocks(isBackground: true);
     });
     _clockReadinessTicker = Timer.periodic(_clockReadinessRefreshInterval, (_) {
@@ -237,7 +248,9 @@ class _AttendanceHomePageState extends State<AttendanceHomePage>
           tone: ClockFeedbackTone.warning,
         );
       }
-      if (!_hasFreshConfig()) unawaited(_loadConfig());
+      if (!_hasFreshConfig()) {
+        unawaited(_loadConfig());
+      }
       return;
     }
 
@@ -248,6 +261,7 @@ class _AttendanceHomePageState extends State<AttendanceHomePage>
     if (!_hasFreshConfig()) {
       unawaited(_loadConfig());
     }
+    unawaited(_loadAlertsOverview());
   }
 
   @override
@@ -255,6 +269,7 @@ class _AttendanceHomePageState extends State<AttendanceHomePage>
     if (state == AppLifecycleState.resumed) {
       _startTimers();
       unawaited(_warmUpClockReadiness(forceGps: true, refreshConfig: true));
+      unawaited(_loadAlertsOverview());
     } else if (state == AppLifecycleState.paused) {
       _stopTimers();
     }
@@ -273,7 +288,9 @@ class _AttendanceHomePageState extends State<AttendanceHomePage>
     );
   }
 
-  static final _linksUrl = Uri.parse('https://horamda.github.io/delPalacio_DPO/');
+  static final _linksUrl = Uri.parse(
+    'https://horamda.github.io/delPalacio_DPO/',
+  );
 
   Future<void> _openLinks() async {
     if (await canLaunchUrl(_linksUrl)) {
@@ -290,6 +307,47 @@ class _AttendanceHomePageState extends State<AttendanceHomePage>
       apiClient: widget.apiClient,
       token: widget.token,
     );
+  }
+
+  Future<void> _openGpsLocation() async {
+    if (_submitting) {
+      return;
+    }
+    await _homeCoordinator.openGpsLocation(context);
+  }
+
+  Future<void> _loadAlertsOverview() async {
+    if (_alertsLoading) return;
+    _alertsLoading = true;
+    try {
+      final snapshot = await _alertsRepository.loadOverview(
+        token: widget.token,
+      );
+      if (!mounted) return;
+      setState(() => _alertsCount = snapshot.activeCount);
+    } catch (error, stackTrace) {
+      _log.warning(
+        'No se pudo actualizar el contador de alertas.',
+        error,
+        stackTrace,
+      );
+    } finally {
+      _alertsLoading = false;
+    }
+  }
+
+  Future<void> _openEmployeeAlerts() async {
+    if (_submitting) {
+      return;
+    }
+    await _homeCoordinator.openEmployeeAlerts(
+      context,
+      apiClient: widget.apiClient,
+      token: widget.token,
+    );
+    if (mounted) {
+      unawaited(_loadAlertsOverview());
+    }
   }
 
   Future<void> _openJustificaciones() async {
@@ -312,6 +370,9 @@ class _AttendanceHomePageState extends State<AttendanceHomePage>
       apiClient: widget.apiClient,
       token: widget.token,
     );
+    if (mounted) {
+      unawaited(_loadAlertsOverview());
+    }
   }
 
   Future<void> _openVacaciones() async {
@@ -348,11 +409,35 @@ class _AttendanceHomePageState extends State<AttendanceHomePage>
       apiClient: widget.apiClient,
       token: widget.token,
     );
+    if (mounted) {
+      unawaited(_loadAlertsOverview());
+    }
   }
 
   Future<void> _openKpisSector() async {
     if (_submitting) return;
     await _homeCoordinator.openKpisSector(
+      context,
+      apiClient: widget.apiClient,
+      token: widget.token,
+    );
+  }
+
+  Future<void> _openFeedback() async {
+    if (_submitting) return;
+    await _homeCoordinator.openFeedback(
+      context,
+      apiClient: widget.apiClient,
+      token: widget.token,
+    );
+    if (mounted) {
+      unawaited(_loadAlertsOverview());
+    }
+  }
+
+  Future<void> _openSkap() async {
+    if (_submitting) return;
+    await _homeCoordinator.openSkap(
       context,
       apiClient: widget.apiClient,
       token: widget.token,
@@ -456,7 +541,10 @@ class _AttendanceHomePageState extends State<AttendanceHomePage>
       ]);
       if (!mounted) return;
       final historial = results[2] as List<TriviaMyHistorialItem>;
-      final pts = historial.fold<int>(0, (sum, i) => sum + (i.puntosTotal ?? 0));
+      final pts = historial.fold<int>(
+        0,
+        (sum, i) => sum + (i.puntosTotal ?? 0),
+      );
       setState(() {
         _triviaEstado = results[0] as TriviaEstadoResponse;
         _triviaNotificaciones = results[1] as List<TriviaNotificacion>;
@@ -519,7 +607,8 @@ class _AttendanceHomePageState extends State<AttendanceHomePage>
             const Duration(minutes: 2)) {
       return;
     }
-    final previousVersion = _profile?.imagenVersion ?? widget.empleado.imagenVersion;
+    final previousVersion =
+        _profile?.imagenVersion ?? widget.empleado.imagenVersion;
     setState(() {
       _loadingProfile = true;
     });
@@ -530,7 +619,10 @@ class _AttendanceHomePageState extends State<AttendanceHomePage>
       // cuando EmployeeSummary y EmployeeProfile difieren en formato de URL.
       final nextVersion = profile.imagenVersion;
       if (nextVersion != previousVersion) {
-        await ProfilePhotoCache.evict(_resolvedPhotoUrl, version: previousVersion);
+        await ProfilePhotoCache.evict(
+          _resolvedPhotoUrl,
+          version: previousVersion,
+        );
       }
       if (!mounted) return;
       // Recalcular URL solo si la version cambio, para no romper el cache de
@@ -541,7 +633,10 @@ class _AttendanceHomePageState extends State<AttendanceHomePage>
               dni: effectiveDni,
               version: profile.imagenVersion,
             )
-          : ProfilePhotoCache.withVersion(profile.foto, version: profile.imagenVersion);
+          : ProfilePhotoCache.withVersion(
+              profile.foto,
+              version: profile.imagenVersion,
+            );
       setState(() {
         _profile = profile;
         _profileLoadError = null;
@@ -680,10 +775,12 @@ class _AttendanceHomePageState extends State<AttendanceHomePage>
 
       // Persistir permisos concedidos para arranques futuros.
       if (next.cameraGranted == true || next.locationGranted == true) {
-        unawaited(_clockReadinessCache.saveGranted(
-          cameraGranted: next.cameraGranted == true,
-          locationGranted: next.locationGranted == true,
-        ));
+        unawaited(
+          _clockReadinessCache.saveGranted(
+            cameraGranted: next.cameraGranted == true,
+            locationGranted: next.locationGranted == true,
+          ),
+        );
       }
 
       if (!mounted) {
@@ -728,9 +825,14 @@ class _AttendanceHomePageState extends State<AttendanceHomePage>
       if (photo == null) {
         return null;
       }
-      return _clockPhotoCache.saveFromPath(
+      final bytes = await photo.readAsBytes();
+      if (bytes.isEmpty) {
+        return null;
+      }
+      return _clockPhotoCache.saveFromBytes(
         employeeId: widget.empleado.id,
-        sourcePath: photo.path,
+        bytes: bytes,
+        sourceName: photo.path,
       );
     } catch (_) {
       return null;
@@ -1145,6 +1247,10 @@ class _AttendanceHomePageState extends State<AttendanceHomePage>
         return () {
           unawaited(_openAttendanceHistory());
         };
+      case AttendanceHomeActionIntent.openGpsLocation:
+        return () {
+          unawaited(_openGpsLocation());
+        };
       case AttendanceHomeActionIntent.openProfile:
         return () {
           unawaited(_openProfile());
@@ -1188,6 +1294,14 @@ class _AttendanceHomePageState extends State<AttendanceHomePage>
       case AttendanceHomeActionIntent.openKpisSector:
         return () {
           unawaited(_openKpisSector());
+        };
+      case AttendanceHomeActionIntent.openFeedback:
+        return () {
+          unawaited(_openFeedback());
+        };
+      case AttendanceHomeActionIntent.openSkap:
+        return () {
+          unawaited(_openSkap());
         };
       case AttendanceHomeActionIntent.openPremios:
         return () {
@@ -1519,8 +1633,8 @@ class _AttendanceHomePageState extends State<AttendanceHomePage>
       // Solo propagar statusMessage cuando agrega info real (lock/refresh).
       // En sesion activa normal, statusMessage = 'Sesion activa.' que ya esta
       // incorporado en sessionBaseText, lo que causaria texto duplicado.
-      sessionMessage: (widget.sessionManager.isRefreshing ||
-              widget.sessionManager.isLocked)
+      sessionMessage:
+          (widget.sessionManager.isRefreshing || widget.sessionManager.isLocked)
           ? widget.sessionManager.statusMessage
           : null,
       sessionColor: sessionColor,
@@ -1543,8 +1657,31 @@ class _AttendanceHomePageState extends State<AttendanceHomePage>
       isBusy: _isBusy,
     );
     final cs = Theme.of(context).colorScheme;
+    final alertsCount = _alertsCount ?? 0;
+    final hasAlerts = alertsCount > 0;
+    final alertsBadgeLabel = hasAlerts
+        ? Text(
+            alertsCount > 99 ? '99+' : '$alertsCount',
+            style: const TextStyle(fontSize: 10),
+          )
+        : null;
     return Scaffold(
       appBar: AppBar(
+        automaticallyImplyLeading: false,
+        centerTitle: true,
+        leading: Badge(
+          isLabelVisible: hasAlerts,
+          label: alertsBadgeLabel,
+          child: IconButton(
+            onPressed: _submitting
+                ? null
+                : () => unawaited(_openEmployeeAlerts()),
+            icon: const Icon(Icons.notifications_active_outlined),
+            tooltip: hasAlerts
+                ? 'Alertas (${alertsCount > 99 ? '99+' : alertsCount})'
+                : 'Alertas',
+          ),
+        ),
         title: const Text('FichaYa'),
         actions: [
           PopupMenuButton<_HomeMenuAction>(
@@ -1557,6 +1694,8 @@ class _AttendanceHomePageState extends State<AttendanceHomePage>
                   await _openBiometricSettings();
                 case _HomeMenuAction.security:
                   await _openSecurityEvents();
+                case _HomeMenuAction.locationGps:
+                  await _openGpsLocation();
                 case _HomeMenuAction.rateApp:
                   await _openRateApp();
                 case _HomeMenuAction.links:
@@ -1592,6 +1731,15 @@ class _AttendanceHomePageState extends State<AttendanceHomePage>
                 child: ListTile(
                   leading: Icon(Icons.shield_outlined),
                   title: Text('Seguridad'),
+                  contentPadding: EdgeInsets.zero,
+                  dense: true,
+                ),
+              ),
+              const PopupMenuItem(
+                value: _HomeMenuAction.locationGps,
+                child: ListTile(
+                  leading: Icon(Icons.my_location_outlined),
+                  title: Text('Mi ubicacion GPS'),
                   contentPadding: EdgeInsets.zero,
                   dense: true,
                 ),
@@ -1658,7 +1806,9 @@ class _AttendanceHomePageState extends State<AttendanceHomePage>
       ),
       floatingActionButton: FloatingActionButton(
         onPressed: _submitting ? null : _fichar,
-        backgroundColor: _submitting ? cs.surfaceContainerHighest : const Color(0xFF00B09C),
+        backgroundColor: _submitting
+            ? cs.surfaceContainerHighest
+            : const Color(0xFF00B09C),
         foregroundColor: Colors.white,
         elevation: 6,
         tooltip: 'Fichar con QR',
@@ -1686,8 +1836,10 @@ class _AttendanceHomePageState extends State<AttendanceHomePage>
             _NavBarItem(
               icon: Badge(
                 isLabelVisible: pendingQueue.hasPending,
-                label: Text('${pendingQueue.total}',
-                    style: const TextStyle(fontSize: 10)),
+                label: Text(
+                  '${pendingQueue.total}',
+                  style: const TextStyle(fontSize: 10),
+                ),
                 child: const Icon(Icons.home_outlined),
               ),
               selectedIcon: const Icon(Icons.home),
@@ -1723,179 +1875,186 @@ class _AttendanceHomePageState extends State<AttendanceHomePage>
       body: Stack(
         children: [
           RefreshIndicator(
-        onRefresh: _refreshHome,
-        child: Center(
-          child: ConstrainedBox(
-            constraints: BoxConstraints(maxWidth: viewData.contentMaxWidth),
-            child: ListView(
-              physics: const AlwaysScrollableScrollPhysics(),
-              padding: EdgeInsets.fromLTRB(
-                viewData.horizontalPadding,
-                20,
-                viewData.horizontalPadding,
-                24,
-              ),
-              children: [
-                if (_loadingConfig || _loadingProfile)
-                  const Padding(
-                    padding: EdgeInsets.only(bottom: 10),
-                    child: LinearProgressIndicator(minHeight: 3),
+            onRefresh: _refreshHome,
+            child: Center(
+              child: ConstrainedBox(
+                constraints: BoxConstraints(maxWidth: viewData.contentMaxWidth),
+                child: ListView(
+                  physics: const AlwaysScrollableScrollPhysics(),
+                  padding: EdgeInsets.fromLTRB(
+                    viewData.horizontalPadding,
+                    20,
+                    viewData.horizontalPadding,
+                    24,
                   ),
-                if (viewData.hasPendingUrgency)
-                  AttendancePendingBanner(
-                    hasErrors: viewData.hasPendingErrors,
-                    pendingCleanCount: viewData.pendingClean,
-                    failedCount: pendingQueue.failed,
-                    lastSyncText: viewData.lastSyncText,
-                    statusMessage: pendingQueue.lastMessage,
-                    primaryAction: _buttonData(actionViewData.bannerPrimary),
-                    secondaryAction: _buttonData(actionViewData.bannerSecondary),
-                  ),
-                if (viewData.hasPendingUrgency) const SizedBox(height: 12),
-                AttendanceHeroCard(
-                  photoUrl: fotoUrl,
-                  token: widget.token,
-                  greeting: _greetingPrefix(),
-                  employeeName: empleado.nombreCompleto,
-                  employeeDni: empleado.dni,
-                  employeeCompany: null,
-                  syncText: viewData.syncText,
-                  sessionText: viewData.sessionText,
-                  sessionColor: sessionColor,
-                  sessionForeground: viewData.sessionForeground,
-                  gpsStatusText: viewData.gpsStatusText,
-                ),
-                if (_profileLoadError != null) ...[
-                  const SizedBox(height: 8),
-                  Card(
-                    color: Theme.of(context).colorScheme.errorContainer,
-                    child: Padding(
-                      padding: const EdgeInsets.all(12),
-                      child: Text(
-                        _profileLoadError!,
-                        style: TextStyle(
-                          color: Theme.of(context).colorScheme.onErrorContainer,
+                  children: [
+                    if (_loadingConfig || _loadingProfile)
+                      const Padding(
+                        padding: EdgeInsets.only(bottom: 10),
+                        child: LinearProgressIndicator(minHeight: 3),
+                      ),
+                    if (viewData.hasPendingUrgency)
+                      AttendancePendingBanner(
+                        hasErrors: viewData.hasPendingErrors,
+                        pendingCleanCount: viewData.pendingClean,
+                        failedCount: pendingQueue.failed,
+                        lastSyncText: viewData.lastSyncText,
+                        statusMessage: pendingQueue.lastMessage,
+                        primaryAction: _buttonData(
+                          actionViewData.bannerPrimary,
+                        ),
+                        secondaryAction: _buttonData(
+                          actionViewData.bannerSecondary,
                         ),
                       ),
+                    if (viewData.hasPendingUrgency) const SizedBox(height: 12),
+                    AttendanceHeroCard(
+                      photoUrl: fotoUrl,
+                      token: widget.token,
+                      greeting: _greetingPrefix(),
+                      employeeName: empleado.nombreCompleto,
+                      employeeDni: empleado.dni,
+                      employeeCompany: null,
+                      syncText: viewData.syncText,
+                      sessionText: viewData.sessionText,
+                      sessionColor: sessionColor,
+                      sessionForeground: viewData.sessionForeground,
+                      gpsStatusText: viewData.gpsStatusText,
                     ),
-                  ),
-                ],
-                const SizedBox(height: 12),
-                // ── Status banner ──────────────────────────────────
-                AttendanceStatusBanner(
-                  pendingTotal: pendingQueue.total,
-                  pendingFailed: pendingQueue.failed,
-                  lastClockText: viewData.lastClockStatText,
-                  hasClockToday: viewData.hasClockToday,
-                  hasFreshGps: viewData.hasFreshGps,
-                  onTap: viewData.hasPendingErrors || viewData.hasPendingSync
-                      ? () => unawaited(_openPendingQueueDetails())
-                      : null,
-                ),
-                if (_turnoHoy != null && _turnoHoy!.bloques.isNotEmpty) ...[
-                  const SizedBox(height: 8),
-                  _TurnoHoyBanner(turno: _turnoHoy!),
-                ],
-                const SizedBox(height: 12),
-                // ── Stats grid (4 tiles) ───────────────────────────
-                AttendanceStatsCarousel(
-                  items: [
-                    AttendanceStatItem(
-                      title: 'Puntualidad',
-                      value: _dashboard != null
-                          ? '${_dashboard!.asistencia.kpis.puntualidadPct.toStringAsFixed(0)}%'
-                          : '–',
-                      icon: Icons.timer_outlined,
-                      accent: const Color(0xFF2A789E),
+                    if (_profileLoadError != null) ...[
+                      const SizedBox(height: 8),
+                      Card(
+                        color: Theme.of(context).colorScheme.errorContainer,
+                        child: Padding(
+                          padding: const EdgeInsets.all(12),
+                          child: Text(
+                            _profileLoadError!,
+                            style: TextStyle(
+                              color: Theme.of(
+                                context,
+                              ).colorScheme.onErrorContainer,
+                            ),
+                          ),
+                        ),
+                      ),
+                    ],
+                    const SizedBox(height: 12),
+                    // ── Status banner ──────────────────────────────────
+                    AttendanceStatusBanner(
+                      pendingTotal: pendingQueue.total,
+                      pendingFailed: pendingQueue.failed,
+                      lastClockText: viewData.lastClockStatText,
+                      hasClockToday: viewData.hasClockToday,
+                      hasFreshGps: viewData.hasFreshGps,
+                      onTap:
+                          viewData.hasPendingErrors || viewData.hasPendingSync
+                          ? () => unawaited(_openPendingQueueDetails())
+                          : null,
                     ),
-                    AttendanceStatItem(
-                      title: 'A tiempo semana',
-                      value: _dashboard != null
-                          ? '${_dashboard!.asistencia.totales.ok} / ${_dashboard!.asistencia.totales.ok + _dashboard!.asistencia.totales.tarde + _dashboard!.asistencia.totales.ausente}'
-                          : '–',
-                      icon: Icons.calendar_today_outlined,
-                      accent: const Color(0xFF315D52),
+                    if (_turnoHoy != null && _turnoHoy!.bloques.isNotEmpty) ...[
+                      const SizedBox(height: 8),
+                      _TurnoHoyBanner(turno: _turnoHoy!),
+                    ],
+                    const SizedBox(height: 12),
+                    // ── Stats grid (4 tiles) ───────────────────────────
+                    AttendanceStatsCarousel(
+                      items: [
+                        AttendanceStatItem(
+                          title: 'Puntualidad',
+                          value: _dashboard != null
+                              ? '${_dashboard!.asistencia.kpis.puntualidadPct.toStringAsFixed(0)}%'
+                              : '–',
+                          icon: Icons.timer_outlined,
+                          accent: const Color(0xFF2A789E),
+                        ),
+                        AttendanceStatItem(
+                          title: 'A tiempo semana',
+                          value: _dashboard != null
+                              ? '${_dashboard!.asistencia.totales.ok} / ${_dashboard!.asistencia.totales.ok + _dashboard!.asistencia.totales.tarde + _dashboard!.asistencia.totales.ausente}'
+                              : '–',
+                          icon: Icons.calendar_today_outlined,
+                          accent: const Color(0xFF315D52),
+                        ),
+                        AttendanceStatItem(
+                          title: 'Pendientes',
+                          value: '${pendingQueue.total}',
+                          icon: Icons.cloud_upload_outlined,
+                          accent: pendingQueue.total > 0
+                              ? const Color(0xFFC85F0F)
+                              : const Color(0xFF3D4F6B),
+                        ),
+                        AttendanceStatItem(
+                          title: 'Última fichada',
+                          value: viewData.lastClockStatText,
+                          icon: Icons.punch_clock_outlined,
+                          accent: const Color(0xFF5C3D8F),
+                        ),
+                      ],
                     ),
-                    AttendanceStatItem(
-                      title: 'Pendientes',
-                      value: '${pendingQueue.total}',
-                      icon: Icons.cloud_upload_outlined,
-                      accent: pendingQueue.total > 0
-                          ? const Color(0xFFC85F0F)
-                          : const Color(0xFF3D4F6B),
+                    // ── Trivia card ────────────────────────────────────────────
+                    const SizedBox(height: 12),
+                    _TriviaDashboardCard(
+                      estado: _triviaEstado,
+                      notificaciones: _triviaNotificaciones,
+                      onTap: () => unawaited(_openTrivia()),
                     ),
-                    AttendanceStatItem(
-                      title: 'Última fichada',
-                      value: viewData.lastClockStatText,
-                      icon: Icons.punch_clock_outlined,
-                      accent: const Color(0xFF5C3D8F),
+                    const SizedBox(height: 8),
+                    _TriviaPuntosCard(
+                      puntos: _triviaPuntosAcumulados,
+                      onTap: () => unawaited(_openTrivia()),
+                    ),
+                    // ── Readiness strip: solo visible si algo no está listo ────
+                    if (!viewData.configReady ||
+                        !viewData.cameraReady ||
+                        !(viewData.locationReady &&
+                            viewData.locationServiceReady) ||
+                        !viewData.hasFreshGps ||
+                        readiness.warming ||
+                        _clockActionPhase != null) ...[
+                      const SizedBox(height: 12),
+                      AttendanceReadinessStrip(
+                        warming: readiness.warming,
+                        phaseText: _clockActionPhase,
+                        badges: [
+                          AttendanceReadinessBadgeData(
+                            text: viewData.configPrepText,
+                            ready: viewData.configReady,
+                          ),
+                          AttendanceReadinessBadgeData(
+                            text: viewData.cameraPrepText,
+                            ready: viewData.cameraReady,
+                          ),
+                          AttendanceReadinessBadgeData(
+                            text: viewData.locationPrepText,
+                            ready:
+                                viewData.locationReady &&
+                                viewData.locationServiceReady,
+                          ),
+                          AttendanceReadinessBadgeData(
+                            text: viewData.gpsPrepText,
+                            ready: viewData.hasFreshGps,
+                          ),
+                        ],
+                      ),
+                    ],
+                    const SizedBox(height: 12),
+                    // ── Quick actions ──────────────────────────────────
+                    AttendanceQuickActionsCard(
+                      items: actionViewData.quickActions
+                          .map(_quickActionItem)
+                          .toList(growable: false),
                     ),
                   ],
                 ),
-                // ── Trivia card ────────────────────────────────────────────
-                const SizedBox(height: 12),
-                _TriviaDashboardCard(
-                  estado: _triviaEstado,
-                  notificaciones: _triviaNotificaciones,
-                  onTap: () => unawaited(_openTrivia()),
-                ),
-                const SizedBox(height: 8),
-                _TriviaPuntosCard(
-                  puntos: _triviaPuntosAcumulados,
-                  onTap: () => unawaited(_openTrivia()),
-                ),
-                // ── Readiness strip: solo visible si algo no está listo ────
-                if (!viewData.configReady ||
-                    !viewData.cameraReady ||
-                    !(viewData.locationReady && viewData.locationServiceReady) ||
-                    !viewData.hasFreshGps ||
-                    readiness.warming ||
-                    _clockActionPhase != null) ...[
-                  const SizedBox(height: 12),
-                  AttendanceReadinessStrip(
-                    warming: readiness.warming,
-                    phaseText: _clockActionPhase,
-                    badges: [
-                      AttendanceReadinessBadgeData(
-                        text: viewData.configPrepText,
-                        ready: viewData.configReady,
-                      ),
-                      AttendanceReadinessBadgeData(
-                        text: viewData.cameraPrepText,
-                        ready: viewData.cameraReady,
-                      ),
-                      AttendanceReadinessBadgeData(
-                        text: viewData.locationPrepText,
-                        ready: viewData.locationReady &&
-                            viewData.locationServiceReady,
-                      ),
-                      AttendanceReadinessBadgeData(
-                        text: viewData.gpsPrepText,
-                        ready: viewData.hasFreshGps,
-                      ),
-                    ],
-                  ),
-                ],
-                const SizedBox(height: 12),
-                // ── Quick actions ──────────────────────────────────
-                AttendanceQuickActionsCard(
-                  items: actionViewData.quickActions
-                      .map(_quickActionItem)
-                      .toList(growable: false),
-                ),
-              ],
+              ),
             ),
           ),
-        ),
-          ),
           // ── Overlay de procesamiento (visible mientras _submitting = true) ─
-          if (_submitting)
-            _ClockProcessingOverlay(phase: _clockActionPhase),
+          if (_submitting) _ClockProcessingOverlay(phase: _clockActionPhase),
         ],
       ),
     );
   }
-
 }
 
 // ─── Turno de hoy ────────────────────────────────────────────────────────────
@@ -1906,9 +2065,7 @@ class _TurnoHoyBanner extends StatelessWidget {
   final HorarioEsperadoResponse turno;
 
   String _bloquesText() {
-    return turno.bloques
-        .map((b) => '${b.entrada} – ${b.salida}')
-        .join('  |  ');
+    return turno.bloques.map((b) => '${b.entrada} – ${b.salida}').join('  |  ');
   }
 
   @override
@@ -1931,15 +2088,15 @@ class _TurnoHoyBanner extends StatelessWidget {
               children: [
                 Text(
                   'Turno de hoy',
-                  style: Theme.of(context).textTheme.labelSmall?.copyWith(
-                        color: cs.onSurfaceVariant,
-                      ),
+                  style: Theme.of(
+                    context,
+                  ).textTheme.labelSmall?.copyWith(color: cs.onSurfaceVariant),
                 ),
                 Text(
                   _bloquesText(),
-                  style: Theme.of(context).textTheme.bodyMedium?.copyWith(
-                        fontWeight: FontWeight.w600,
-                      ),
+                  style: Theme.of(
+                    context,
+                  ).textTheme.bodyMedium?.copyWith(fontWeight: FontWeight.w600),
                 ),
               ],
             ),
@@ -1977,7 +2134,17 @@ class _TurnoHoyBanner extends StatelessWidget {
 
 // ─── Menu actions ────────────────────────────────────────────────────────────
 
-enum _HomeMenuAction { biometrics, security, rateApp, links, diagnostics, lockSession, about, logout }
+enum _HomeMenuAction {
+  biometrics,
+  security,
+  locationGps,
+  rateApp,
+  links,
+  diagnostics,
+  lockSession,
+  about,
+  logout,
+}
 
 // ─── Processing overlay ───────────────────────────────────────────────────────
 
@@ -2103,7 +2270,10 @@ class _TriviaDashboardCard extends StatelessWidget {
             Row(
               children: [
                 Container(
-                  padding: const EdgeInsets.symmetric(horizontal: 10, vertical: 4),
+                  padding: const EdgeInsets.symmetric(
+                    horizontal: 10,
+                    vertical: 4,
+                  ),
                   decoration: BoxDecoration(
                     color: Colors.white.withValues(alpha: 0.2),
                     borderRadius: BorderRadius.circular(20),
@@ -2276,7 +2446,10 @@ class _TriviaDashboardCard extends StatelessWidget {
                 crossAxisAlignment: CrossAxisAlignment.start,
                 children: [
                   Container(
-                    padding: const EdgeInsets.symmetric(horizontal: 8, vertical: 2),
+                    padding: const EdgeInsets.symmetric(
+                      horizontal: 8,
+                      vertical: 2,
+                    ),
                     decoration: BoxDecoration(
                       color: badgeColor.withValues(alpha: 0.1),
                       borderRadius: BorderRadius.circular(20),
@@ -2293,9 +2466,9 @@ class _TriviaDashboardCard extends StatelessWidget {
                   const SizedBox(height: 3),
                   Text(
                     subtitulo,
-                    style: Theme.of(context).textTheme.bodySmall?.copyWith(
-                          color: cs.onSurfaceVariant,
-                        ),
+                    style: Theme.of(
+                      context,
+                    ).textTheme.bodySmall?.copyWith(color: cs.onSurfaceVariant),
                     maxLines: 1,
                     overflow: TextOverflow.ellipsis,
                   ),
@@ -2307,7 +2480,10 @@ class _TriviaDashboardCard extends StatelessWidget {
               FilledButton(
                 style: FilledButton.styleFrom(
                   backgroundColor: badgeColor,
-                  padding: const EdgeInsets.symmetric(horizontal: 14, vertical: 8),
+                  padding: const EdgeInsets.symmetric(
+                    horizontal: 14,
+                    vertical: 8,
+                  ),
                   minimumSize: Size.zero,
                   tapTargetSize: MaterialTapTargetSize.shrinkWrap,
                   shape: RoundedRectangleBorder(
@@ -2420,8 +2596,7 @@ class _NavBarItem extends StatelessWidget {
                 style: TextStyle(
                   fontSize: 11,
                   color: color,
-                  fontWeight:
-                      selected ? FontWeight.w700 : FontWeight.normal,
+                  fontWeight: selected ? FontWeight.w700 : FontWeight.normal,
                 ),
               ),
             ],

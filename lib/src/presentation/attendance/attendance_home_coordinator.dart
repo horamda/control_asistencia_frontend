@@ -20,10 +20,14 @@ import 'justificaciones_page.dart';
 import 'marks_history_page.dart';
 import 'pedidos_mercaderia_page.dart';
 import 'kpis_sector_page.dart';
+import 'employee_alerts_page.dart';
+import 'gps_location_page.dart';
 import 'premios_page.dart';
 import 'horarios_page.dart';
 import 'qr_scan_page.dart';
+import 'feedback_page.dart';
 import 'security_events_page.dart';
+import 'skap_page.dart';
 import 'widgets/pending_queue_sheet.dart';
 
 class AttendanceHomeCoordinator {
@@ -49,9 +53,9 @@ class AttendanceHomeCoordinator {
   }
 
   Future<void> openAbout(BuildContext context) {
-    return Navigator.of(context).push(
-      MaterialPageRoute(builder: (_) => const AboutPage()),
-    );
+    return Navigator.of(
+      context,
+    ).push(MaterialPageRoute(builder: (_) => const AboutPage()));
   }
 
   Future<void> openSecurityEvents(
@@ -66,6 +70,48 @@ class AttendanceHomeCoordinator {
     );
   }
 
+  Future<void> openGpsLocation(BuildContext context) {
+    return Navigator.of(
+      context,
+    ).push(MaterialPageRoute(builder: (_) => const GpsLocationPage()));
+  }
+
+  Future<void> openEmployeeAlerts(
+    BuildContext context, {
+    required MobileApiClient apiClient,
+    required String token,
+  }) {
+    return Navigator.of(context).push(
+      MaterialPageRoute(
+        builder: (_) => EmployeeAlertsPage(apiClient: apiClient, token: token),
+      ),
+    );
+  }
+
+  Future<void> openFeedback(
+    BuildContext context, {
+    required MobileApiClient apiClient,
+    required String token,
+  }) {
+    return Navigator.of(context).push(
+      MaterialPageRoute(
+        builder: (_) => FeedbackPage(apiClient: apiClient, token: token),
+      ),
+    );
+  }
+
+  Future<void> openSkap(
+    BuildContext context, {
+    required MobileApiClient apiClient,
+    required String token,
+  }) {
+    return Navigator.of(context).push(
+      MaterialPageRoute(
+        builder: (_) => SkapPage(apiClient: apiClient, token: token),
+      ),
+    );
+  }
+
   Future<void> openAttendanceHistory(
     BuildContext context, {
     required MobileApiClient apiClient,
@@ -73,7 +119,8 @@ class AttendanceHomeCoordinator {
   }) {
     return Navigator.of(context).push(
       MaterialPageRoute(
-        builder: (_) => AttendanceHistoryPage(apiClient: apiClient, token: token),
+        builder: (_) =>
+            AttendanceHistoryPage(apiClient: apiClient, token: token),
       ),
     );
   }
@@ -97,8 +144,7 @@ class AttendanceHomeCoordinator {
   }) {
     return Navigator.of(context).push(
       MaterialPageRoute(
-        builder: (_) =>
-            JustificacionesPage(apiClient: apiClient, token: token),
+        builder: (_) => JustificacionesPage(apiClient: apiClient, token: token),
       ),
     );
   }
@@ -171,7 +217,8 @@ class AttendanceHomeCoordinator {
   }) {
     return Navigator.of(context).push(
       MaterialPageRoute(
-        builder: (_) => PedidosMercaderiaPage(apiClient: apiClient, token: token),
+        builder: (_) =>
+            PedidosMercaderiaPage(apiClient: apiClient, token: token),
       ),
     );
   }

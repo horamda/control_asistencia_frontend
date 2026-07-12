@@ -1,10 +1,13 @@
 import 'dart:convert';
 import 'dart:io';
+import 'dart:typed_data';
 
 import 'package:flutter_test/flutter_test.dart';
 import 'package:http/http.dart' as http;
 
+import 'package:ficharqr/src/core/network/feedback_api_models.dart';
 import 'package:ficharqr/src/core/network/mobile_api_client.dart';
+import 'package:ficharqr/src/core/network/skap_api_models.dart';
 
 void main() {
   test(
@@ -74,6 +77,206 @@ void main() {
           await sourceRoot.delete(recursive: true);
         }
       }
+    },
+  );
+
+  test(
+    'createJustificacion con adjuntos envia multipart y parsea adjuntos',
+    () async {
+      final sourceRoot = await Directory.systemTemp.createTemp(
+        'mobile-api-client-justificacion-',
+      );
+
+      try {
+        final file = File(
+          '${sourceRoot.path}${Platform.pathSeparator}certificado.pdf',
+        );
+        await file.writeAsBytes(const <int>[1, 2, 3, 4, 5, 6]);
+
+        final client = _QueuedClient([
+          _QueuedReply(
+            statusCode: 201,
+            body: const <String, dynamic>{
+              'id': 10,
+              'fecha': '2026-06-01',
+              'asistencia_id': 8,
+              'asistencia_fecha': '2026-06-01',
+              'motivo': 'Enfermedad con certificado',
+              'adjuntos_count': 1,
+              'adjuntos': [
+                {
+                  'id': 88,
+                  'evento_id': 8,
+                  'nombre_original': 'certificado.pdf',
+                  'mime_type': 'application/pdf',
+                  'extension': 'pdf',
+                  'tamano_bytes': 6,
+                  'estado': 'activo',
+                  'created_at': '2026-06-01T09:00:00',
+                  'download_url':
+                      '/api/v1/mobile/me/justificaciones/10/adjuntos/88',
+                },
+              ],
+              'estado': 'pendiente',
+              'created_at': '2026-06-01T08:30:00',
+            },
+            inspect: (request) {
+              expect(request, isA<http.MultipartRequest>());
+              final multipart = request as http.MultipartRequest;
+              expect(multipart.method, 'POST');
+              expect(multipart.url.path, '/api/v1/mobile/me/justificaciones');
+              expect(multipart.headers['Authorization'], 'Bearer abc');
+              expect(multipart.fields['motivo'], 'Enfermedad con certificado');
+              expect(multipart.fields['fecha'], '2026-06-01');
+              expect(multipart.fields['asistencia_id'], '8');
+              expect(multipart.files, hasLength(1));
+              expect(multipart.files.single.field, 'adjuntos');
+              expect(multipart.files.single.filename, 'certificado.pdf');
+              expect(multipart.files.single.contentType.type, 'application');
+              expect(multipart.files.single.contentType.subtype, 'pdf');
+            },
+          ),
+        ]);
+
+        final apiClient = MobileApiClient(
+          baseUrl: 'https://example.com',
+          httpClient: client,
+        );
+
+        final result = await apiClient.createJustificacion(
+          token: 'abc',
+          motivo: '  Enfermedad con certificado  ',
+          fecha: '2026-06-01',
+          asistenciaId: 8,
+          adjuntos: [
+            JustificacionAdjuntoUpload(
+              filename: 'certificado.pdf',
+              path: file.path,
+              sizeBytes: await file.length(),
+            ),
+          ],
+        );
+
+        expect(result.id, 10);
+        expect(result.fecha, '2026-06-01');
+        expect(result.motivo, 'Enfermedad con certificado');
+        expect(result.adjuntosCount, 1);
+        expect(result.hasAdjuntos, isTrue);
+        expect(result.adjuntos.single.displayName, 'certificado.pdf');
+        expect(client.callCount, 1);
+        apiClient.dispose();
+      } finally {
+        if (await sourceRoot.exists()) {
+          await sourceRoot.delete(recursive: true);
+        }
+      }
+    },
+  );
+
+  test(
+    'createJustificacion con rango envia fecha_desde y fecha_hasta',
+    () async {
+      final client = _QueuedClient([
+        _QueuedReply(
+          statusCode: 201,
+          body: const <String, dynamic>{
+            'id': 12,
+            'fecha': '2026-06-01',
+            'fecha_desde': '2026-06-01',
+            'fecha_hasta': '2026-06-03',
+            'asistencia_id': null,
+            'asistencia_fecha': null,
+            'motivo': 'Reposo prolongado',
+            'adjuntos_count': 0,
+            'adjuntos': <Map<String, dynamic>>[],
+            'estado': 'pendiente',
+            'created_at': '2026-06-01T08:30:00',
+          },
+          inspect: (request) {
+            expect(request, isA<http.Request>());
+            final httpRequest = request as http.Request;
+            final payload = jsonDecode(httpRequest.body) as Map<String, dynamic>;
+            expect(payload['motivo'], 'Reposo prolongado');
+            expect(payload['fecha_desde'], '2026-06-01');
+            expect(payload['fecha_hasta'], '2026-06-03');
+            expect(payload.containsKey('fecha'), isFalse);
+          },
+        ),
+      ]);
+
+      final apiClient = MobileApiClient(
+        baseUrl: 'https://example.com',
+        httpClient: client,
+      );
+
+      final result = await apiClient.createJustificacion(
+        token: 'abc',
+        motivo: 'Reposo prolongado',
+        fechaDesde: '2026-06-01',
+        fechaHasta: '2026-06-03',
+      );
+
+      expect(result.id, 12);
+      expect(result.fechaDesde, '2026-06-01');
+      expect(result.fechaHasta, '2026-06-03');
+      expect(result.hasFechaRange, isTrue);
+      expect(client.callCount, 1);
+      apiClient.dispose();
+    },
+  );
+
+  test(
+    'createJustificacion con bytes sanitiza el nombre del adjunto',
+    () async {
+      final client = _QueuedClient([
+        _QueuedReply(
+          statusCode: 201,
+          body: const <String, dynamic>{
+            'id': 11,
+            'fecha': '2026-07-09',
+            'asistencia_id': null,
+            'asistencia_fecha': null,
+            'motivo': 'Con evidencia',
+            'adjuntos_count': 1,
+            'adjuntos': [],
+            'estado': 'pendiente',
+            'created_at': '2026-07-09T12:00:00',
+          },
+          inspect: (request) {
+            expect(request, isA<http.MultipartRequest>());
+            final multipart = request as http.MultipartRequest;
+            expect(multipart.files, hasLength(1));
+            expect(
+              multipart.files.single.filename,
+              'WhatsApp_Image_2026_07_09_at_12_56_05.jpeg',
+            );
+            expect(multipart.files.single.contentType.type, 'image');
+            expect(multipart.files.single.contentType.subtype, 'jpeg');
+          },
+        ),
+      ]);
+
+      final apiClient = MobileApiClient(
+        baseUrl: 'https://example.com',
+        httpClient: client,
+      );
+
+      final result = await apiClient.createJustificacion(
+        token: 'abc',
+        motivo: 'Con evidencia',
+        fecha: '2026-07-09',
+        adjuntos: [
+          JustificacionAdjuntoUpload(
+            filename: 'WhatsApp Image 2026-07-09 at 12.56.05.jpeg',
+            bytes: Uint8List.fromList(const <int>[1, 2, 3, 4]),
+            sizeBytes: 4,
+          ),
+        ],
+      );
+
+      expect(result.id, 11);
+      expect(client.callCount, 1);
+      apiClient.dispose();
     },
   );
 
@@ -431,6 +634,223 @@ void main() {
       apiClient.dispose();
     },
   );
+
+  test('feedback usa endpoints complementarios y parsea respuestas', () async {
+    final client = _QueuedClient([
+      _QueuedReply(
+        statusCode: 200,
+        body: const <String, dynamic>{
+          'resumen': {'total': 2, 'pendientes': 1, 'resueltos': 1},
+          'top_motivos': [
+            {'motivo_id': 1, 'motivo_nombre': 'Entrega', 'total': 2},
+          ],
+          'ranking': [
+            {
+              'empleado_id': 7,
+              'legajo': '1020',
+              'apellido': 'Perez',
+              'nombre': 'Ana',
+              'total': 2,
+            },
+          ],
+          'personal': {
+            'empleado_id': 7,
+            'total_cargados': 2,
+            'posicion_ranking': 1,
+          },
+          'totales': {'empleados_activos': 10, 'empleados_con_carga': 3},
+          'empleado': {'id': 7, 'nombre': 'Ana', 'apellido': 'Perez'},
+        },
+        inspect: (request) {
+          expect(request.method, 'GET');
+          expect(request.url.path, '/api/v1/feedback/dashboard');
+          expect(request.headers['Authorization'], 'Bearer abc');
+        },
+      ),
+      _QueuedReply(
+        statusCode: 201,
+        body: const <String, dynamic>{
+          'ok': true,
+          'feedback': {
+            'id': 123,
+            'estado': 'pendiente',
+            'estado_actual': 'pendiente',
+            'cliente': {'id': 55, 'nombre_fantasia': 'Cliente Centro'},
+            'motivo': {'id': 1, 'nombre': 'Entrega'},
+          },
+        },
+        inspect: (request) {
+          expect(request.method, 'POST');
+          expect(request.url.path, '/api/v1/feedback');
+          final body = jsonDecode((request as http.Request).body) as Map;
+          expect(body['cliente_id'], 55);
+          expect(body['motivo_id'], 1);
+          expect(body['descripcion'], 'Falta producto');
+        },
+      ),
+      _QueuedReply(
+        statusCode: 200,
+        body: const <String, dynamic>{
+          'items': [
+            {'id': 124, 'estado': 'en_proceso'},
+          ],
+          'page': 2,
+          'per_page': 10,
+          'total': 11,
+        },
+        inspect: (request) {
+          expect(request.method, 'GET');
+          expect(request.url.path, '/api/v1/feedback/bandeja');
+          expect(request.url.queryParameters['page'], '2');
+          expect(request.url.queryParameters['per_page'], '10');
+          expect(request.url.queryParameters['estado'], 'pendiente');
+          expect(request.url.queryParameters['q'], 'cliente');
+        },
+      ),
+    ]);
+
+    final apiClient = MobileApiClient(
+      baseUrl: 'https://example.com',
+      httpClient: client,
+    );
+
+    final FeedbackDashboardResponse dashboard = await apiClient
+        .getFeedbackDashboard(token: 'abc');
+    expect(dashboard.resumen.total, 2);
+    expect(dashboard.topMotivos.single.motivoNombre, 'Entrega');
+    expect(dashboard.ranking.single.displayName, 'Perez Ana - Legajo 1020');
+
+    final FeedbackItem created = await apiClient.createFeedback(
+      token: 'abc',
+      clienteId: 55,
+      motivoId: 1,
+      descripcion: '  Falta producto  ',
+    );
+    expect(created.id, 123);
+    expect(created.cliente?.displayName, 'Cliente Centro');
+
+    final FeedbackListResponse bandeja = await apiClient.getFeedbackBandeja(
+      token: 'abc',
+      page: 2,
+      perPage: 10,
+      estado: 'pendiente',
+      q: 'cliente',
+    );
+    expect(bandeja.items.single.id, 124);
+    expect(bandeja.page, 2);
+    expect(bandeja.perPage, 10);
+    expect(bandeja.total, 11);
+    expect(client.callCount, 3);
+    apiClient.dispose();
+  });
+
+  test('skap usa envelope data y ranking embebido de mi desarrollo', () async {
+    final client = _QueuedClient([
+      _QueuedReply(
+        statusCode: 200,
+        body: const <String, dynamic>{
+          'success': true,
+          'data': {
+            'empleado': {
+              'id': 7,
+              'legajo': '1020',
+              'dni': '30111222',
+              'nombre': 'Ana Perez',
+            },
+            'anio_evaluado': 2026,
+            'evaluacion': {
+              'id': 77,
+              'anio': 2026,
+              'promedios': {'general': 4.1},
+              'nivel': 'Destacado',
+            },
+            'categoria_cards': [
+              {
+                'categoria': 'S',
+                'label': 'Skills',
+                'promedio': 4.2,
+                'esperado': 4.0,
+                'nivel': 'Destacado',
+                'respuestas': 5,
+              },
+            ],
+            'historial': [],
+            'plan': {
+              'id': 30,
+              'anio': 2026,
+              'acciones': [],
+              'avance_pct': 50.0,
+            },
+            'ranking': {'posicion': 3, 'total': 25, 'puntaje': 4.1},
+            'badge': 'Plata',
+          },
+        },
+        inspect: (request) {
+          expect(request.method, 'GET');
+          expect(request.url.path, '/api/skap/mi_desarrollo');
+          expect(request.url.queryParameters['anio'], '2026');
+        },
+      ),
+      _QueuedReply(
+        statusCode: 200,
+        body: const <String, dynamic>{
+          'success': true,
+          'data': {
+            'sector_id': 3,
+            'items': [
+              {
+                'id': 10,
+                'sector_id': 3,
+                'sector_nombre': 'Ventas',
+                'categoria': 'S',
+                'categoria_label': 'Skills',
+                'descripcion': 'Gestiona objeciones.',
+                'peso': 1.0,
+                'puntaje_esperado': 4.0,
+                'requiere_observacion': false,
+                'requiere_evidencia': false,
+              },
+            ],
+            'total': 1,
+          },
+        },
+        inspect: (request) {
+          expect(request.method, 'GET');
+          expect(request.url.path, '/api/skap/preguntas');
+          expect(request.url.queryParameters['sector_id'], '3');
+          expect(request.url.queryParameters['empleado_id'], '7');
+          expect(request.url.queryParameters['categoria'], 'S');
+          expect(request.url.queryParameters['activo'], '1');
+        },
+      ),
+    ]);
+
+    final apiClient = MobileApiClient(
+      baseUrl: 'https://example.com',
+      httpClient: client,
+    );
+
+    final SkapMiDesarrolloResponse desarrollo = await apiClient
+        .getSkapMiDesarrollo(token: 'abc', anio: 2026);
+    expect(desarrollo.empleado.displayName, 'Ana Perez - Legajo 1020');
+    expect(desarrollo.anioEvaluado, 2026);
+    expect(desarrollo.ranking?.posicion, 3);
+    expect(desarrollo.ranking?.puntaje, 4.1);
+    expect(desarrollo.plan?.avancePct, 50.0);
+
+    final SkapPreguntasResponse preguntas = await apiClient.getSkapPreguntas(
+      token: 'abc',
+      sectorId: 3,
+      empleadoId: 7,
+      categoria: 'S',
+      activo: true,
+    );
+    expect(preguntas.sectorId, 3);
+    expect(preguntas.items.single.descripcion, 'Gestiona objeciones.');
+    expect(preguntas.items.single.requiereEvidencia, isFalse);
+    expect(client.callCount, 2);
+    apiClient.dispose();
+  });
 }
 
 class _QueuedClient extends http.BaseClient {

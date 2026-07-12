@@ -1,6 +1,10 @@
 import 'dart:async';
 
+import 'package:file_picker/file_picker.dart';
+import 'package:flutter/foundation.dart';
 import 'package:flutter/material.dart';
+import 'package:image_picker/image_picker.dart';
+import 'package:url_launcher/url_launcher.dart';
 
 import '../../core/network/mobile_api_client.dart';
 import '../../core/utils/date_formatter.dart';
@@ -134,23 +138,44 @@ class _JustificacionesPageState extends State<JustificacionesPage> {
     }
   }
 
-  void _showDetailSheet(JustificacionItem item) {
+  Future<JustificacionItem> _loadJustificacionDetail(
+    JustificacionItem item,
+  ) async {
+    if (item.adjuntos.isNotEmpty || item.effectiveAdjuntosCount <= 0) {
+      return item;
+    }
+
+    try {
+      return await widget.apiClient.getJustificacion(
+        token: widget.token,
+        id: item.id,
+      );
+    } catch (_) {
+      return item;
+    }
+  }
+
+  Future<void> _showDetailSheet(JustificacionItem item) async {
+    final detailItem = await _loadJustificacionDetail(item);
+    if (!mounted) return;
+
     showModalBottomSheet<void>(
       context: context,
       isScrollControlled: true,
       useSafeArea: true,
       builder: (_) => _DetailSheet(
-        item: item,
-        onDelete: item.estado == 'pendiente'
+        apiClient: widget.apiClient,
+        item: detailItem,
+        onDelete: detailItem.estado == 'pendiente'
             ? () {
                 Navigator.of(context).pop();
-                _deleteItem(item);
+                _deleteItem(detailItem);
               }
             : null,
-        onEdit: item.estado == 'pendiente'
+        onEdit: detailItem.estado == 'pendiente'
             ? () {
                 Navigator.of(context).pop();
-                _showEditSheet(item);
+                unawaited(_showEditSheet(detailItem));
               }
             : null,
       ),
@@ -180,9 +205,9 @@ class _JustificacionesPageState extends State<JustificacionesPage> {
         id: item.id,
       );
       if (!mounted) return;
-      ScaffoldMessenger.of(context).showSnackBar(
-        const SnackBar(content: Text('Justificación eliminada.')),
-      );
+      ScaffoldMessenger.of(
+        context,
+      ).showSnackBar(const SnackBar(content: Text('Justificación eliminada.')));
       await _load(reset: true);
       unawaited(_loadCounts());
     } on ApiException catch (e) {
@@ -216,8 +241,7 @@ class _JustificacionesPageState extends State<JustificacionesPage> {
       ),
       body: Column(
         children: [
-          if (_counts.isNotEmpty)
-            _SummaryHeader(counts: _counts),
+          if (_counts.isNotEmpty) _SummaryHeader(counts: _counts),
           _FilterRow(
             selected: _filtroEstado,
             estados: _estados,
@@ -252,8 +276,7 @@ class _JustificacionesPageState extends State<JustificacionesPage> {
                       child: ListView.separated(
                         padding: const EdgeInsets.all(12),
                         itemCount: _items.length + (_loadingMore ? 1 : 0),
-                        separatorBuilder: (_, __) =>
-                            const SizedBox(height: 8),
+                        separatorBuilder: (_, __) => const SizedBox(height: 8),
                         itemBuilder: (context, i) {
                           if (i == _items.length) {
                             return const Center(
@@ -265,7 +288,9 @@ class _JustificacionesPageState extends State<JustificacionesPage> {
                           }
                           final item = _items[i];
                           final card = GestureDetector(
-                            onTap: () => _showDetailSheet(item),
+                            onTap: () {
+                              unawaited(_showDetailSheet(item));
+                            },
                             child: _JustificacionCard(item: item),
                           );
                           if (item.estado == 'pendiente') {
@@ -299,9 +324,7 @@ class _JustificacionesPageState extends State<JustificacionesPage> {
       context: context,
       builder: (ctx) => AlertDialog(
         title: const Text('Eliminar justificación'),
-        content: const Text(
-          '¿Eliminar esta justificación pendiente?',
-        ),
+        content: const Text('¿Eliminar esta justificación pendiente?'),
         actions: [
           TextButton(
             onPressed: () => Navigator.pop(ctx, false),
@@ -507,9 +530,7 @@ class _JustificacionCard extends StatelessWidget {
   Widget build(BuildContext context) {
     final cs = Theme.of(context).colorScheme;
     final color = _estadoColor(context, item.estado);
-    final fechaDisplay = item.asistenciaFecha != null
-        ? DateFormatter.formatApiDateForDisplay(item.asistenciaFecha)
-        : 'Sin asistencia asociada';
+    final fechaDisplay = _justificacionPeriodoDisplay(item);
 
     return Card(
       clipBehavior: Clip.antiAlias,
@@ -531,9 +552,7 @@ class _JustificacionCard extends StatelessWidget {
                         Expanded(
                           child: Text(
                             'Justificación #${item.id}',
-                            style: Theme.of(context)
-                                .textTheme
-                                .titleSmall
+                            style: Theme.of(context).textTheme.titleSmall
                                 ?.copyWith(fontWeight: FontWeight.w700),
                           ),
                         ),
@@ -580,9 +599,7 @@ class _JustificacionCard extends StatelessWidget {
                           const SizedBox(width: 3),
                           Text(
                             'deslizar para eliminar',
-                            style: Theme.of(context)
-                                .textTheme
-                                .labelSmall
+                            style: Theme.of(context).textTheme.labelSmall
                                 ?.copyWith(color: cs.outlineVariant),
                           ),
                         ],
@@ -593,20 +610,22 @@ class _JustificacionCard extends StatelessWidget {
                       Text(
                         item.motivo!,
                         style: Theme.of(context).textTheme.bodySmall?.copyWith(
-                              color: cs.onSurfaceVariant,
-                            ),
+                          color: cs.onSurfaceVariant,
+                        ),
                         maxLines: 2,
                         overflow: TextOverflow.ellipsis,
                       ),
                     ],
-                    if (item.archivo != null) ...[
+                    if (item.hasAdjuntos) ...[
                       const SizedBox(height: 4),
                       Row(
                         children: [
                           Icon(Icons.attach_file, size: 13, color: cs.primary),
                           const SizedBox(width: 3),
                           Text(
-                            'Adjunto',
+                            item.hasAdjuntos
+                                ? '${item.effectiveAdjuntosCount} adjunto${item.effectiveAdjuntosCount == 1 ? '' : 's'}'
+                                : 'Adjunto',
                             style: TextStyle(fontSize: 12, color: cs.primary),
                           ),
                         ],
@@ -637,8 +656,14 @@ class _JustificacionCard extends StatelessWidget {
 // ─── Detail bottom sheet ───────────────────────────────────────────────────────
 
 class _DetailSheet extends StatelessWidget {
-  const _DetailSheet({required this.item, this.onDelete, this.onEdit});
+  const _DetailSheet({
+    required this.apiClient,
+    required this.item,
+    this.onDelete,
+    this.onEdit,
+  });
 
+  final MobileApiClient apiClient;
   final JustificacionItem item;
   final VoidCallback? onDelete;
   final VoidCallback? onEdit;
@@ -660,16 +685,40 @@ class _DetailSheet extends StatelessWidget {
     };
   }
 
+  Future<void> _openAttachment(BuildContext context, String? rawUrl) async {
+    final value = rawUrl?.trim();
+    if (value == null || value.isEmpty) {
+      return;
+    }
+    final uri = Uri.tryParse(apiClient.buildAbsoluteUrl(value));
+    if (uri == null) {
+      if (context.mounted) {
+        ScaffoldMessenger.of(context).showSnackBar(
+          const SnackBar(content: Text('No se pudo abrir el adjunto.')),
+        );
+      }
+      return;
+    }
+    final launched = await launchUrl(uri, mode: LaunchMode.externalApplication);
+    if (!launched && context.mounted) {
+      ScaffoldMessenger.of(context).showSnackBar(
+        const SnackBar(content: Text('No se pudo abrir el adjunto.')),
+      );
+    }
+  }
+
   @override
   Widget build(BuildContext context) {
     final cs = Theme.of(context).colorScheme;
     final color = _estadoColor(context, item.estado);
-    final fechaDisplay = item.asistenciaFecha != null
-        ? DateFormatter.formatApiDateForDisplay(item.asistenciaFecha)
-        : 'Sin asistencia asociada';
+    final fechaDisplay = _justificacionPeriodoDisplay(item);
     final creacion = item.createdAt != null
         ? DateFormatter.formatApiDateForDisplay(item.createdAt)
         : '—';
+
+    final hasServerAdjuntos = item.adjuntos.isNotEmpty;
+    final hasLegacyArchivo = item.hasLegacyArchivo;
+    final effectiveAdjuntosCount = item.effectiveAdjuntosCount;
 
     return DraggableScrollableSheet(
       expand: false,
@@ -703,7 +752,11 @@ class _DetailSheet extends StatelessWidget {
                           color: color.withValues(alpha: 0.12),
                           shape: BoxShape.circle,
                         ),
-                        child: Icon(_estadoIcon(item.estado), color: color, size: 24),
+                        child: Icon(
+                          _estadoIcon(item.estado),
+                          color: color,
+                          size: 24,
+                        ),
                       ),
                       const SizedBox(width: 12),
                       Expanded(
@@ -712,14 +765,15 @@ class _DetailSheet extends StatelessWidget {
                           children: [
                             Text(
                               'Justificación #${item.id}',
-                              style: Theme.of(context)
-                                  .textTheme
-                                  .titleMedium
+                              style: Theme.of(context).textTheme.titleMedium
                                   ?.copyWith(fontWeight: FontWeight.w700),
                             ),
                             const SizedBox(height: 2),
                             Container(
-                              padding: const EdgeInsets.symmetric(horizontal: 8, vertical: 3),
+                              padding: const EdgeInsets.symmetric(
+                                horizontal: 8,
+                                vertical: 3,
+                              ),
                               decoration: BoxDecoration(
                                 color: color.withValues(alpha: 0.12),
                                 borderRadius: BorderRadius.circular(20),
@@ -743,7 +797,11 @@ class _DetailSheet extends StatelessWidget {
                   const SizedBox(height: 16),
                   _DetailRow(
                     icon: Icons.calendar_today_outlined,
-                    label: 'Fecha de asistencia',
+                    label: item.hasFechaRange
+                        ? 'Periodo justificado'
+                        : (item.asistenciaFecha != null
+                            ? 'Fecha de asistencia'
+                            : 'Fecha justificada'),
                     value: fechaDisplay,
                   ),
                   const SizedBox(height: 12),
@@ -757,9 +815,9 @@ class _DetailSheet extends StatelessWidget {
                     Text(
                       'Motivo',
                       style: Theme.of(context).textTheme.labelMedium?.copyWith(
-                            color: cs.onSurfaceVariant,
-                            fontWeight: FontWeight.w600,
-                          ),
+                        color: cs.onSurfaceVariant,
+                        fontWeight: FontWeight.w600,
+                      ),
                     ),
                     const SizedBox(height: 6),
                     Container(
@@ -776,40 +834,44 @@ class _DetailSheet extends StatelessWidget {
                       ),
                     ),
                   ],
-                  if (item.archivo != null) ...[
+                  if (effectiveAdjuntosCount > 0) ...[
                     const SizedBox(height: 16),
                     Text(
-                      'Adjunto',
+                      'Adjuntos ($effectiveAdjuntosCount)',
                       style: Theme.of(context).textTheme.labelMedium?.copyWith(
-                            color: cs.onSurfaceVariant,
-                            fontWeight: FontWeight.w600,
-                          ),
-                    ),
-                    const SizedBox(height: 6),
-                    Container(
-                      width: double.infinity,
-                      padding: const EdgeInsets.all(12),
-                      decoration: BoxDecoration(
-                        color: cs.surfaceContainerLow,
-                        borderRadius: BorderRadius.circular(10),
-                        border: Border.all(color: cs.outlineVariant),
-                      ),
-                      child: Row(
-                        children: [
-                          Icon(Icons.attach_file, size: 16, color: cs.primary),
-                          const SizedBox(width: 8),
-                          Expanded(
-                            child: Text(
-                              item.archivo!,
-                              style: Theme.of(context).textTheme.bodySmall?.copyWith(
-                                    color: cs.primary,
-                                  ),
-                              overflow: TextOverflow.ellipsis,
-                            ),
-                          ),
-                        ],
+                        color: cs.onSurfaceVariant,
+                        fontWeight: FontWeight.w600,
                       ),
                     ),
+                    const SizedBox(height: 8),
+                    if (hasServerAdjuntos)
+                      ...item.adjuntos.map(
+                        (adjunto) => _JustificacionAttachmentCard(
+                          title: adjunto.displayName,
+                          subtitle: _serverAttachmentSubtitle(adjunto),
+                          icon: _attachmentIconForServerAttachment(adjunto),
+                          onTap: () {
+                            unawaited(
+                              _openAttachment(context, adjunto.downloadUrl),
+                            );
+                          },
+                        ),
+                      ),
+                    if (hasLegacyArchivo)
+                      _JustificacionAttachmentCard(
+                        title: 'Archivo legado',
+                        subtitle: item.archivo!.trim(),
+                        icon: Icons.link_outlined,
+                        onTap: () {
+                          unawaited(_openAttachment(context, item.archivo));
+                        },
+                      ),
+                    if (!hasServerAdjuntos && !hasLegacyArchivo)
+                      const _JustificacionAttachmentCard(
+                        title: 'Adjuntos registrados',
+                        subtitle: 'No se pudieron listar para descarga.',
+                        icon: Icons.attach_file,
+                      ),
                   ],
                   if (onEdit != null || onDelete != null) ...[
                     const SizedBox(height: 24),
@@ -876,16 +938,15 @@ class _DetailRow extends StatelessWidget {
           children: [
             Text(
               label,
-              style: Theme.of(context).textTheme.labelSmall?.copyWith(
-                    color: cs.onSurfaceVariant,
-                  ),
+              style: Theme.of(
+                context,
+              ).textTheme.labelSmall?.copyWith(color: cs.onSurfaceVariant),
             ),
             Text(
               value,
-              style: Theme.of(context)
-                  .textTheme
-                  .bodyMedium
-                  ?.copyWith(fontWeight: FontWeight.w600),
+              style: Theme.of(
+                context,
+              ).textTheme.bodyMedium?.copyWith(fontWeight: FontWeight.w600),
             ),
           ],
         ),
@@ -895,6 +956,45 @@ class _DetailRow extends StatelessWidget {
 }
 
 // ─── Create bottom sheet ───────────────────────────────────────────────────────
+
+String _justificacionPeriodoDisplay(JustificacionItem item) {
+  final start = item.fechaDesde ?? item.fecha ?? item.asistenciaFecha;
+  final end = item.fechaHasta ?? item.fecha ?? item.asistenciaFecha;
+  if (start == null && end == null) {
+    return 'Sin periodo asociado';
+  }
+  final startDisplay = DateFormatter.formatApiDateForDisplay(start);
+  final endDisplay = DateFormatter.formatApiDateForDisplay(end);
+  if (startDisplay == endDisplay) {
+    return startDisplay;
+  }
+  return '$startDisplay - $endDisplay';
+}
+
+String _formatSelectedRange(DateTime? from, DateTime? to) {
+  if (from == null || to == null) {
+    return 'Elegir periodo';
+  }
+  final start = DateFormatter.formatDisplayDate(from);
+  final end = DateFormatter.formatDisplayDate(to);
+  if (DateFormatter.formatApiDate(from) == DateFormatter.formatApiDate(to)) {
+    return start;
+  }
+  return '$start - $end';
+}
+
+bool _sameDateRange(
+  DateTime? fromA,
+  DateTime? toA,
+  DateTime? fromB,
+  DateTime? toB,
+) {
+  if (fromA == null || toA == null || fromB == null || toB == null) {
+    return false;
+  }
+  return DateFormatter.formatApiDate(fromA) == DateFormatter.formatApiDate(fromB) &&
+      DateFormatter.formatApiDate(toA) == DateFormatter.formatApiDate(toB);
+}
 
 class _CreateJustificacionSheet extends StatefulWidget {
   const _CreateJustificacionSheet({
@@ -910,17 +1010,21 @@ class _CreateJustificacionSheet extends StatefulWidget {
       _CreateJustificacionSheetState();
 }
 
-class _CreateJustificacionSheetState
-    extends State<_CreateJustificacionSheet> {
+class _CreateJustificacionSheetState extends State<_CreateJustificacionSheet> {
   final TextEditingController _motivoCtrl = TextEditingController();
-  final TextEditingController _archivoCtrl = TextEditingController();
+  final List<_DraftJustificacionAdjunto> _adjuntos = [];
+  DateTime? _selectedFechaDesde;
+  DateTime? _selectedFechaHasta;
+  AsistenciaItem? _selectedAsistencia;
   bool _saving = false;
+  bool _pickingAttachment = false;
+  bool _pickingAsistencia = false;
   String? _error;
+  String? _asistenciaError;
 
   @override
   void dispose() {
     _motivoCtrl.dispose();
-    _archivoCtrl.dispose();
     super.dispose();
   }
 
@@ -935,10 +1039,19 @@ class _CreateJustificacionSheetState
       _error = null;
     });
     try {
+      final fechaDesde = _selectedFechaDesde;
+      final fechaHasta = _selectedFechaHasta;
       await widget.apiClient.createJustificacion(
         token: widget.token,
         motivo: motivo,
-        archivo: _archivoCtrl.text.trim().isEmpty ? null : _archivoCtrl.text.trim(),
+        fechaDesde: fechaDesde != null ? DateFormatter.formatApiDate(fechaDesde) : null,
+        fechaHasta: fechaHasta != null ? DateFormatter.formatApiDate(fechaHasta) : null,
+        asistenciaId: fechaDesde != null &&
+                fechaHasta != null &&
+                fechaDesde == fechaHasta
+            ? _selectedAsistencia?.id
+            : null,
+        adjuntos: _adjuntos.map((item) => item.upload).toList(),
       );
       if (!mounted) return;
       Navigator.pop(context, true);
@@ -953,6 +1066,144 @@ class _CreateJustificacionSheetState
     }
   }
 
+  Future<void> _pickPeriodo() async {
+    if (_saving || _pickingAttachment || _pickingAsistencia) {
+      return;
+    }
+
+    final today = DateTime.now();
+    final initialRange = _selectedFechaDesde != null && _selectedFechaHasta != null
+        ? DateTimeRange(start: _selectedFechaDesde!, end: _selectedFechaHasta!)
+        : DateTimeRange(start: today, end: today);
+    final picked = await showDateRangePicker(
+      context: context,
+      initialDateRange: initialRange,
+      firstDate: DateTime(2020),
+      lastDate: today,
+      helpText: 'Seleccionar periodo de justificacion',
+    );
+    if (picked == null || !mounted) {
+      return;
+    }
+
+    setState(() {
+      _selectedFechaDesde = DateTime(picked.start.year, picked.start.month, picked.start.day);
+      _selectedFechaHasta = DateTime(picked.end.year, picked.end.month, picked.end.day);
+      _selectedAsistencia = null;
+      _pickingAsistencia = true;
+      _error = null;
+      _asistenciaError = null;
+    });
+
+    try {
+      if (picked.start == picked.end) {
+        final selectedDate = DateFormatter.formatApiDate(picked.start);
+        final result = await widget.apiClient.getAsistencias(
+          token: widget.token,
+          page: 1,
+          per: 100,
+          desde: selectedDate,
+          hasta: selectedDate,
+        );
+        if (!mounted) {
+          return;
+        }
+
+        if (result.items.isEmpty) {
+          setState(() {
+            _asistenciaError = null;
+          });
+          return;
+        }
+
+        final pickedAsistencia = result.items.length == 1
+            ? result.items.first
+            : await _showAsistenciaSelectionSheet(
+                context,
+                pickedDate: picked.start,
+                items: result.items,
+              );
+        if (!mounted || pickedAsistencia == null) {
+          return;
+        }
+
+        setState(() {
+          _selectedAsistencia = pickedAsistencia;
+          _asistenciaError = null;
+        });
+      } else {
+        setState(() {
+          _selectedAsistencia = null;
+          _asistenciaError = null;
+        });
+      }
+    } on ApiException catch (e) {
+      if (!mounted) {
+        return;
+      }
+      setState(() {
+        _asistenciaError = e.message;
+      });
+    } catch (_) {
+      if (!mounted) {
+        return;
+      }
+      setState(() {
+        _asistenciaError = 'No se pudo cargar la asistencia para esa fecha.';
+      });
+    } finally {
+      if (mounted) {
+        setState(() => _pickingAsistencia = false);
+      }
+    }
+  }
+
+  void _clearAsistencia() {
+    if (_saving || _pickingAsistencia) {
+      return;
+    }
+    setState(() {
+      _selectedAsistencia = null;
+      _asistenciaError = null;
+    });
+  }
+
+  Future<void> _addAttachment() async {
+    if (_saving || _pickingAttachment) {
+      return;
+    }
+    final source = await _showAttachmentSourceSheet(context);
+    if (!mounted || source == null) {
+      return;
+    }
+    setState(() {
+      _pickingAttachment = true;
+      _error = null;
+    });
+    try {
+      final picked = switch (source) {
+        _AttachmentSourceChoice.camera => await _pickCameraAttachments(),
+        _AttachmentSourceChoice.file => await _pickFileAttachments(),
+      };
+      if (!mounted || picked.isEmpty) {
+        return;
+      }
+      setState(() => _adjuntos.addAll(picked));
+    } catch (_) {
+      if (!mounted) return;
+      setState(() => _error = 'No se pudo adjuntar el archivo.');
+    } finally {
+      if (mounted) setState(() => _pickingAttachment = false);
+    }
+  }
+
+  void _removeAdjuntoAt(int index) {
+    if (_saving) {
+      return;
+    }
+    setState(() => _adjuntos.removeAt(index));
+  }
+
   @override
   Widget build(BuildContext context) {
     final cs = Theme.of(context).colorScheme;
@@ -961,7 +1212,7 @@ class _CreateJustificacionSheetState
     return Padding(
       padding: EdgeInsets.only(bottom: bottomPadding),
       child: Column(
-        mainAxisSize: MainAxisSize.min,
+        mainAxisSize: MainAxisSize.max,
         children: [
           Padding(
             padding: const EdgeInsets.symmetric(vertical: 10),
@@ -980,10 +1231,9 @@ class _CreateJustificacionSheetState
               children: [
                 Text(
                   'Nueva justificación',
-                  style: Theme.of(context)
-                      .textTheme
-                      .titleMedium
-                      ?.copyWith(fontWeight: FontWeight.w700),
+                  style: Theme.of(context).textTheme.titleMedium?.copyWith(
+                    fontWeight: FontWeight.w700,
+                  ),
                 ),
                 const Spacer(),
                 IconButton(
@@ -993,59 +1243,163 @@ class _CreateJustificacionSheetState
               ],
             ),
           ),
-          SingleChildScrollView(
-            padding: const EdgeInsets.fromLTRB(20, 8, 20, 24),
-            child: Column(
-              crossAxisAlignment: CrossAxisAlignment.stretch,
-              children: [
-                TextField(
-                  controller: _motivoCtrl,
-                  maxLines: 3,
-                  maxLength: 300,
-                  decoration: const InputDecoration(
-                    labelText: 'Motivo *',
-                    border: OutlineInputBorder(),
-                    isDense: true,
-                    alignLabelWithHint: true,
+          Expanded(
+            child: SingleChildScrollView(
+              padding: const EdgeInsets.fromLTRB(20, 8, 20, 24),
+              child: Column(
+                crossAxisAlignment: CrossAxisAlignment.stretch,
+                children: [
+                  TextField(
+                    controller: _motivoCtrl,
+                    maxLines: 3,
+                    maxLength: 300,
+                    decoration: const InputDecoration(
+                      labelText: 'Motivo *',
+                      border: OutlineInputBorder(),
+                      isDense: true,
+                      alignLabelWithHint: true,
+                    ),
                   ),
-                ),
-                const SizedBox(height: 14),
-                TextField(
-                  controller: _archivoCtrl,
-                  keyboardType: TextInputType.url,
-                  decoration: const InputDecoration(
-                    labelText: 'URL del adjunto (opcional)',
-                    hintText: 'https://...',
-                    border: OutlineInputBorder(),
-                    isDense: true,
-                    prefixIcon: Icon(Icons.attach_file, size: 18),
+                  const SizedBox(height: 14),
+                  Text(
+                    'Periodo de justificacion',
+                    style: Theme.of(context).textTheme.labelMedium?.copyWith(
+                      color: cs.onSurfaceVariant,
+                      fontWeight: FontWeight.w600,
+                    ),
                   ),
-                ),
-                if (_error != null) ...[
+                  const SizedBox(height: 8),
+                  OutlinedButton.icon(
+                    onPressed:
+                        _saving || _pickingAttachment || _pickingAsistencia
+                        ? null
+                        : _pickPeriodo,
+                    icon: _pickingAsistencia
+                        ? const SizedBox(
+                            width: 16,
+                            height: 16,
+                            child: CircularProgressIndicator(strokeWidth: 2),
+                          )
+                        : const Icon(Icons.event_outlined),
+                    label: Text(
+                      _formatSelectedRange(_selectedFechaDesde, _selectedFechaHasta),
+                    ),
+                  ),
                   const SizedBox(height: 8),
                   Text(
-                    _error!,
-                    style: TextStyle(color: cs.error, fontSize: 13),
+                    'Opcional. Si existe una asistencia en una fecha unica, puedes vincularla; si no, se guarda solo con el periodo.',
+                    style: Theme.of(
+                      context,
+                    ).textTheme.bodySmall?.copyWith(color: cs.onSurfaceVariant),
+                  ),
+                  if (_selectedFechaDesde != null &&
+                      _selectedFechaHasta != null &&
+                      _selectedFechaDesde == _selectedFechaHasta &&
+                      _selectedAsistencia == null) ...[
+                    const SizedBox(height: 8),
+                    Text(
+                      'La justificacion quedara asociada solo a la fecha seleccionada.',
+                      style: Theme.of(context).textTheme.bodySmall?.copyWith(
+                        color: cs.onSurfaceVariant,
+                      ),
+                    ),
+                  ],
+                  if (_selectedFechaDesde != null &&
+                      _selectedFechaHasta != null &&
+                      _selectedFechaDesde != _selectedFechaHasta) ...[
+                    const SizedBox(height: 8),
+                    Text(
+                      'Al elegir varios dias no se vincula una asistencia puntual.',
+                      style: Theme.of(context).textTheme.bodySmall?.copyWith(
+                        color: cs.onSurfaceVariant,
+                      ),
+                    ),
+                  ],
+                  if (_selectedAsistencia != null) ...[
+                    const SizedBox(height: 10),
+                    _JustificacionAttachmentCard(
+                      title:
+                          'Asistencia vinculada ${DateFormatter.formatApiDateForDisplay(_selectedAsistencia!.fecha)}',
+                      subtitle: _asistenciaSubtitle(_selectedAsistencia!),
+                      icon: Icons.event_available_outlined,
+                      onRemove: _saving ? null : _clearAsistencia,
+                    ),
+                  ],
+                  if (_asistenciaError != null) ...[
+                    const SizedBox(height: 8),
+                    Text(
+                      _asistenciaError!,
+                      style: TextStyle(color: cs.error, fontSize: 13),
+                    ),
+                  ],
+                  const SizedBox(height: 14),
+                  SizedBox(
+                    width: double.infinity,
+                    child: FilledButton.tonalIcon(
+                      onPressed: _saving || _pickingAttachment
+                          ? null
+                          : _addAttachment,
+                      icon: const Icon(Icons.add_photo_alternate_outlined),
+                      label: Text(
+                        _pickingAttachment
+                            ? 'Procesando...'
+                            : 'Adjuntar evidencia',
+                      ),
+                    ),
+                  ),
+                  const SizedBox(height: 8),
+                  Text(
+                    'Tomá una foto o elegí un archivo PDF o imagen.',
+                    style: Theme.of(
+                      context,
+                    ).textTheme.bodySmall?.copyWith(color: cs.onSurfaceVariant),
+                  ),
+                  if (_adjuntos.isNotEmpty) ...[
+                    const SizedBox(height: 14),
+                    Text(
+                      'Adjuntos seleccionados (${_adjuntos.length})',
+                      style: Theme.of(context).textTheme.labelMedium?.copyWith(
+                        color: cs.onSurfaceVariant,
+                        fontWeight: FontWeight.w600,
+                      ),
+                    ),
+                    const SizedBox(height: 8),
+                    for (var i = 0; i < _adjuntos.length; i++)
+                      _JustificacionAttachmentCard(
+                        title: _adjuntos[i].name,
+                        subtitle: _formatAttachmentBytes(
+                          _adjuntos[i].sizeBytes,
+                        ),
+                        icon: _attachmentIconForDraft(_adjuntos[i].name),
+                        onRemove: _saving ? null : () => _removeAdjuntoAt(i),
+                      ),
+                  ],
+                  if (_error != null) ...[
+                    const SizedBox(height: 8),
+                    Text(
+                      _error!,
+                      style: TextStyle(color: cs.error, fontSize: 13),
+                    ),
+                  ],
+                  const SizedBox(height: 16),
+                  FilledButton(
+                    onPressed: _saving ? null : _submit,
+                    style: FilledButton.styleFrom(
+                      padding: const EdgeInsets.symmetric(vertical: 16),
+                    ),
+                    child: _saving
+                        ? const SizedBox(
+                            width: 20,
+                            height: 20,
+                            child: CircularProgressIndicator(
+                              strokeWidth: 2,
+                              valueColor: AlwaysStoppedAnimation(Colors.white),
+                            ),
+                          )
+                        : const Text('Guardar justificación'),
                   ),
                 ],
-                const SizedBox(height: 16),
-                FilledButton(
-                  onPressed: _saving ? null : _submit,
-                  style: FilledButton.styleFrom(
-                    padding: const EdgeInsets.symmetric(vertical: 16),
-                  ),
-                  child: _saving
-                      ? const SizedBox(
-                          width: 20,
-                          height: 20,
-                          child: CircularProgressIndicator(
-                            strokeWidth: 2,
-                            valueColor: AlwaysStoppedAnimation(Colors.white),
-                          ),
-                        )
-                      : const Text('Guardar justificación'),
-                ),
-              ],
+              ),
             ),
           ),
         ],
@@ -1074,21 +1428,35 @@ class _EditJustificacionSheet extends StatefulWidget {
 
 class _EditJustificacionSheetState extends State<_EditJustificacionSheet> {
   late final TextEditingController _motivoCtrl;
-  late final TextEditingController _archivoCtrl;
+  final List<_DraftJustificacionAdjunto> _adjuntos = [];
+  DateTime? _initialFechaDesde;
+  DateTime? _initialFechaHasta;
+  DateTime? _selectedFechaDesde;
+  DateTime? _selectedFechaHasta;
   bool _saving = false;
+  bool _pickingPeriodo = false;
+  bool _pickingAttachment = false;
   String? _error;
 
   @override
   void initState() {
     super.initState();
     _motivoCtrl = TextEditingController(text: widget.item.motivo ?? '');
-    _archivoCtrl = TextEditingController(text: widget.item.archivo ?? '');
+    final parsedDesde = DateFormatter.parseFlexibleDate(
+      widget.item.fechaDesde ?? widget.item.fecha ?? widget.item.asistenciaFecha ?? '',
+    );
+    final parsedHasta = DateFormatter.parseFlexibleDate(
+      widget.item.fechaHasta ?? widget.item.fecha ?? widget.item.asistenciaFecha ?? '',
+    );
+    _initialFechaDesde = parsedDesde;
+    _initialFechaHasta = parsedHasta ?? parsedDesde;
+    _selectedFechaDesde = parsedDesde;
+    _selectedFechaHasta = parsedHasta ?? parsedDesde;
   }
 
   @override
   void dispose() {
     _motivoCtrl.dispose();
-    _archivoCtrl.dispose();
     super.dispose();
   }
 
@@ -1103,13 +1471,31 @@ class _EditJustificacionSheetState extends State<_EditJustificacionSheet> {
       _error = null;
     });
     try {
+      final fechaDesde = _selectedFechaDesde;
+      final fechaHasta = _selectedFechaHasta;
+      final periodoSinCambios = _sameDateRange(
+        fechaDesde,
+        fechaHasta,
+        _initialFechaDesde,
+        _initialFechaHasta,
+      );
       await widget.apiClient.updateJustificacion(
         token: widget.token,
         id: widget.item.id,
         motivo: motivo,
-        archivo: _archivoCtrl.text.trim().isEmpty
-            ? null
-            : _archivoCtrl.text.trim(),
+        fechaDesde: fechaDesde != null ? DateFormatter.formatApiDate(fechaDesde) : null,
+        fechaHasta: fechaHasta != null ? DateFormatter.formatApiDate(fechaHasta) : null,
+        asistenciaId: periodoSinCambios &&
+                fechaDesde != null &&
+                fechaHasta != null &&
+                fechaDesde == fechaHasta
+            ? widget.item.asistenciaId
+            : null,
+        clearAsistencia: !(periodoSinCambios &&
+            fechaDesde != null &&
+            fechaHasta != null &&
+            fechaDesde == fechaHasta),
+        adjuntos: _adjuntos.map((item) => item.upload).toList(),
       );
       if (!mounted) return;
       Navigator.pop(context, true);
@@ -1124,6 +1510,78 @@ class _EditJustificacionSheetState extends State<_EditJustificacionSheet> {
     }
   }
 
+  Future<void> _pickPeriodo() async {
+    if (_saving || _pickingAttachment || _pickingPeriodo) {
+      return;
+    }
+
+    final today = DateTime.now();
+    final initialRange = _selectedFechaDesde != null && _selectedFechaHasta != null
+        ? DateTimeRange(start: _selectedFechaDesde!, end: _selectedFechaHasta!)
+        : DateTimeRange(start: today, end: today);
+    setState(() {
+      _pickingPeriodo = true;
+    });
+    try {
+      final picked = await showDateRangePicker(
+        context: context,
+        initialDateRange: initialRange,
+        firstDate: DateTime(2020),
+        lastDate: today,
+        helpText: 'Seleccionar periodo de justificacion',
+      );
+      if (picked == null || !mounted) {
+        return;
+      }
+
+      setState(() {
+        _selectedFechaDesde = DateTime(picked.start.year, picked.start.month, picked.start.day);
+        _selectedFechaHasta = DateTime(picked.end.year, picked.end.month, picked.end.day);
+        _error = null;
+      });
+    } finally {
+      if (mounted) {
+        setState(() => _pickingPeriodo = false);
+      }
+    }
+  }
+
+  Future<void> _addAttachment() async {
+    if (_saving || _pickingAttachment) {
+      return;
+    }
+    final source = await _showAttachmentSourceSheet(context);
+    if (!mounted || source == null) {
+      return;
+    }
+    setState(() {
+      _pickingAttachment = true;
+      _error = null;
+    });
+    try {
+      final picked = switch (source) {
+        _AttachmentSourceChoice.camera => await _pickCameraAttachments(),
+        _AttachmentSourceChoice.file => await _pickFileAttachments(),
+      };
+      if (!mounted || picked.isEmpty) {
+        return;
+      }
+      setState(() => _adjuntos.addAll(picked));
+    } catch (_) {
+      if (!mounted) return;
+      setState(() => _error = 'No se pudo adjuntar el archivo.');
+    } finally {
+      if (mounted) setState(() => _pickingAttachment = false);
+    }
+  }
+
+  void _removeAdjuntoAt(int index) {
+    if (_saving) {
+      return;
+    }
+    setState(() => _adjuntos.removeAt(index));
+  }
+
   @override
   Widget build(BuildContext context) {
     final cs = Theme.of(context).colorScheme;
@@ -1132,7 +1590,7 @@ class _EditJustificacionSheetState extends State<_EditJustificacionSheet> {
     return Padding(
       padding: EdgeInsets.only(bottom: bottomPadding),
       child: Column(
-        mainAxisSize: MainAxisSize.min,
+        mainAxisSize: MainAxisSize.max,
         children: [
           Padding(
             padding: const EdgeInsets.symmetric(vertical: 10),
@@ -1151,10 +1609,9 @@ class _EditJustificacionSheetState extends State<_EditJustificacionSheet> {
               children: [
                 Text(
                   'Editar justificación #${widget.item.id}',
-                  style: Theme.of(context)
-                      .textTheme
-                      .titleMedium
-                      ?.copyWith(fontWeight: FontWeight.w700),
+                  style: Theme.of(context).textTheme.titleMedium?.copyWith(
+                    fontWeight: FontWeight.w700,
+                  ),
                 ),
                 const Spacer(),
                 IconButton(
@@ -1164,63 +1621,575 @@ class _EditJustificacionSheetState extends State<_EditJustificacionSheet> {
               ],
             ),
           ),
-          SingleChildScrollView(
-            padding: const EdgeInsets.fromLTRB(20, 8, 20, 24),
-            child: Column(
-              crossAxisAlignment: CrossAxisAlignment.stretch,
-              children: [
-                TextField(
-                  controller: _motivoCtrl,
-                  maxLines: 3,
-                  maxLength: 300,
-                  decoration: const InputDecoration(
-                    labelText: 'Motivo *',
-                    border: OutlineInputBorder(),
-                    isDense: true,
-                    alignLabelWithHint: true,
+          Expanded(
+            child: SingleChildScrollView(
+              padding: const EdgeInsets.fromLTRB(20, 8, 20, 24),
+              child: Column(
+                crossAxisAlignment: CrossAxisAlignment.stretch,
+                children: [
+                  TextField(
+                    controller: _motivoCtrl,
+                    maxLines: 3,
+                    maxLength: 300,
+                    decoration: const InputDecoration(
+                      labelText: 'Motivo *',
+                      border: OutlineInputBorder(),
+                      isDense: true,
+                      alignLabelWithHint: true,
+                    ),
                   ),
-                ),
-                const SizedBox(height: 14),
-                TextField(
-                  controller: _archivoCtrl,
-                  keyboardType: TextInputType.url,
-                  decoration: const InputDecoration(
-                    labelText: 'URL del adjunto (opcional)',
-                    hintText: 'https://...',
-                    border: OutlineInputBorder(),
-                    isDense: true,
-                    prefixIcon: Icon(Icons.attach_file, size: 18),
+                  if (_selectedFechaDesde != null &&
+                      _selectedFechaHasta != null) ...[
+                    const SizedBox(height: 14),
+                    Text(
+                      'Periodo',
+                      style: Theme.of(context).textTheme.labelMedium?.copyWith(
+                        color: cs.onSurfaceVariant,
+                        fontWeight: FontWeight.w600,
+                      ),
+                    ),
+                    const SizedBox(height: 8),
+                    OutlinedButton.icon(
+                      onPressed: (_saving || _pickingAttachment || _pickingPeriodo)
+                          ? null
+                          : _pickPeriodo,
+                      icon: _pickingPeriodo
+                          ? const SizedBox(
+                              width: 16,
+                              height: 16,
+                              child: CircularProgressIndicator(strokeWidth: 2),
+                            )
+                          : const Icon(Icons.event_outlined),
+                      label: Text(_formatSelectedRange(
+                        _selectedFechaDesde,
+                        _selectedFechaHasta,
+                      )),
+                    ),
+                    const SizedBox(height: 8),
+                    Text(
+                      'Si el periodo cubre un solo dia, se puede mantener una asistencia puntual. Si abarca varios dias, esa vinculacion se quitara al guardar.',
+                      style: Theme.of(context).textTheme.bodySmall?.copyWith(
+                        color: cs.onSurfaceVariant,
+                      ),
+                    ),
+                    if (widget.item.asistenciaFecha != null) ...[
+                      const SizedBox(height: 10),
+                      _DetailRow(
+                        icon: Icons.event_available_outlined,
+                        label: 'Asistencia vinculada',
+                        value: DateFormatter.formatApiDateForDisplay(
+                          widget.item.asistenciaFecha,
+                        ),
+                      ),
+                    ],
+                  ],
+                  if (widget.item.effectiveAdjuntosCount > 0) ...[
+                    const SizedBox(height: 14),
+                    Text(
+                      'Adjuntos actuales (${widget.item.effectiveAdjuntosCount})',
+                      style: Theme.of(context).textTheme.labelMedium?.copyWith(
+                        color: cs.onSurfaceVariant,
+                        fontWeight: FontWeight.w600,
+                      ),
+                    ),
+                    const SizedBox(height: 8),
+                    if (widget.item.adjuntos.isNotEmpty)
+                      ...widget.item.adjuntos.map(
+                        (adjunto) => _JustificacionAttachmentCard(
+                          title: adjunto.displayName,
+                          subtitle: _serverAttachmentSubtitle(adjunto),
+                          icon: _attachmentIconForServerAttachment(adjunto),
+                          onTap: () {
+                            unawaited(
+                              _openJustificacionAttachment(
+                                context,
+                                widget.apiClient,
+                                adjunto.downloadUrl,
+                              ),
+                            );
+                          },
+                        ),
+                      ),
+                    if (widget.item.hasLegacyArchivo)
+                      _JustificacionAttachmentCard(
+                        title: 'Archivo legado',
+                        subtitle: widget.item.archivo!.trim(),
+                        icon: Icons.link_outlined,
+                        onTap: () {
+                          unawaited(
+                            _openJustificacionAttachment(
+                              context,
+                              widget.apiClient,
+                              widget.item.archivo,
+                            ),
+                          );
+                        },
+                      ),
+                  ],
+                  const SizedBox(height: 14),
+                  SizedBox(
+                    width: double.infinity,
+                    child: FilledButton.tonalIcon(
+                      onPressed: _saving || _pickingAttachment
+                          ? null
+                          : _addAttachment,
+                      icon: const Icon(Icons.add_photo_alternate_outlined),
+                      label: Text(
+                        _pickingAttachment
+                            ? 'Procesando...'
+                            : 'Agregar evidencia',
+                      ),
+                    ),
                   ),
-                ),
-                if (_error != null) ...[
                   const SizedBox(height: 8),
                   Text(
-                    _error!,
-                    style: TextStyle(color: cs.error, fontSize: 13),
+                    'Los adjuntos nuevos se agregan al guardar la edición.',
+                    style: Theme.of(
+                      context,
+                    ).textTheme.bodySmall?.copyWith(color: cs.onSurfaceVariant),
+                  ),
+                  if (_adjuntos.isNotEmpty) ...[
+                    const SizedBox(height: 14),
+                    Text(
+                      'Nuevos adjuntos (${_adjuntos.length})',
+                      style: Theme.of(context).textTheme.labelMedium?.copyWith(
+                        color: cs.onSurfaceVariant,
+                        fontWeight: FontWeight.w600,
+                      ),
+                    ),
+                    const SizedBox(height: 8),
+                    for (var i = 0; i < _adjuntos.length; i++)
+                      _JustificacionAttachmentCard(
+                        title: _adjuntos[i].name,
+                        subtitle: _formatAttachmentBytes(
+                          _adjuntos[i].sizeBytes,
+                        ),
+                        icon: _attachmentIconForDraft(_adjuntos[i].name),
+                        onRemove: _saving ? null : () => _removeAdjuntoAt(i),
+                      ),
+                  ],
+                  if (_error != null) ...[
+                    const SizedBox(height: 8),
+                    Text(
+                      _error!,
+                      style: TextStyle(color: cs.error, fontSize: 13),
+                    ),
+                  ],
+                  const SizedBox(height: 16),
+                  FilledButton(
+                    onPressed: _saving ? null : _submit,
+                    style: FilledButton.styleFrom(
+                      padding: const EdgeInsets.symmetric(vertical: 16),
+                    ),
+                    child: _saving
+                        ? const SizedBox(
+                            width: 20,
+                            height: 20,
+                            child: CircularProgressIndicator(
+                              strokeWidth: 2,
+                              valueColor: AlwaysStoppedAnimation(Colors.white),
+                            ),
+                          )
+                        : const Text('Guardar cambios'),
                   ),
                 ],
-                const SizedBox(height: 16),
-                FilledButton(
-                  onPressed: _saving ? null : _submit,
-                  style: FilledButton.styleFrom(
-                    padding: const EdgeInsets.symmetric(vertical: 16),
-                  ),
-                  child: _saving
-                      ? const SizedBox(
-                          width: 20,
-                          height: 20,
-                          child: CircularProgressIndicator(
-                            strokeWidth: 2,
-                            valueColor: AlwaysStoppedAnimation(Colors.white),
-                          ),
-                        )
-                      : const Text('Guardar cambios'),
-                ),
-              ],
+              ),
             ),
           ),
+          if (widget.item.adjuntos.isEmpty && !widget.item.hasLegacyArchivo)
+            const _JustificacionAttachmentCard(
+              title: 'Adjuntos actuales',
+              subtitle: 'No se pudieron listar para descarga.',
+              icon: Icons.attach_file,
+            ),
         ],
       ),
+    );
+  }
+}
+
+enum _AttachmentSourceChoice { camera, file }
+
+class _DraftJustificacionAdjunto {
+  const _DraftJustificacionAdjunto({
+    required this.upload,
+    required this.name,
+    this.sizeBytes,
+  });
+
+  final JustificacionAdjuntoUpload upload;
+  final String name;
+  final int? sizeBytes;
+}
+
+class _JustificacionAttachmentCard extends StatelessWidget {
+  const _JustificacionAttachmentCard({
+    required this.title,
+    this.subtitle,
+    required this.icon,
+    this.onTap,
+    this.onRemove,
+  });
+
+  final String title;
+  final String? subtitle;
+  final IconData icon;
+  final VoidCallback? onTap;
+  final VoidCallback? onRemove;
+
+  @override
+  Widget build(BuildContext context) {
+    final cs = Theme.of(context).colorScheme;
+    final actionIcon = onRemove != null
+        ? Icons.close
+        : onTap != null
+        ? Icons.open_in_new_outlined
+        : null;
+    final actionTooltip = onRemove != null
+        ? 'Quitar'
+        : onTap != null
+        ? 'Abrir'
+        : null;
+
+    return Card(
+      margin: const EdgeInsets.only(bottom: 8),
+      elevation: 0,
+      color: cs.surfaceContainerLow,
+      child: ListTile(
+        onTap: onTap,
+        contentPadding: const EdgeInsets.symmetric(horizontal: 12, vertical: 4),
+        leading: Container(
+          width: 36,
+          height: 36,
+          decoration: BoxDecoration(
+            color: cs.primary.withValues(alpha: 0.10),
+            borderRadius: BorderRadius.circular(10),
+          ),
+          child: Icon(icon, size: 18, color: cs.primary),
+        ),
+        title: Text(title, maxLines: 1, overflow: TextOverflow.ellipsis),
+        subtitle: subtitle == null
+            ? null
+            : Text(subtitle!, maxLines: 2, overflow: TextOverflow.ellipsis),
+        trailing: actionIcon == null
+            ? null
+            : IconButton(
+                tooltip: actionTooltip,
+                onPressed: onTap ?? onRemove,
+                icon: Icon(actionIcon, size: 18),
+              ),
+      ),
+    );
+  }
+}
+
+Future<_AttachmentSourceChoice?> _showAttachmentSourceSheet(
+  BuildContext context,
+) {
+  return showModalBottomSheet<_AttachmentSourceChoice>(
+    context: context,
+    useSafeArea: true,
+    showDragHandle: true,
+    builder: (sheetContext) {
+      final cs = Theme.of(sheetContext).colorScheme;
+      return SafeArea(
+        child: Padding(
+          padding: const EdgeInsets.fromLTRB(20, 8, 20, 24),
+          child: Column(
+            mainAxisSize: MainAxisSize.min,
+            crossAxisAlignment: CrossAxisAlignment.stretch,
+            children: [
+              Text(
+                'Adjuntar evidencia',
+                style: Theme.of(
+                  sheetContext,
+                ).textTheme.titleMedium?.copyWith(fontWeight: FontWeight.w700),
+              ),
+              const SizedBox(height: 6),
+              Text(
+                'Tomá una foto o elegí un archivo PDF o imagen.',
+                style: Theme.of(
+                  sheetContext,
+                ).textTheme.bodySmall?.copyWith(color: cs.onSurfaceVariant),
+              ),
+              const SizedBox(height: 16),
+              FilledButton.tonalIcon(
+                onPressed: () =>
+                    Navigator.pop(sheetContext, _AttachmentSourceChoice.camera),
+                icon: const Icon(Icons.photo_camera_outlined),
+                label: const Text('Tomar foto'),
+              ),
+              const SizedBox(height: 10),
+              OutlinedButton.icon(
+                onPressed: () =>
+                    Navigator.pop(sheetContext, _AttachmentSourceChoice.file),
+                icon: const Icon(Icons.attach_file),
+                label: const Text('Elegir archivo'),
+              ),
+            ],
+          ),
+        ),
+      );
+    },
+  );
+}
+
+Future<AsistenciaItem?> _showAsistenciaSelectionSheet(
+  BuildContext context, {
+  required DateTime pickedDate,
+  required List<AsistenciaItem> items,
+}) {
+  return showModalBottomSheet<AsistenciaItem>(
+    context: context,
+    useSafeArea: true,
+    showDragHandle: true,
+    isScrollControlled: true,
+    builder: (sheetContext) {
+      final cs = Theme.of(sheetContext).colorScheme;
+      return SafeArea(
+        child: Padding(
+          padding: const EdgeInsets.fromLTRB(20, 8, 20, 24),
+          child: Column(
+            mainAxisSize: MainAxisSize.min,
+            crossAxisAlignment: CrossAxisAlignment.stretch,
+            children: [
+              Text(
+                'Elegi la asistencia de ${DateFormatter.formatDisplayDate(pickedDate)}',
+                style: Theme.of(
+                  sheetContext,
+                ).textTheme.titleMedium?.copyWith(fontWeight: FontWeight.w700),
+              ),
+              const SizedBox(height: 6),
+              Text(
+                'Se encontraron ${items.length} registro(s) para esa fecha.',
+                style: Theme.of(
+                  sheetContext,
+                ).textTheme.bodySmall?.copyWith(color: cs.onSurfaceVariant),
+              ),
+              const SizedBox(height: 16),
+              SizedBox(
+                height: (MediaQuery.sizeOf(sheetContext).height * 0.45)
+                    .clamp(220.0, 420.0)
+                    .toDouble(),
+                child: ListView.separated(
+                  itemCount: items.length,
+                  separatorBuilder: (_, __) => const SizedBox(height: 8),
+                  itemBuilder: (context, index) {
+                    final item = items[index];
+                    return _JustificacionAttachmentCard(
+                      title:
+                          'Asistencia ${DateFormatter.formatApiDateForDisplay(item.fecha)}',
+                      subtitle: _asistenciaSubtitle(item),
+                      icon: Icons.event_available_outlined,
+                      onTap: () => Navigator.pop(sheetContext, item),
+                    );
+                  },
+                ),
+              ),
+            ],
+          ),
+        ),
+      );
+    },
+  );
+}
+
+String _normalizeAttachmentFilename(
+  String rawName, {
+  String fallbackExtension = 'jpg',
+}) {
+  final name = rawName.trim();
+  if (name.isEmpty) {
+    return 'adjunto.$fallbackExtension';
+  }
+  return name.contains('.') ? name : '$name.$fallbackExtension';
+}
+
+String _formatAttachmentBytes(int? sizeBytes) {
+  if (sizeBytes == null || sizeBytes <= 0) {
+    return 'Tamaño no disponible';
+  }
+  const kb = 1024.0;
+  const mb = kb * 1024;
+  const gb = mb * 1024;
+  final value = sizeBytes.toDouble();
+  if (value < kb) {
+    return '$sizeBytes B';
+  }
+  if (value < mb) {
+    final kbValue = value / kb;
+    return '${kbValue >= 10 ? kbValue.toStringAsFixed(0) : kbValue.toStringAsFixed(1)} KB';
+  }
+  if (value < gb) {
+    final mbValue = value / mb;
+    return '${mbValue >= 10 ? mbValue.toStringAsFixed(0) : mbValue.toStringAsFixed(1)} MB';
+  }
+  return '${(value / gb).toStringAsFixed(1)} GB';
+}
+
+String _asistenciaSubtitle(AsistenciaItem item) {
+  final parts = <String>[];
+  final estado = item.estado?.trim();
+  if (estado != null && estado.isNotEmpty) {
+    parts.add(
+      estado.length == 1
+          ? estado.toUpperCase()
+          : '${estado[0].toUpperCase()}${estado.substring(1)}',
+    );
+  }
+
+  final entrada = item.horaEntrada?.trim();
+  if (entrada != null && entrada.isNotEmpty) {
+    parts.add('Entrada $entrada');
+  }
+
+  final salida = item.horaSalida?.trim();
+  if (salida != null && salida.isNotEmpty) {
+    parts.add('Salida $salida');
+  }
+
+  return parts.isEmpty ? 'Asistencia registrada' : parts.join(' · ');
+}
+
+String _serverAttachmentSubtitle(JustificacionAdjuntoItem adjunto) {
+  final parts = <String>[];
+  final extension = adjunto.extension?.trim();
+  if (extension != null && extension.isNotEmpty) {
+    parts.add(extension.toUpperCase());
+  }
+  if (adjunto.tamanoBytes != null) {
+    parts.add(_formatAttachmentBytes(adjunto.tamanoBytes));
+  }
+  final estado = adjunto.estado?.trim();
+  if (estado != null && estado.isNotEmpty) {
+    parts.add(estado);
+  }
+  return parts.isEmpty ? 'Adjunto' : parts.join(' · ');
+}
+
+IconData _attachmentIconForServerAttachment(JustificacionAdjuntoItem adjunto) {
+  final mime = adjunto.mimeType?.trim().toLowerCase() ?? '';
+  final extension = adjunto.extension?.trim().toLowerCase() ?? '';
+  if (mime.startsWith('image/') ||
+      ['jpg', 'jpeg', 'png', 'webp', 'gif', 'bmp'].contains(extension)) {
+    return Icons.image_outlined;
+  }
+  if (mime == 'application/pdf' || extension == 'pdf') {
+    return Icons.picture_as_pdf_outlined;
+  }
+  return Icons.attach_file;
+}
+
+IconData _attachmentIconForDraft(String name) {
+  final extension = name.split('.').last.trim().toLowerCase();
+  if (['jpg', 'jpeg', 'png', 'webp', 'gif', 'bmp'].contains(extension)) {
+    return Icons.image_outlined;
+  }
+  if (extension == 'pdf') {
+    return Icons.picture_as_pdf_outlined;
+  }
+  return Icons.attach_file;
+}
+
+Future<List<_DraftJustificacionAdjunto>> _pickCameraAttachments() async {
+  final picker = ImagePicker();
+  final photo = await picker.pickImage(
+    source: ImageSource.camera,
+    imageQuality: 85,
+    maxWidth: 2048,
+    maxHeight: 2048,
+    requestFullMetadata: false,
+  );
+  if (photo == null) {
+    return const <_DraftJustificacionAdjunto>[];
+  }
+  final bytes = await photo.readAsBytes();
+  final filename = _normalizeAttachmentFilename(
+    photo.name,
+    fallbackExtension: 'jpg',
+  );
+  return <_DraftJustificacionAdjunto>[
+    _DraftJustificacionAdjunto(
+      upload: JustificacionAdjuntoUpload(
+        filename: filename,
+        bytes: bytes,
+        sizeBytes: bytes.length,
+      ),
+      name: filename,
+      sizeBytes: bytes.length,
+    ),
+  ];
+}
+
+Future<List<_DraftJustificacionAdjunto>> _pickFileAttachments() async {
+  final result = await FilePicker.pickFiles(
+    allowMultiple: true,
+    withData: kIsWeb,
+    type: FileType.custom,
+    allowedExtensions: const <String>['jpg', 'jpeg', 'png', 'webp', 'pdf'],
+  );
+  if (result == null || result.files.isEmpty) {
+    return const <_DraftJustificacionAdjunto>[];
+  }
+
+  final items = <_DraftJustificacionAdjunto>[];
+  for (final file in result.files) {
+    final filename = _normalizeAttachmentFilename(file.name);
+    final bytes = file.bytes;
+    if (bytes != null && bytes.isNotEmpty) {
+      items.add(
+        _DraftJustificacionAdjunto(
+          upload: JustificacionAdjuntoUpload(
+            filename: filename,
+            bytes: bytes,
+            sizeBytes: file.size,
+          ),
+          name: filename,
+          sizeBytes: file.size,
+        ),
+      );
+      continue;
+    }
+    final path = file.path;
+    if (path != null && path.trim().isNotEmpty) {
+      items.add(
+        _DraftJustificacionAdjunto(
+          upload: JustificacionAdjuntoUpload(
+            filename: filename,
+            path: path,
+            sizeBytes: file.size,
+          ),
+          name: filename,
+          sizeBytes: file.size,
+        ),
+      );
+    }
+  }
+  return items;
+}
+
+Future<void> _openJustificacionAttachment(
+  BuildContext context,
+  MobileApiClient apiClient,
+  String? rawUrl,
+) async {
+  final value = rawUrl?.trim();
+  if (value == null || value.isEmpty) {
+    return;
+  }
+  final uri = Uri.tryParse(apiClient.buildAbsoluteUrl(value));
+  if (uri == null) {
+    if (context.mounted) {
+      ScaffoldMessenger.of(context).showSnackBar(
+        const SnackBar(content: Text('No se pudo abrir el adjunto.')),
+      );
+    }
+    return;
+  }
+  final launched = await launchUrl(uri, mode: LaunchMode.externalApplication);
+  if (!launched && context.mounted) {
+    ScaffoldMessenger.of(context).showSnackBar(
+      const SnackBar(content: Text('No se pudo abrir el adjunto.')),
     );
   }
 }
@@ -1314,9 +2283,10 @@ class _JustifSkeletonState extends State<_JustifSkeleton>
       vsync: this,
       duration: const Duration(milliseconds: 900),
     )..repeat(reverse: true);
-    _fade = Tween<double>(begin: 0.35, end: 0.75).animate(
-      CurvedAnimation(parent: _controller, curve: Curves.easeInOut),
-    );
+    _fade = Tween<double>(
+      begin: 0.35,
+      end: 0.75,
+    ).animate(CurvedAnimation(parent: _controller, curve: Curves.easeInOut));
   }
 
   @override
@@ -1327,8 +2297,9 @@ class _JustifSkeletonState extends State<_JustifSkeleton>
 
   @override
   Widget build(BuildContext context) {
-    final base =
-        Theme.of(context).colorScheme.onSurface.withValues(alpha: 0.08);
+    final base = Theme.of(
+      context,
+    ).colorScheme.onSurface.withValues(alpha: 0.08);
     return AnimatedBuilder(
       animation: _fade,
       builder: (context, _) => ListView(

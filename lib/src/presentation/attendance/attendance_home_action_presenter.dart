@@ -140,6 +140,12 @@ class AttendanceHomeActionPresenter {
           enabled: historyEnabled,
         ),
         AttendanceHomeActionSpec(
+          intent: AttendanceHomeActionIntent.openGpsLocation,
+          label: 'GPS real',
+          icon: Icons.my_location_outlined,
+          enabled: historyEnabled,
+        ),
+        AttendanceHomeActionSpec(
           intent: AttendanceHomeActionIntent.openJustificaciones,
           label: 'Justificaciones',
           icon: Icons.fact_check_outlined,
@@ -179,6 +185,18 @@ class AttendanceHomeActionPresenter {
           intent: AttendanceHomeActionIntent.openKpisSector,
           label: 'KPIs',
           icon: Icons.bar_chart_outlined,
+          enabled: historyEnabled,
+        ),
+        AttendanceHomeActionSpec(
+          intent: AttendanceHomeActionIntent.openFeedback,
+          label: 'Feedback',
+          icon: Icons.campaign_outlined,
+          enabled: historyEnabled,
+        ),
+        AttendanceHomeActionSpec(
+          intent: AttendanceHomeActionIntent.openSkap,
+          label: 'SKAP',
+          icon: Icons.psychology_outlined,
           enabled: historyEnabled,
         ),
         AttendanceHomeActionSpec(
@@ -249,6 +267,7 @@ enum AttendanceHomeActionIntent {
   startClock,
   openMarksHistory,
   openAttendanceHistory,
+  openGpsLocation,
   openProfile,
   openBiometricSettings,
   openStats,
@@ -260,6 +279,8 @@ enum AttendanceHomeActionIntent {
   openLegajo,
   openPedidosMercaderia,
   openKpisSector,
+  openFeedback,
+  openSkap,
   openPremios,
   openHorarios,
   openLinks,

@@ -5,6 +5,14 @@ Formato: `[version+build] — fecha`
 
 ---
 
+## [1.20.5+27] — 2026-05-29
+
+### Build
+- Version: `1.20.5+27`
+- Comando: `flutter build apk --release --dart-define=API_BASE_URL=... --dart-define=APP_PROD=true --build-name=1.20.5 --build-number=27`
+
+---
+
 ## [1.20.5+26] — 2026-05-25
 
 ### Correcciones de login

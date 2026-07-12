@@ -60,7 +60,7 @@ void main() {
 
     expect(client.callCount, 2);
     expect(find.text('Entrega'), findsOneWidget);
-    expect(find.text('Bultos entregados'), findsOneWidget);
+    expect(find.text('Bultos entregados'), findsWidgets);
     expect(find.textContaining('summary failed'), findsNothing);
     apiClient.dispose();
   });

@@ -421,27 +421,29 @@ class _BrandHeader extends StatelessWidget {
 
   @override
   Widget build(BuildContext context) {
-    final circleSize = compact ? 60.0 : 84.0;
-    final iconSize = compact ? 32.0 : 46.0;
+    final logoSize = compact ? 72.0 : 108.0;
     final titleSize = compact ? 22.0 : 30.0;
 
     return Column(
       children: [
         Container(
-          width: circleSize,
-          height: circleSize,
+          width: logoSize,
+          height: logoSize,
+          padding: EdgeInsets.all(compact ? 8 : 12),
           decoration: BoxDecoration(
-            color: Colors.white.withValues(alpha: 0.12),
-            shape: BoxShape.circle,
+            color: Colors.white.withValues(alpha: 0.10),
+            borderRadius: BorderRadius.circular(compact ? 18 : 24),
             border: Border.all(
               color: Colors.white.withValues(alpha: 0.25),
               width: 2,
             ),
           ),
-          child: Icon(
-            Icons.qr_code_2_rounded,
-            size: iconSize,
-            color: Colors.white,
+          child: ClipRRect(
+            borderRadius: BorderRadius.circular(compact ? 14 : 20),
+            child: Image.asset(
+              'assets/branding/logo_dp.png',
+              fit: BoxFit.cover,
+            ),
           ),
         ),
         SizedBox(height: compact ? 10 : 16),

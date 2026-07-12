@@ -1,9 +1,12 @@
 import 'dart:convert';
 import 'dart:async';
+import 'dart:typed_data';
 
 import 'package:http/http.dart' as http;
 
 import '../utils/app_logger.dart';
+import 'feedback_api_models.dart';
+import 'skap_api_models.dart';
 
 class MobileApiClient {
   static final _log = AppLogger.get('MobileApiClient');
@@ -205,6 +208,19 @@ class MobileApiClient {
         .toString();
   }
 
+  String buildAbsoluteUrl(String rawUrl) {
+    final value = rawUrl.trim();
+    if (value.isEmpty) {
+      return '';
+    }
+    final parsed = Uri.tryParse(value);
+    if (parsed != null && parsed.hasScheme && parsed.hasAuthority) {
+      return value;
+    }
+    final path = value.startsWith('/') ? value : '/$value';
+    return _rootUri(path).toString();
+  }
+
   Future<AsistenciasPageResult> getAsistencias({
     required String token,
     int page = 1,
@@ -364,18 +380,66 @@ class MobileApiClient {
   Future<JustificacionItem> createJustificacion({
     required String token,
     required String motivo,
+    String? fecha,
+    String? fechaDesde,
+    String? fechaHasta,
     int? asistenciaId,
     String? archivo,
+    List<JustificacionAdjuntoUpload>? adjuntos,
   }) async {
+    final normalizedAdjuntos = _normalizeJustificacionAdjuntos(adjuntos);
     final body = <String, dynamic>{'motivo': motivo.trim()};
+    if (fechaDesde != null && fechaDesde.trim().isNotEmpty) {
+      body['fecha_desde'] = fechaDesde.trim();
+    }
+    if (fechaHasta != null && fechaHasta.trim().isNotEmpty) {
+      body['fecha_hasta'] = fechaHasta.trim();
+    }
+    if (!body.containsKey('fecha_desde') && fecha != null && fecha.trim().isNotEmpty) {
+      body['fecha'] = fecha.trim();
+    }
     if (asistenciaId != null) body['asistencia_id'] = asistenciaId;
     if (archivo != null && archivo.trim().isNotEmpty) {
       body['archivo'] = archivo.trim();
     }
-    final response = await _safePost(
-      _uri('/me/justificaciones'),
-      headers: _headers(token: token),
-      body: jsonEncode(body),
+    if (normalizedAdjuntos.isEmpty) {
+      final response = await _safePost(
+        _uri('/me/justificaciones'),
+        headers: _headers(token: token),
+        body: jsonEncode(body),
+        actionLabel: 'crear justificación',
+      );
+      if (response.statusCode != 200 && response.statusCode != 201) {
+        final error = _extractApiError(
+          response,
+          fallback: 'No se pudo crear la justificación.',
+        );
+        throw ApiException(
+          message: error.message,
+          statusCode: response.statusCode,
+          code: error.code,
+        );
+      }
+      return JustificacionItem.fromJson(_decodeObject(response.body));
+    }
+
+    final response = await _sendJustificacionMultipart(
+      token: token,
+      method: 'POST',
+      uri: _uri('/me/justificaciones'),
+      fields: <String, String>{
+        'motivo': motivo.trim(),
+        if (fechaDesde != null && fechaDesde.trim().isNotEmpty) 'fecha_desde': fechaDesde.trim(),
+        if (fechaHasta != null && fechaHasta.trim().isNotEmpty) 'fecha_hasta': fechaHasta.trim(),
+        if (!((fechaDesde != null && fechaDesde.trim().isNotEmpty) ||
+            (fechaHasta != null && fechaHasta.trim().isNotEmpty)) &&
+            fecha != null &&
+            fecha.trim().isNotEmpty)
+          'fecha': fecha.trim(),
+        if (asistenciaId != null) 'asistencia_id': asistenciaId.toString(),
+        if (archivo != null) 'archivo': archivo.trim(),
+      },
+      adjuntos: normalizedAdjuntos,
       actionLabel: 'crear justificación',
     );
     if (response.statusCode != 200 && response.statusCode != 201) {
@@ -1070,17 +1134,71 @@ class MobileApiClient {
     required String token,
     required int id,
     String? motivo,
+    String? fecha,
+    String? fechaDesde,
+    String? fechaHasta,
+    int? asistenciaId,
+    bool clearAsistencia = false,
     String? archivo,
+    List<JustificacionAdjuntoUpload>? adjuntos,
   }) async {
+    final normalizedAdjuntos = _normalizeJustificacionAdjuntos(adjuntos);
     final body = <String, dynamic>{};
     if (motivo != null) body['motivo'] = motivo.trim();
+    if (fechaDesde != null && fechaDesde.trim().isNotEmpty) {
+      body['fecha_desde'] = fechaDesde.trim();
+    }
+    if (fechaHasta != null && fechaHasta.trim().isNotEmpty) {
+      body['fecha_hasta'] = fechaHasta.trim();
+    }
+    if (!body.containsKey('fecha_desde') && fecha != null && fecha.trim().isNotEmpty) body['fecha'] = fecha.trim();
+    if (asistenciaId != null) {
+      body['asistencia_id'] = asistenciaId;
+    } else if (clearAsistencia) {
+      body['asistencia_id'] = null;
+    }
     if (archivo != null) {
       body['archivo'] = archivo.trim().isEmpty ? null : archivo.trim();
     }
-    final response = await _safePut(
-      _uri('/me/justificaciones/$id'),
-      headers: _headers(token: token),
-      body: jsonEncode(body),
+    if (normalizedAdjuntos.isEmpty) {
+      final response = await _safePut(
+        _uri('/me/justificaciones/$id'),
+        headers: _headers(token: token),
+        body: jsonEncode(body),
+        actionLabel: 'actualizar justificación',
+      );
+      if (response.statusCode != 200) {
+        final error = _extractApiError(
+          response,
+          fallback: 'No se pudo actualizar la justificación.',
+        );
+        throw ApiException(
+          message: error.message,
+          statusCode: response.statusCode,
+          code: error.code,
+        );
+      }
+      return JustificacionItem.fromJson(_decodeObject(response.body));
+    }
+
+    final response = await _sendJustificacionMultipart(
+      token: token,
+      method: 'PUT',
+      uri: _uri('/me/justificaciones/$id'),
+      fields: <String, String>{
+        if (motivo != null) 'motivo': motivo.trim(),
+        if (fechaDesde != null && fechaDesde.trim().isNotEmpty) 'fecha_desde': fechaDesde.trim(),
+        if (fechaHasta != null && fechaHasta.trim().isNotEmpty) 'fecha_hasta': fechaHasta.trim(),
+        if (!((fechaDesde != null && fechaDesde.trim().isNotEmpty) ||
+            (fechaHasta != null && fechaHasta.trim().isNotEmpty)) &&
+            fecha != null &&
+            fecha.trim().isNotEmpty)
+          'fecha': fecha.trim(),
+        if (asistenciaId != null) 'asistencia_id': asistenciaId.toString(),
+        if (asistenciaId == null && clearAsistencia) 'asistencia_id': '',
+        if (archivo != null) 'archivo': archivo.trim(),
+      },
+      adjuntos: normalizedAdjuntos,
       actionLabel: 'actualizar justificación',
     );
     if (response.statusCode != 200) {
@@ -1698,6 +1816,417 @@ class MobileApiClient {
   }
 
   // ─── Premios y concursos ─────────────────────────────────────────────────────
+
+  Uri _feedbackUri(String path) => _rootUri('/api/v1/feedback$path');
+
+  Uri _skapUri(String path) => _rootUri('/api/skap$path');
+
+  Future<FeedbackDashboardResponse> getFeedbackDashboard({
+    required String token,
+  }) async {
+    final response = await _safeGet(
+      _feedbackUri('/dashboard'),
+      headers: _headers(token: token),
+      actionLabel: 'consultar dashboard de feedback',
+    );
+    if (response.statusCode != 200) {
+      final error = _extractApiError(
+        response,
+        fallback: 'No se pudo obtener el dashboard de feedback.',
+      );
+      throw ApiException(
+        message: error.message,
+        statusCode: response.statusCode,
+        code: error.code,
+      );
+    }
+    return FeedbackDashboardResponse.fromJson(_decodeObject(response.body));
+  }
+
+  Future<FeedbackMotivosResponse> getFeedbackMotivos({
+    required String token,
+  }) async {
+    final response = await _safeGet(
+      _feedbackUri('/motivos'),
+      headers: _headers(token: token),
+      actionLabel: 'consultar motivos de feedback',
+    );
+    if (response.statusCode != 200) {
+      final error = _extractApiError(
+        response,
+        fallback: 'No se pudieron obtener los motivos de feedback.',
+      );
+      throw ApiException(
+        message: error.message,
+        statusCode: response.statusCode,
+        code: error.code,
+      );
+    }
+    return FeedbackMotivosResponse.fromJson(_decodeObject(response.body));
+  }
+
+  Future<FeedbackClientesResponse> getFeedbackClientes({
+    required String token,
+    String? q,
+    int page = 1,
+    int perPage = 20,
+  }) async {
+    final query = <String, String>{
+      'page': page.toString(),
+      'per_page': perPage.toString(),
+    };
+    final cleanQuery = q?.trim();
+    if (cleanQuery != null && cleanQuery.isNotEmpty) {
+      query['q'] = cleanQuery;
+    }
+    final response = await _safeGet(
+      _feedbackUri('/clientes').replace(queryParameters: query),
+      headers: _headers(token: token),
+      actionLabel: 'consultar clientes de feedback',
+    );
+    if (response.statusCode != 200) {
+      final error = _extractApiError(
+        response,
+        fallback: 'No se pudieron obtener los clientes de feedback.',
+      );
+      throw ApiException(
+        message: error.message,
+        statusCode: response.statusCode,
+        code: error.code,
+      );
+    }
+    return FeedbackClientesResponse.fromJson(_decodeObject(response.body));
+  }
+
+  Future<FeedbackListResponse> getFeedbackHistorial({
+    required String token,
+    int page = 1,
+    int perPage = 20,
+    String? estado,
+    String? q,
+  }) async {
+    final query = <String, String>{
+      'page': page.toString(),
+      'per_page': perPage.toString(),
+    };
+    final cleanEstado = estado?.trim();
+    if (cleanEstado != null && cleanEstado.isNotEmpty) {
+      query['estado'] = cleanEstado;
+    }
+    final cleanQuery = q?.trim();
+    if (cleanQuery != null && cleanQuery.isNotEmpty) {
+      query['q'] = cleanQuery;
+    }
+    final response = await _safeGet(
+      _feedbackUri('/historial').replace(queryParameters: query),
+      headers: _headers(token: token),
+      actionLabel: 'consultar historial de feedback',
+    );
+    if (response.statusCode != 200) {
+      final error = _extractApiError(
+        response,
+        fallback: 'No se pudo obtener el historial de feedback.',
+      );
+      throw ApiException(
+        message: error.message,
+        statusCode: response.statusCode,
+        code: error.code,
+      );
+    }
+    return FeedbackListResponse.fromJson(_decodeObject(response.body));
+  }
+
+  Future<FeedbackListResponse> getFeedbackBandeja({
+    required String token,
+    int page = 1,
+    int perPage = 20,
+    String? estado,
+    String? q,
+  }) async {
+    final query = <String, String>{
+      'page': page.toString(),
+      'per_page': perPage.toString(),
+    };
+    final cleanEstado = estado?.trim();
+    if (cleanEstado != null && cleanEstado.isNotEmpty) {
+      query['estado'] = cleanEstado;
+    }
+    final cleanQuery = q?.trim();
+    if (cleanQuery != null && cleanQuery.isNotEmpty) {
+      query['q'] = cleanQuery;
+    }
+    final response = await _safeGet(
+      _feedbackUri('/bandeja').replace(queryParameters: query),
+      headers: _headers(token: token),
+      actionLabel: 'consultar bandeja de feedback',
+    );
+    if (response.statusCode != 200) {
+      final error = _extractApiError(
+        response,
+        fallback: 'No se pudo obtener la bandeja de feedback.',
+      );
+      throw ApiException(
+        message: error.message,
+        statusCode: response.statusCode,
+        code: error.code,
+      );
+    }
+    return FeedbackListResponse.fromJson(_decodeObject(response.body));
+  }
+
+  Future<FeedbackItem> getFeedbackDetail({
+    required String token,
+    required int feedbackId,
+  }) async {
+    final response = await _safeGet(
+      _feedbackUri('/$feedbackId'),
+      headers: _headers(token: token),
+      actionLabel: 'consultar detalle de feedback',
+    );
+    if (response.statusCode != 200) {
+      final error = _extractApiError(
+        response,
+        fallback: 'No se pudo obtener el feedback.',
+      );
+      throw ApiException(
+        message: error.message,
+        statusCode: response.statusCode,
+        code: error.code,
+      );
+    }
+    return FeedbackDetailResponse.fromJson(
+      _decodeObject(response.body),
+    ).feedback;
+  }
+
+  Future<FeedbackItem> createFeedback({
+    required String token,
+    required int clienteId,
+    required int motivoId,
+    required String descripcion,
+  }) async {
+    final response = await _safePost(
+      _feedbackUri(''),
+      headers: _headers(token: token),
+      body: jsonEncode({
+        'cliente_id': clienteId,
+        'motivo_id': motivoId,
+        'descripcion': descripcion.trim(),
+      }),
+      actionLabel: 'crear feedback',
+    );
+    if (response.statusCode != 200 && response.statusCode != 201) {
+      final error = _extractApiError(
+        response,
+        fallback: 'No se pudo crear el feedback.',
+      );
+      throw ApiException(
+        message: error.message,
+        statusCode: response.statusCode,
+        code: error.code,
+      );
+    }
+    return FeedbackMutationResponse.fromJson(
+      _decodeObject(response.body),
+    ).feedback;
+  }
+
+  Future<FeedbackItem> takeFeedback({
+    required String token,
+    required int feedbackId,
+  }) async {
+    final response = await _safePost(
+      _feedbackUri('/$feedbackId/tomar'),
+      headers: _headers(token: token),
+      body: jsonEncode(<String, dynamic>{}),
+      actionLabel: 'tomar feedback',
+    );
+    if (response.statusCode != 200) {
+      final error = _extractApiError(
+        response,
+        fallback: 'No se pudo tomar el feedback.',
+      );
+      throw ApiException(
+        message: error.message,
+        statusCode: response.statusCode,
+        code: error.code,
+      );
+    }
+    return FeedbackMutationResponse.fromJson(
+      _decodeObject(response.body),
+    ).feedback;
+  }
+
+  Future<FeedbackItem> resolveFeedback({
+    required String token,
+    required int feedbackId,
+    required String resolucionDescripcion,
+  }) async {
+    final response = await _safePost(
+      _feedbackUri('/$feedbackId/resolver'),
+      headers: _headers(token: token),
+      body: jsonEncode({
+        'resolucion_descripcion': resolucionDescripcion.trim(),
+      }),
+      actionLabel: 'resolver feedback',
+    );
+    if (response.statusCode != 200) {
+      final error = _extractApiError(
+        response,
+        fallback: 'No se pudo resolver el feedback.',
+      );
+      throw ApiException(
+        message: error.message,
+        statusCode: response.statusCode,
+        code: error.code,
+      );
+    }
+    return FeedbackMutationResponse.fromJson(
+      _decodeObject(response.body),
+    ).feedback;
+  }
+
+  Future<SkapPreguntasResponse> getSkapPreguntas({
+    required String token,
+    int? sectorId,
+    int? empleadoId,
+    String? categoria,
+    bool? activo,
+  }) async {
+    final query = <String, String>{};
+    if (sectorId != null) query['sector_id'] = sectorId.toString();
+    if (empleadoId != null) query['empleado_id'] = empleadoId.toString();
+    final cleanCategoria = categoria?.trim();
+    if (cleanCategoria != null && cleanCategoria.isNotEmpty) {
+      query['categoria'] = cleanCategoria;
+    }
+    if (activo != null) {
+      query['activo'] = activo ? '1' : '0';
+    }
+    final response = await _safeGet(
+      _skapUri(
+        '/preguntas',
+      ).replace(queryParameters: query.isEmpty ? null : query),
+      headers: _headers(token: token),
+      actionLabel: 'consultar preguntas SKAP',
+    );
+    if (response.statusCode != 200) {
+      final error = _extractApiError(
+        response,
+        fallback: 'No se pudieron obtener las preguntas SKAP.',
+      );
+      throw ApiException(
+        message: error.message,
+        statusCode: response.statusCode,
+        code: error.code,
+      );
+    }
+    return SkapPreguntasResponse.fromJson(_decodeObject(response.body));
+  }
+
+  Future<SkapEvaluacionResponse> getSkapEvaluacion({
+    required String token,
+    required int evaluacionId,
+  }) async {
+    final response = await _safeGet(
+      _skapUri('/evaluacion/$evaluacionId'),
+      headers: _headers(token: token),
+      actionLabel: 'consultar evaluacion SKAP',
+    );
+    if (response.statusCode != 200) {
+      final error = _extractApiError(
+        response,
+        fallback: 'No se pudo obtener la evaluacion SKAP.',
+      );
+      throw ApiException(
+        message: error.message,
+        statusCode: response.statusCode,
+        code: error.code,
+      );
+    }
+    return SkapEvaluacionResponse.fromJson(_decodeObject(response.body));
+  }
+
+  Future<SkapMiDesarrolloResponse> getSkapMiDesarrollo({
+    required String token,
+    int? anio,
+  }) async {
+    final query = <String, String>{};
+    if (anio != null) query['anio'] = anio.toString();
+    final response = await _safeGet(
+      _skapUri(
+        '/mi_desarrollo',
+      ).replace(queryParameters: query.isEmpty ? null : query),
+      headers: _headers(token: token),
+      actionLabel: 'consultar mi desarrollo SKAP',
+    );
+    if (response.statusCode != 200) {
+      final error = _extractApiError(
+        response,
+        fallback: 'No se pudo obtener mi desarrollo SKAP.',
+      );
+      throw ApiException(
+        message: error.message,
+        statusCode: response.statusCode,
+        code: error.code,
+      );
+    }
+    return SkapMiDesarrolloResponse.fromJson(_decodeObject(response.body));
+  }
+
+  Future<SkapRankingResponse> getSkapRanking({
+    required String token,
+    int? anio,
+  }) async {
+    final query = <String, String>{};
+    if (anio != null) query['anio'] = anio.toString();
+    final response = await _safeGet(
+      _skapUri(
+        '/ranking',
+      ).replace(queryParameters: query.isEmpty ? null : query),
+      headers: _headers(token: token),
+      actionLabel: 'consultar ranking SKAP',
+    );
+    if (response.statusCode != 200) {
+      final error = _extractApiError(
+        response,
+        fallback: 'No se pudo obtener el ranking SKAP.',
+      );
+      throw ApiException(
+        message: error.message,
+        statusCode: response.statusCode,
+        code: error.code,
+      );
+    }
+    return SkapRankingResponse.fromJson(_decodeObject(response.body));
+  }
+
+  Future<SkapPlanesResponse> getSkapPlanes({
+    required String token,
+    int? anio,
+  }) async {
+    final query = <String, String>{};
+    if (anio != null) query['anio'] = anio.toString();
+    final response = await _safeGet(
+      _skapUri(
+        '/planes',
+      ).replace(queryParameters: query.isEmpty ? null : query),
+      headers: _headers(token: token),
+      actionLabel: 'consultar planes SKAP',
+    );
+    if (response.statusCode != 200) {
+      final error = _extractApiError(
+        response,
+        fallback: 'No se pudieron obtener los planes SKAP.',
+      );
+      throw ApiException(
+        message: error.message,
+        statusCode: response.statusCode,
+        code: error.code,
+      );
+    }
+    return SkapPlanesResponse.fromJson(_decodeObject(response.body));
+  }
 
   Future<PremiosResponse> getPremios({required String token, int? anio}) async {
     final query = <String, String>{if (anio != null) 'anio': '$anio'};
@@ -2365,6 +2894,109 @@ class MobileApiClient {
       _log.warning('Error inesperado al $actionLabel', e, stack);
       throw ApiException(message: 'Error de conexión al $actionLabel.');
     }
+  }
+
+  Future<http.Response> _sendJustificacionMultipart({
+    required String token,
+    required String actionLabel,
+    required String method,
+    required Uri uri,
+    required Map<String, String> fields,
+    required List<JustificacionAdjuntoUpload> adjuntos,
+  }) {
+    return _sendMultipartWithAuthRecovery(
+      token: token,
+      actionLabel: actionLabel,
+      requestBuilder: (effectiveToken) async {
+        final request = http.MultipartRequest(method, uri);
+        if (effectiveToken.isNotEmpty) {
+          request.headers['Authorization'] = 'Bearer $effectiveToken';
+        }
+        request.fields.addAll(fields);
+        for (final adjunto in adjuntos) {
+          request.files.add(await _buildJustificacionMultipartFile(adjunto));
+        }
+        return request;
+      },
+    );
+  }
+
+  Future<http.MultipartFile> _buildJustificacionMultipartFile(
+    JustificacionAdjuntoUpload adjunto,
+  ) async {
+    final uploadFilename = _sanitizeJustificacionFilename(adjunto.filename);
+    final contentType = _contentTypeForJustificacionFilename(uploadFilename);
+    final path = adjunto.path?.trim();
+    if (path != null && path.isNotEmpty) {
+      return http.MultipartFile.fromPath(
+        'adjuntos',
+        path,
+        filename: uploadFilename,
+        contentType: contentType,
+      );
+    }
+    final bytes = adjunto.bytes;
+    if (bytes != null && bytes.isNotEmpty) {
+      return http.MultipartFile.fromBytes(
+        'adjuntos',
+        bytes,
+        filename: uploadFilename,
+        contentType: contentType,
+      );
+    }
+    throw ArgumentError('El adjunto no tiene path ni bytes.');
+  }
+
+  String _sanitizeJustificacionFilename(String rawName) {
+    final cleaned = rawName.trim().replaceAll(RegExp(r'[\\/]+'), ' ');
+    if (cleaned.isEmpty) {
+      return 'adjunto.jpg';
+    }
+
+    var base = cleaned;
+    var ext = 'jpg';
+    final dot = cleaned.lastIndexOf('.');
+    if (dot > 0 && dot < cleaned.length - 1) {
+      base = cleaned.substring(0, dot);
+      ext = cleaned.substring(dot + 1);
+    }
+
+    final safeBase = base
+        .replaceAll(RegExp(r'[^A-Za-z0-9]+'), '_')
+        .replaceAll(RegExp(r'_+'), '_')
+        .replaceAll(RegExp(r'^_+|_+$'), '');
+    final safeExt = ext.toLowerCase().replaceAll(RegExp(r'[^a-z0-9]'), '');
+    final finalBase = safeBase.isEmpty ? 'adjunto' : safeBase;
+    final finalExt = safeExt.isEmpty || safeExt.length > 6 ? 'jpg' : safeExt;
+    return '$finalBase.$finalExt';
+  }
+
+  http.MediaType? _contentTypeForJustificacionFilename(String filename) {
+    final extension = filename.split('.').last.trim().toLowerCase();
+    return switch (extension) {
+      'jpg' || 'jpeg' => http.MediaType('image', 'jpeg'),
+      'png' => http.MediaType('image', 'png'),
+      'webp' => http.MediaType('image', 'webp'),
+      'gif' => http.MediaType('image', 'gif'),
+      'bmp' => http.MediaType('image', 'bmp'),
+      'pdf' => http.MediaType('application', 'pdf'),
+      _ => null,
+    };
+  }
+
+  List<JustificacionAdjuntoUpload> _normalizeJustificacionAdjuntos(
+    List<JustificacionAdjuntoUpload>? adjuntos,
+  ) {
+    if (adjuntos == null || adjuntos.isEmpty) {
+      return const <JustificacionAdjuntoUpload>[];
+    }
+    final cleaned = <JustificacionAdjuntoUpload>[];
+    for (final adjunto in adjuntos) {
+      if (adjunto.isValid) {
+        cleaned.add(adjunto);
+      }
+    }
+    return cleaned;
   }
 
   Future<http.Response> _sendMultipartWithAuthRecovery({
@@ -3983,35 +4615,164 @@ class CatalogoPedidoMercaderiaPageResult {
 
 // ─── Justificaciones ─────────────────────────────────────────────────────────
 
+class JustificacionAdjuntoUpload {
+  const JustificacionAdjuntoUpload({
+    required this.filename,
+    this.path,
+    this.bytes,
+    this.sizeBytes,
+  });
+
+  final String filename;
+  final String? path;
+  final Uint8List? bytes;
+  final int? sizeBytes;
+
+  bool get hasPath => path != null && path!.trim().isNotEmpty;
+  bool get hasBytes => bytes != null && bytes!.isNotEmpty;
+  bool get isValid => hasPath || hasBytes;
+}
+
+class JustificacionAdjuntoItem {
+  JustificacionAdjuntoItem({
+    required this.id,
+    this.eventoId,
+    this.nombreOriginal,
+    this.mimeType,
+    this.extension,
+    this.tamanoBytes,
+    this.estado,
+    this.createdAt,
+    this.downloadUrl,
+  });
+
+  final int id;
+  final int? eventoId;
+  final String? nombreOriginal;
+  final String? mimeType;
+  final String? extension;
+  final int? tamanoBytes;
+  final String? estado;
+  final String? createdAt;
+  final String? downloadUrl;
+
+  String get displayName {
+    final name = nombreOriginal?.trim();
+    if (name != null && name.isNotEmpty) {
+      return name;
+    }
+    final url = downloadUrl?.trim();
+    if (url != null && url.isNotEmpty) {
+      final uri = Uri.tryParse(url);
+      if (uri != null && uri.pathSegments.isNotEmpty) {
+        final segment = uri.pathSegments.last.trim();
+        if (segment.isNotEmpty) {
+          return segment;
+        }
+      }
+    }
+    return 'Adjunto';
+  }
+
+  factory JustificacionAdjuntoItem.fromJson(Map<String, dynamic> json) {
+    return JustificacionAdjuntoItem(
+      id: _jsonInt(json['id']) ?? 0,
+      eventoId: _jsonInt(json['evento_id']),
+      nombreOriginal: _jsonString(json['nombre_original']),
+      mimeType: _jsonString(json['mime_type']),
+      extension: _jsonString(json['extension']),
+      tamanoBytes: _jsonInt(json['tamano_bytes']),
+      estado: _jsonString(json['estado']),
+      createdAt: _jsonString(json['created_at']),
+      downloadUrl: _jsonString(json['download_url']),
+    );
+  }
+}
+
 class JustificacionItem {
   JustificacionItem({
     required this.id,
+    this.fecha,
+    this.fechaDesde,
+    this.fechaHasta,
     this.asistenciaId,
     this.asistenciaFecha,
+    this.legajoEventoId,
     this.motivo,
     this.archivo,
+    this.adjuntosCount,
+    this.adjuntos = const <JustificacionAdjuntoItem>[],
     this.estado,
     this.createdAt,
   });
 
   final int id;
+  final String? fecha;
+  final String? fechaDesde;
+  final String? fechaHasta;
   final int? asistenciaId;
   final String? asistenciaFecha;
+  final int? legajoEventoId;
   final String? motivo;
   final String? archivo;
+  final int? adjuntosCount;
+  final List<JustificacionAdjuntoItem> adjuntos;
   final String? estado;
   final String? createdAt;
 
   factory JustificacionItem.fromJson(Map<String, dynamic> json) {
+    final rawAdjuntos = json['adjuntos'];
+    final adjuntos = <JustificacionAdjuntoItem>[];
+    if (rawAdjuntos is List) {
+      for (final raw in rawAdjuntos) {
+        if (raw is Map<String, dynamic>) {
+          adjuntos.add(JustificacionAdjuntoItem.fromJson(raw));
+        } else if (raw is Map) {
+          adjuntos.add(
+            JustificacionAdjuntoItem.fromJson(Map<String, dynamic>.from(raw)),
+          );
+        }
+      }
+    }
     return JustificacionItem(
       id: _jsonInt(json['id']) ?? 0,
+      fecha: _jsonString(json['fecha']),
+      fechaDesde: _jsonString(json['fecha_desde']),
+      fechaHasta: _jsonString(json['fecha_hasta']),
       asistenciaId: _jsonInt(json['asistencia_id']),
       asistenciaFecha: _jsonString(json['asistencia_fecha']),
+      legajoEventoId: _jsonInt(json['legajo_evento_id']),
       motivo: _jsonString(json['motivo']),
       archivo: _jsonString(json['archivo']),
+      adjuntosCount: _jsonInt(json['adjuntos_count']) ?? adjuntos.length,
+      adjuntos: adjuntos,
       estado: _jsonString(json['estado']),
       createdAt: _jsonString(json['created_at']),
     );
+  }
+
+  bool get hasAdjuntos =>
+      (adjuntosCount ?? 0) > 0 ||
+      adjuntos.isNotEmpty ||
+      (archivo ?? '').trim().isNotEmpty;
+
+  bool get hasLegacyArchivo => (archivo ?? '').trim().isNotEmpty;
+
+  bool get hasFechaRange =>
+      (fechaDesde ?? '').trim().isNotEmpty &&
+      (fechaHasta ?? '').trim().isNotEmpty &&
+      (fechaDesde ?? '').trim() != (fechaHasta ?? '').trim();
+
+  String? get operativeFecha => fechaDesde ?? fecha ?? asistenciaFecha;
+
+  String? get operativeFechaHasta => fechaHasta ?? fecha ?? asistenciaFecha;
+
+  int get effectiveAdjuntosCount {
+    final count = adjuntosCount ?? adjuntos.length;
+    if (count > 0) {
+      return count;
+    }
+    return hasLegacyArchivo ? 1 : 0;
   }
 }
 
@@ -5558,7 +6319,9 @@ class KpiSectorPuntoDiario {
       fecha: _jsonString(json['fecha']) ?? '',
       resultadoDia: _jsonDouble(json['resultado_dia']),
       objetivoDia: _jsonDouble(json['objetivo_dia']),
-      resultadoAcumuladoAFecha: _jsonDouble(json['resultado_acumulado_a_fecha']),
+      resultadoAcumuladoAFecha: _jsonDouble(
+        json['resultado_acumulado_a_fecha'],
+      ),
       objetivoAcumuladoAFecha: _jsonDouble(json['objetivo_acumulado_a_fecha']),
       progresoDiaPct: _jsonDouble(json['progreso_dia_pct']) ?? 0,
       progresoAcumuladoPct: _jsonDouble(json['progreso_acumulado_pct']) ?? 0,
@@ -5694,7 +6457,9 @@ class KpisSectorDiaItem {
       tieneResultado: _jsonBool(json['tiene_resultado']) ?? false,
       resultadoDia: _jsonDouble(json['resultado_dia']),
       objetivoDia: _jsonDouble(json['objetivo_dia']),
-      resultadoAcumuladoAFecha: _jsonDouble(json['resultado_acumulado_a_fecha']),
+      resultadoAcumuladoAFecha: _jsonDouble(
+        json['resultado_acumulado_a_fecha'],
+      ),
       objetivoAcumuladoAFecha: _jsonDouble(json['objetivo_acumulado_a_fecha']),
       progresoDiaPct: _jsonDouble(json['progreso_dia_pct']) ?? 0,
       progresoAcumuladoPct: _jsonDouble(json['progreso_acumulado_pct']) ?? 0,
@@ -5726,9 +6491,7 @@ class KpisSectorDiaResponse {
     if (rawKpis is List) {
       for (final item in rawKpis) {
         if (item is Map) {
-          kpis.add(
-            KpisSectorDiaItem.fromJson(Map<String, dynamic>.from(item)),
-          );
+          kpis.add(KpisSectorDiaItem.fromJson(Map<String, dynamic>.from(item)));
         }
       }
     }
