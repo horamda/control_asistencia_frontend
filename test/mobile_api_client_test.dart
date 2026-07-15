@@ -10,6 +10,144 @@ import 'package:ficharqr/src/core/network/mobile_api_client.dart';
 import 'package:ficharqr/src/core/network/skap_api_models.dart';
 
 void main() {
+  test('pedido de mercaderia envia y parsea bultos y unidades', () async {
+    final client = _QueuedClient([
+      _QueuedReply(
+        statusCode: 201,
+        body: const <String, dynamic>{
+          'id': 31,
+          'periodo': '2026-07',
+          'estado': 'pendiente',
+          'cantidad_items': 1,
+          'total_bultos': 2,
+          'total_unidades': 29,
+          'items': [
+            {
+              'id': 91,
+              'articulo_id': 15,
+              'descripcion': 'Galletitas',
+              'unidades_por_bulto': 12,
+              'cantidad_bultos': 2,
+              'cantidad_unidades': 5,
+              'total_unidades': 29,
+            },
+          ],
+        },
+        inspect: (request) {
+          expect(request, isA<http.Request>());
+          final body = jsonDecode((request as http.Request).body);
+          expect(body['items'], [
+            {'articulo_id': 15, 'cantidad_bultos': 2, 'cantidad_unidades': 5},
+          ]);
+        },
+      ),
+    ]);
+    final apiClient = MobileApiClient(
+      baseUrl: 'https://example.com',
+      httpClient: client,
+    );
+
+    final result = await apiClient.createPedidoMercaderia(
+      token: 'abc',
+      items: const [
+        PedidoMercaderiaLinea(
+          articuloId: 15,
+          cantidadBultos: 2,
+          cantidadUnidades: 5,
+        ),
+      ],
+    );
+
+    expect(result.totalBultos, 2);
+    expect(result.totalUnidades, 29);
+    expect(result.items.single.cantidadUnidades, 5);
+    expect(result.items.single.totalUnidades, 29);
+    apiClient.dispose();
+  });
+
+  test('edicion de pedido preserva unidades sin bultos', () async {
+    final client = _QueuedClient([
+      _QueuedReply(
+        statusCode: 200,
+        body: const <String, dynamic>{
+          'id': 31,
+          'total_bultos': 0,
+          'total_unidades': 7,
+          'items': [
+            {
+              'id': 91,
+              'articulo_id': 15,
+              'cantidad_bultos': 0,
+              'cantidad_unidades': 7,
+              'total_unidades': 7,
+            },
+          ],
+        },
+        inspect: (request) {
+          expect(request.method, 'PUT');
+          final body = jsonDecode((request as http.Request).body);
+          expect(body['items'].single['cantidad_bultos'], 0);
+          expect(body['items'].single['cantidad_unidades'], 7);
+        },
+      ),
+    ]);
+    final apiClient = MobileApiClient(
+      baseUrl: 'https://example.com',
+      httpClient: client,
+    );
+
+    final result = await apiClient.updatePedidoMercaderia(
+      token: 'abc',
+      id: 31,
+      items: const [PedidoMercaderiaLinea(articuloId: 15, cantidadUnidades: 7)],
+    );
+
+    expect(result.items.single.cantidadBultos, 0);
+    expect(result.items.single.cantidadUnidades, 7);
+    apiClient.dispose();
+  });
+
+  test('un 403 no refresca token ni cierra la sesion', () async {
+    final client = _QueuedClient([
+      _QueuedReply(
+        statusCode: 403,
+        body: const <String, dynamic>{'error': 'Operacion no permitida.'},
+      ),
+    ]);
+    final apiClient = MobileApiClient(
+      baseUrl: 'https://example.com',
+      httpClient: client,
+    );
+    var refreshCalls = 0;
+    var unauthorizedCalls = 0;
+    apiClient.configureAuth(
+      onUnauthorizedRefresh: (_) async {
+        refreshCalls += 1;
+        return 'fresh-token';
+      },
+      onUnauthorized: () async {
+        unauthorizedCalls += 1;
+      },
+    );
+
+    await expectLater(
+      apiClient.getMe(token: 'valid-token'),
+      throwsA(
+        isA<ApiException>()
+            .having((error) => error.statusCode, 'statusCode', 403)
+            .having(
+              (error) => error.message,
+              'message',
+              'Operacion no permitida.',
+            ),
+      ),
+    );
+    expect(refreshCalls, 0);
+    expect(unauthorizedCalls, 0);
+    expect(client.callCount, 1);
+    apiClient.dispose();
+  });
+
   test(
     'updatePerfilConFotoFile refresca token y reintenta upload multipart',
     () async {
@@ -195,7 +333,8 @@ void main() {
           inspect: (request) {
             expect(request, isA<http.Request>());
             final httpRequest = request as http.Request;
-            final payload = jsonDecode(httpRequest.body) as Map<String, dynamic>;
+            final payload =
+                jsonDecode(httpRequest.body) as Map<String, dynamic>;
             expect(payload['motivo'], 'Reposo prolongado');
             expect(payload['fecha_desde'], '2026-06-01');
             expect(payload['fecha_hasta'], '2026-06-03');

@@ -96,9 +96,7 @@ class _AuthGatePageState extends State<AuthGatePage> {
     // Upgrade al cliente con certificate pinning en cuanto el asset este listo.
     // Si el asset no existe todavia, PinnedHttpClient.create() devuelve un
     // http.Client() estandar sin lanzar excepcion (ver pinned_http_client.dart).
-    unawaited(
-      PinnedHttpClient.create().then(_apiClient.upgradeHttpClient),
-    );
+    unawaited(PinnedHttpClient.create().then(_apiClient.upgradeHttpClient));
   }
 
   void _scheduleDevicePermissionBootstrap() {
@@ -126,7 +124,8 @@ class _AuthGatePageState extends State<AuthGatePage> {
 
   Future<void> _bootstrapDevicePermissions({required String sessionKey}) async {
     try {
-      final result = await _devicePermissionBootstrap.ensureRequestedAfterLogin();
+      final result = await _devicePermissionBootstrap
+          .ensureRequestedAfterLogin();
       if (!mounted || _currentSessionPermissionKey() != sessionKey) {
         return;
       }
@@ -258,7 +257,7 @@ class _AuthGatePageState extends State<AuthGatePage> {
       await _onLoginSuccess(session);
     } on ApiException catch (e) {
       if (!mounted) return;
-      if (e.statusCode == 401 || e.statusCode == 403) {
+      if (e.statusCode == 401) {
         await _biometricCredentialCache.clear();
         if (!mounted) return;
         setState(() {
@@ -339,8 +338,7 @@ class _AuthGatePageState extends State<AuthGatePage> {
             : null,
         biometricLoading: _sessionManager.isBiometricLoading,
         biometricReauthLoading: _biometricReauthApiLoading,
-        biometricError:
-            _sessionManager.statusMessage ?? _biometricReauthError,
+        biometricError: _sessionManager.statusMessage ?? _biometricReauthError,
       );
     }
 
@@ -380,10 +378,9 @@ class _SessionLockedView extends StatelessWidget {
           builder: (context, constraints) {
             final horizontalPadding = constraints.maxWidth < 600 ? 12.0 : 20.0;
             final verticalPadding = constraints.maxHeight < 700 ? 12.0 : 24.0;
-            final minHeight =
-                (constraints.maxHeight - (verticalPadding * 2))
-                    .clamp(0.0, double.infinity)
-                    .toDouble();
+            final minHeight = (constraints.maxHeight - (verticalPadding * 2))
+                .clamp(0.0, double.infinity)
+                .toDouble();
             return SingleChildScrollView(
               padding: EdgeInsets.symmetric(
                 horizontal: horizontalPadding,

@@ -64,7 +64,7 @@ class _JustificacionesTestClient extends http.BaseClient {
         'archivo': null,
         'legajo_evento_id': 99,
         'adjuntos_count': 1,
-        'adjuntos': const <Map<String, dynamic>>[
+        'adjuntos': <Map<String, dynamic>>[
           {
             'id': 88,
             'evento_id': 99,
@@ -90,7 +90,7 @@ class _JustificacionesTestClient extends http.BaseClient {
         }
         _listServed = true;
         return _jsonResponse(const <String, dynamic>{
-          'items': const <Map<String, dynamic>>[
+          'items': <Map<String, dynamic>>[
             {
               'id': 10,
               'asistencia_id': null,

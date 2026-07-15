@@ -473,7 +473,7 @@ class SessionManager extends ChangeNotifier {
   }
 
   bool _isUnauthorized(ApiException error) {
-    return error.statusCode == 401 || error.statusCode == 403;
+    return error.statusCode == 401;
   }
 
   void _startSessionTimers() {

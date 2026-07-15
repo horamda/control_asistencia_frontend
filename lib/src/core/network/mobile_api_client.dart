@@ -395,7 +395,9 @@ class MobileApiClient {
     if (fechaHasta != null && fechaHasta.trim().isNotEmpty) {
       body['fecha_hasta'] = fechaHasta.trim();
     }
-    if (!body.containsKey('fecha_desde') && fecha != null && fecha.trim().isNotEmpty) {
+    if (!body.containsKey('fecha_desde') &&
+        fecha != null &&
+        fecha.trim().isNotEmpty) {
       body['fecha'] = fecha.trim();
     }
     if (asistenciaId != null) body['asistencia_id'] = asistenciaId;
@@ -429,10 +431,12 @@ class MobileApiClient {
       uri: _uri('/me/justificaciones'),
       fields: <String, String>{
         'motivo': motivo.trim(),
-        if (fechaDesde != null && fechaDesde.trim().isNotEmpty) 'fecha_desde': fechaDesde.trim(),
-        if (fechaHasta != null && fechaHasta.trim().isNotEmpty) 'fecha_hasta': fechaHasta.trim(),
+        if (fechaDesde != null && fechaDesde.trim().isNotEmpty)
+          'fecha_desde': fechaDesde.trim(),
+        if (fechaHasta != null && fechaHasta.trim().isNotEmpty)
+          'fecha_hasta': fechaHasta.trim(),
         if (!((fechaDesde != null && fechaDesde.trim().isNotEmpty) ||
-            (fechaHasta != null && fechaHasta.trim().isNotEmpty)) &&
+                (fechaHasta != null && fechaHasta.trim().isNotEmpty)) &&
             fecha != null &&
             fecha.trim().isNotEmpty)
           'fecha': fecha.trim(),
@@ -1151,7 +1155,11 @@ class MobileApiClient {
     if (fechaHasta != null && fechaHasta.trim().isNotEmpty) {
       body['fecha_hasta'] = fechaHasta.trim();
     }
-    if (!body.containsKey('fecha_desde') && fecha != null && fecha.trim().isNotEmpty) body['fecha'] = fecha.trim();
+    if (!body.containsKey('fecha_desde') &&
+        fecha != null &&
+        fecha.trim().isNotEmpty) {
+      body['fecha'] = fecha.trim();
+    }
     if (asistenciaId != null) {
       body['asistencia_id'] = asistenciaId;
     } else if (clearAsistencia) {
@@ -1187,10 +1195,12 @@ class MobileApiClient {
       uri: _uri('/me/justificaciones/$id'),
       fields: <String, String>{
         if (motivo != null) 'motivo': motivo.trim(),
-        if (fechaDesde != null && fechaDesde.trim().isNotEmpty) 'fecha_desde': fechaDesde.trim(),
-        if (fechaHasta != null && fechaHasta.trim().isNotEmpty) 'fecha_hasta': fechaHasta.trim(),
+        if (fechaDesde != null && fechaDesde.trim().isNotEmpty)
+          'fecha_desde': fechaDesde.trim(),
+        if (fechaHasta != null && fechaHasta.trim().isNotEmpty)
+          'fecha_hasta': fechaHasta.trim(),
         if (!((fechaDesde != null && fechaDesde.trim().isNotEmpty) ||
-            (fechaHasta != null && fechaHasta.trim().isNotEmpty)) &&
+                (fechaHasta != null && fechaHasta.trim().isNotEmpty)) &&
             fecha != null &&
             fecha.trim().isNotEmpty)
           'fecha': fecha.trim(),
@@ -1631,7 +1641,11 @@ class MobileApiClient {
       body: jsonEncode({
         'items': [
           for (final i in items)
-            {'articulo_id': i.articuloId, 'cantidad_bultos': i.cantidadBultos},
+            {
+              'articulo_id': i.articuloId,
+              'cantidad_bultos': i.cantidadBultos,
+              'cantidad_unidades': i.cantidadUnidades,
+            },
         ],
       }),
       actionLabel: 'crear pedido de mercadería',
@@ -1661,7 +1675,11 @@ class MobileApiClient {
       body: jsonEncode({
         'items': [
           for (final i in items)
-            {'articulo_id': i.articuloId, 'cantidad_bultos': i.cantidadBultos},
+            {
+              'articulo_id': i.articuloId,
+              'cantidad_bultos': i.cantidadBultos,
+              'cantidad_unidades': i.cantidadUnidades,
+            },
         ],
       }),
       actionLabel: 'actualizar pedido de mercadería',
@@ -2827,8 +2845,9 @@ class MobileApiClient {
     required bool allowAuthRecovery,
     required Future<http.Response> Function(Map<String, String> headers) sender,
   }) async {
-    if (!allowAuthRecovery ||
-        (response.statusCode != 401 && response.statusCode != 403)) {
+    // Un 403 es una denegacion de negocio/permisos con un token valido.
+    // Solo un 401 indica que corresponde renovar la autenticacion.
+    if (!allowAuthRecovery || response.statusCode != 401) {
       return response;
     }
     final authHeader = headers['Authorization'] ?? '';
@@ -2861,8 +2880,7 @@ class MobileApiClient {
       final retried = await sender(
         nextHeaders,
       ).timeout(const Duration(seconds: 15));
-      if ((retried.statusCode == 401 || retried.statusCode == 403) &&
-          _onUnauthorized != null) {
+      if (retried.statusCode == 401 && _onUnauthorized != null) {
         await _onUnauthorized!.call();
       }
       return retried;
@@ -3016,8 +3034,7 @@ class MobileApiClient {
       initialStreamedResponse,
     );
     if (!allowAuthRecovery ||
-        (initialResponse.statusCode != 401 &&
-            initialResponse.statusCode != 403) ||
+        initialResponse.statusCode != 401 ||
         initialToken.isEmpty) {
       return initialResponse;
     }
@@ -3046,9 +3063,7 @@ class MobileApiClient {
       final retryResponse = await http.Response.fromStream(
         retryStreamedResponse,
       );
-      if ((retryResponse.statusCode == 401 ||
-              retryResponse.statusCode == 403) &&
-          _onUnauthorized != null) {
+      if (retryResponse.statusCode == 401 && _onUnauthorized != null) {
         await _onUnauthorized!.call();
       }
       return retryResponse;
@@ -4318,11 +4333,13 @@ class AdelantoEstadoResponse {
 class PedidoMercaderiaLinea {
   const PedidoMercaderiaLinea({
     required this.articuloId,
-    required this.cantidadBultos,
+    this.cantidadBultos = 0,
+    this.cantidadUnidades = 0,
   });
 
   final int articuloId;
   final int cantidadBultos;
+  final int cantidadUnidades;
 }
 
 class PedidoMercaderiaItemLinea {
@@ -4333,6 +4350,8 @@ class PedidoMercaderiaItemLinea {
     this.descripcion,
     this.unidadesPorBulto,
     required this.cantidadBultos,
+    required this.cantidadUnidades,
+    required this.totalUnidades,
   });
 
   final int id;
@@ -4341,6 +4360,8 @@ class PedidoMercaderiaItemLinea {
   final String? descripcion;
   final int? unidadesPorBulto;
   final int cantidadBultos;
+  final int cantidadUnidades;
+  final int totalUnidades;
 
   factory PedidoMercaderiaItemLinea.fromJson(Map<String, dynamic> json) {
     return PedidoMercaderiaItemLinea(
@@ -4350,6 +4371,8 @@ class PedidoMercaderiaItemLinea {
       descripcion: _jsonString(json['descripcion']),
       unidadesPorBulto: _jsonInt(json['unidades_por_bulto']),
       cantidadBultos: _jsonInt(json['cantidad_bultos']) ?? 0,
+      cantidadUnidades: _jsonInt(json['cantidad_unidades']) ?? 0,
+      totalUnidades: _jsonInt(json['total_unidades']) ?? 0,
     );
   }
 }
@@ -4364,6 +4387,7 @@ class PedidoMercaderiaItem {
     this.estado,
     this.cantidadItems,
     this.totalBultos,
+    this.totalUnidades,
     this.motivoRechazo,
     this.createdAt,
     this.resueltaAt,
@@ -4379,6 +4403,7 @@ class PedidoMercaderiaItem {
   final String? estado;
   final int? cantidadItems;
   final int? totalBultos;
+  final int? totalUnidades;
   final String? motivoRechazo;
   final String? createdAt;
   final String? resueltaAt;
@@ -4408,6 +4433,7 @@ class PedidoMercaderiaItem {
       estado: _jsonString(json['estado']),
       cantidadItems: _jsonInt(json['cantidad_items']),
       totalBultos: _jsonInt(json['total_bultos']),
+      totalUnidades: _jsonInt(json['total_unidades']),
       motivoRechazo: _jsonString(json['motivo_rechazo']),
       createdAt: _jsonString(json['created_at']),
       resueltaAt: _jsonString(json['resuelto_at']),

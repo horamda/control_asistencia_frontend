@@ -159,25 +159,27 @@ class _JustificacionesPageState extends State<JustificacionesPage> {
     final detailItem = await _loadJustificacionDetail(item);
     if (!mounted) return;
 
-    showModalBottomSheet<void>(
-      context: context,
-      isScrollControlled: true,
-      useSafeArea: true,
-      builder: (_) => _DetailSheet(
-        apiClient: widget.apiClient,
-        item: detailItem,
-        onDelete: detailItem.estado == 'pendiente'
-            ? () {
-                Navigator.of(context).pop();
-                _deleteItem(detailItem);
-              }
-            : null,
-        onEdit: detailItem.estado == 'pendiente'
-            ? () {
-                Navigator.of(context).pop();
-                unawaited(_showEditSheet(detailItem));
-              }
-            : null,
+    unawaited(
+      showModalBottomSheet<void>(
+        context: context,
+        isScrollControlled: true,
+        useSafeArea: true,
+        builder: (_) => _DetailSheet(
+          apiClient: widget.apiClient,
+          item: detailItem,
+          onDelete: detailItem.estado == 'pendiente'
+              ? () {
+                  Navigator.of(context).pop();
+                  _deleteItem(detailItem);
+                }
+              : null,
+          onEdit: detailItem.estado == 'pendiente'
+              ? () {
+                  Navigator.of(context).pop();
+                  unawaited(_showEditSheet(detailItem));
+                }
+              : null,
+        ),
       ),
     );
   }
@@ -800,8 +802,8 @@ class _DetailSheet extends StatelessWidget {
                     label: item.hasFechaRange
                         ? 'Periodo justificado'
                         : (item.asistenciaFecha != null
-                            ? 'Fecha de asistencia'
-                            : 'Fecha justificada'),
+                              ? 'Fecha de asistencia'
+                              : 'Fecha justificada'),
                     value: fechaDisplay,
                   ),
                   const SizedBox(height: 12),
@@ -992,7 +994,8 @@ bool _sameDateRange(
   if (fromA == null || toA == null || fromB == null || toB == null) {
     return false;
   }
-  return DateFormatter.formatApiDate(fromA) == DateFormatter.formatApiDate(fromB) &&
+  return DateFormatter.formatApiDate(fromA) ==
+          DateFormatter.formatApiDate(fromB) &&
       DateFormatter.formatApiDate(toA) == DateFormatter.formatApiDate(toB);
 }
 
@@ -1011,6 +1014,7 @@ class _CreateJustificacionSheet extends StatefulWidget {
 }
 
 class _CreateJustificacionSheetState extends State<_CreateJustificacionSheet> {
+  static const int _maxAdjuntos = 10;
   final TextEditingController _motivoCtrl = TextEditingController();
   final List<_DraftJustificacionAdjunto> _adjuntos = [];
   DateTime? _selectedFechaDesde;
@@ -1034,6 +1038,10 @@ class _CreateJustificacionSheetState extends State<_CreateJustificacionSheet> {
       setState(() => _error = 'El motivo es requerido.');
       return;
     }
+    if (_selectedFechaDesde == null || _selectedFechaHasta == null) {
+      setState(() => _error = 'Selecciona el periodo de la justificacion.');
+      return;
+    }
     setState(() {
       _saving = true;
       _error = null;
@@ -1044,11 +1052,14 @@ class _CreateJustificacionSheetState extends State<_CreateJustificacionSheet> {
       await widget.apiClient.createJustificacion(
         token: widget.token,
         motivo: motivo,
-        fechaDesde: fechaDesde != null ? DateFormatter.formatApiDate(fechaDesde) : null,
-        fechaHasta: fechaHasta != null ? DateFormatter.formatApiDate(fechaHasta) : null,
-        asistenciaId: fechaDesde != null &&
-                fechaHasta != null &&
-                fechaDesde == fechaHasta
+        fechaDesde: fechaDesde != null
+            ? DateFormatter.formatApiDate(fechaDesde)
+            : null,
+        fechaHasta: fechaHasta != null
+            ? DateFormatter.formatApiDate(fechaHasta)
+            : null,
+        asistenciaId:
+            fechaDesde != null && fechaHasta != null && fechaDesde == fechaHasta
             ? _selectedAsistencia?.id
             : null,
         adjuntos: _adjuntos.map((item) => item.upload).toList(),
@@ -1072,7 +1083,8 @@ class _CreateJustificacionSheetState extends State<_CreateJustificacionSheet> {
     }
 
     final today = DateTime.now();
-    final initialRange = _selectedFechaDesde != null && _selectedFechaHasta != null
+    final initialRange =
+        _selectedFechaDesde != null && _selectedFechaHasta != null
         ? DateTimeRange(start: _selectedFechaDesde!, end: _selectedFechaHasta!)
         : DateTimeRange(start: today, end: today);
     final picked = await showDateRangePicker(
@@ -1087,8 +1099,16 @@ class _CreateJustificacionSheetState extends State<_CreateJustificacionSheet> {
     }
 
     setState(() {
-      _selectedFechaDesde = DateTime(picked.start.year, picked.start.month, picked.start.day);
-      _selectedFechaHasta = DateTime(picked.end.year, picked.end.month, picked.end.day);
+      _selectedFechaDesde = DateTime(
+        picked.start.year,
+        picked.start.month,
+        picked.start.day,
+      );
+      _selectedFechaHasta = DateTime(
+        picked.end.year,
+        picked.end.month,
+        picked.end.day,
+      );
       _selectedAsistencia = null;
       _pickingAsistencia = true;
       _error = null;
@@ -1183,9 +1203,17 @@ class _CreateJustificacionSheetState extends State<_CreateJustificacionSheet> {
     try {
       final picked = switch (source) {
         _AttachmentSourceChoice.camera => await _pickCameraAttachments(),
+        _AttachmentSourceChoice.gallery => await _pickGalleryAttachments(),
         _AttachmentSourceChoice.file => await _pickFileAttachments(),
       };
       if (!mounted || picked.isEmpty) {
+        return;
+      }
+      final disponibles = _maxAdjuntos - _adjuntos.length;
+      if (disponibles <= 0 || picked.length > disponibles) {
+        setState(
+          () => _error = 'Puedes adjuntar hasta $_maxAdjuntos archivos.',
+        );
         return;
       }
       setState(() => _adjuntos.addAll(picked));
@@ -1282,12 +1310,15 @@ class _CreateJustificacionSheetState extends State<_CreateJustificacionSheet> {
                           )
                         : const Icon(Icons.event_outlined),
                     label: Text(
-                      _formatSelectedRange(_selectedFechaDesde, _selectedFechaHasta),
+                      _formatSelectedRange(
+                        _selectedFechaDesde,
+                        _selectedFechaHasta,
+                      ),
                     ),
                   ),
                   const SizedBox(height: 8),
                   Text(
-                    'Opcional. Si existe una asistencia en una fecha unica, puedes vincularla; si no, se guarda solo con el periodo.',
+                    'Obligatorio. Puedes elegir un solo dia o un rango. La asistencia se vincula automaticamente cuando corresponde.',
                     style: Theme.of(
                       context,
                     ).textTheme.bodySmall?.copyWith(color: cs.onSurfaceVariant),
@@ -1427,6 +1458,7 @@ class _EditJustificacionSheet extends StatefulWidget {
 }
 
 class _EditJustificacionSheetState extends State<_EditJustificacionSheet> {
+  static const int _maxAdjuntos = 10;
   late final TextEditingController _motivoCtrl;
   final List<_DraftJustificacionAdjunto> _adjuntos = [];
   DateTime? _initialFechaDesde;
@@ -1443,10 +1475,16 @@ class _EditJustificacionSheetState extends State<_EditJustificacionSheet> {
     super.initState();
     _motivoCtrl = TextEditingController(text: widget.item.motivo ?? '');
     final parsedDesde = DateFormatter.parseFlexibleDate(
-      widget.item.fechaDesde ?? widget.item.fecha ?? widget.item.asistenciaFecha ?? '',
+      widget.item.fechaDesde ??
+          widget.item.fecha ??
+          widget.item.asistenciaFecha ??
+          '',
     );
     final parsedHasta = DateFormatter.parseFlexibleDate(
-      widget.item.fechaHasta ?? widget.item.fecha ?? widget.item.asistenciaFecha ?? '',
+      widget.item.fechaHasta ??
+          widget.item.fecha ??
+          widget.item.asistenciaFecha ??
+          '',
     );
     _initialFechaDesde = parsedDesde;
     _initialFechaHasta = parsedHasta ?? parsedDesde;
@@ -1466,6 +1504,10 @@ class _EditJustificacionSheetState extends State<_EditJustificacionSheet> {
       setState(() => _error = 'El motivo es requerido.');
       return;
     }
+    if (_selectedFechaDesde == null || _selectedFechaHasta == null) {
+      setState(() => _error = 'Selecciona el periodo de la justificacion.');
+      return;
+    }
     setState(() {
       _saving = true;
       _error = null;
@@ -1483,18 +1525,24 @@ class _EditJustificacionSheetState extends State<_EditJustificacionSheet> {
         token: widget.token,
         id: widget.item.id,
         motivo: motivo,
-        fechaDesde: fechaDesde != null ? DateFormatter.formatApiDate(fechaDesde) : null,
-        fechaHasta: fechaHasta != null ? DateFormatter.formatApiDate(fechaHasta) : null,
-        asistenciaId: periodoSinCambios &&
+        fechaDesde: fechaDesde != null
+            ? DateFormatter.formatApiDate(fechaDesde)
+            : null,
+        fechaHasta: fechaHasta != null
+            ? DateFormatter.formatApiDate(fechaHasta)
+            : null,
+        asistenciaId:
+            periodoSinCambios &&
                 fechaDesde != null &&
                 fechaHasta != null &&
                 fechaDesde == fechaHasta
             ? widget.item.asistenciaId
             : null,
-        clearAsistencia: !(periodoSinCambios &&
-            fechaDesde != null &&
-            fechaHasta != null &&
-            fechaDesde == fechaHasta),
+        clearAsistencia:
+            !(periodoSinCambios &&
+                fechaDesde != null &&
+                fechaHasta != null &&
+                fechaDesde == fechaHasta),
         adjuntos: _adjuntos.map((item) => item.upload).toList(),
       );
       if (!mounted) return;
@@ -1516,7 +1564,8 @@ class _EditJustificacionSheetState extends State<_EditJustificacionSheet> {
     }
 
     final today = DateTime.now();
-    final initialRange = _selectedFechaDesde != null && _selectedFechaHasta != null
+    final initialRange =
+        _selectedFechaDesde != null && _selectedFechaHasta != null
         ? DateTimeRange(start: _selectedFechaDesde!, end: _selectedFechaHasta!)
         : DateTimeRange(start: today, end: today);
     setState(() {
@@ -1535,8 +1584,16 @@ class _EditJustificacionSheetState extends State<_EditJustificacionSheet> {
       }
 
       setState(() {
-        _selectedFechaDesde = DateTime(picked.start.year, picked.start.month, picked.start.day);
-        _selectedFechaHasta = DateTime(picked.end.year, picked.end.month, picked.end.day);
+        _selectedFechaDesde = DateTime(
+          picked.start.year,
+          picked.start.month,
+          picked.start.day,
+        );
+        _selectedFechaHasta = DateTime(
+          picked.end.year,
+          picked.end.month,
+          picked.end.day,
+        );
         _error = null;
       });
     } finally {
@@ -1561,9 +1618,18 @@ class _EditJustificacionSheetState extends State<_EditJustificacionSheet> {
     try {
       final picked = switch (source) {
         _AttachmentSourceChoice.camera => await _pickCameraAttachments(),
+        _AttachmentSourceChoice.gallery => await _pickGalleryAttachments(),
         _AttachmentSourceChoice.file => await _pickFileAttachments(),
       };
       if (!mounted || picked.isEmpty) {
+        return;
+      }
+      final disponibles =
+          _maxAdjuntos - widget.item.effectiveAdjuntosCount - _adjuntos.length;
+      if (disponibles <= 0 || picked.length > disponibles) {
+        setState(
+          () => _error = 'Puedes tener hasta $_maxAdjuntos archivos en total.',
+        );
         return;
       }
       setState(() => _adjuntos.addAll(picked));
@@ -1650,7 +1716,8 @@ class _EditJustificacionSheetState extends State<_EditJustificacionSheet> {
                     ),
                     const SizedBox(height: 8),
                     OutlinedButton.icon(
-                      onPressed: (_saving || _pickingAttachment || _pickingPeriodo)
+                      onPressed:
+                          (_saving || _pickingAttachment || _pickingPeriodo)
                           ? null
                           : _pickPeriodo,
                       icon: _pickingPeriodo
@@ -1660,10 +1727,12 @@ class _EditJustificacionSheetState extends State<_EditJustificacionSheet> {
                               child: CircularProgressIndicator(strokeWidth: 2),
                             )
                           : const Icon(Icons.event_outlined),
-                      label: Text(_formatSelectedRange(
-                        _selectedFechaDesde,
-                        _selectedFechaHasta,
-                      )),
+                      label: Text(
+                        _formatSelectedRange(
+                          _selectedFechaDesde,
+                          _selectedFechaHasta,
+                        ),
+                      ),
                     ),
                     const SizedBox(height: 8),
                     Text(
@@ -1808,7 +1877,7 @@ class _EditJustificacionSheetState extends State<_EditJustificacionSheet> {
   }
 }
 
-enum _AttachmentSourceChoice { camera, file }
+enum _AttachmentSourceChoice { camera, gallery, file }
 
 class _DraftJustificacionAdjunto {
   const _DraftJustificacionAdjunto({
@@ -1918,6 +1987,15 @@ Future<_AttachmentSourceChoice?> _showAttachmentSourceSheet(
                     Navigator.pop(sheetContext, _AttachmentSourceChoice.camera),
                 icon: const Icon(Icons.photo_camera_outlined),
                 label: const Text('Tomar foto'),
+              ),
+              const SizedBox(height: 10),
+              OutlinedButton.icon(
+                onPressed: () => Navigator.pop(
+                  sheetContext,
+                  _AttachmentSourceChoice.gallery,
+                ),
+                icon: const Icon(Icons.photo_library_outlined),
+                label: const Text('Elegir de la galeria'),
               ),
               const SizedBox(height: 10),
               OutlinedButton.icon(
@@ -2119,6 +2197,36 @@ Future<List<_DraftJustificacionAdjunto>> _pickCameraAttachments() async {
       sizeBytes: bytes.length,
     ),
   ];
+}
+
+Future<List<_DraftJustificacionAdjunto>> _pickGalleryAttachments() async {
+  final images = await ImagePicker().pickMultiImage(
+    imageQuality: 85,
+    maxWidth: 2048,
+    maxHeight: 2048,
+    requestFullMetadata: false,
+  );
+  final items = <_DraftJustificacionAdjunto>[];
+  for (final image in images) {
+    final bytes = await image.readAsBytes();
+    if (bytes.isEmpty) continue;
+    final filename = _normalizeAttachmentFilename(
+      image.name,
+      fallbackExtension: 'jpg',
+    );
+    items.add(
+      _DraftJustificacionAdjunto(
+        upload: JustificacionAdjuntoUpload(
+          filename: filename,
+          bytes: bytes,
+          sizeBytes: bytes.length,
+        ),
+        name: filename,
+        sizeBytes: bytes.length,
+      ),
+    );
+  }
+  return items;
 }
 
 Future<List<_DraftJustificacionAdjunto>> _pickFileAttachments() async {

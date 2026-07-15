@@ -30,6 +30,7 @@ class _PedidosMercaderiaPageState extends State<PedidosMercaderiaPage> {
   static const _per = 20;
 
   PedidoMercaderiaEstadoResponse? _estado;
+  PedidoMercaderiaItem? _ultimoPedidoAprobado;
 
   @override
   void initState() {
@@ -53,6 +54,17 @@ class _PedidosMercaderiaPageState extends State<PedidosMercaderiaPage> {
         ),
         widget.apiClient.getPedidosMercaderiaEstado(token: widget.token),
       ]);
+      // El resumen (para "repetir pedido anterior") se pide aparte y no bloquea
+      // la carga principal si falla.
+      PedidoMercaderiaItem? ultimoAprobado;
+      try {
+        final resumen = await widget.apiClient.getPedidosMercaderiaResumen(
+          token: widget.token,
+        );
+        ultimoAprobado = resumen.ultimoPedidoAprobado;
+      } catch (_) {
+        ultimoAprobado = null;
+      }
       if (!mounted) return;
       final page = results[0] as PedidosMercaderiaPageResult;
       final estado = results[1] as PedidoMercaderiaEstadoResponse;
@@ -60,6 +72,7 @@ class _PedidosMercaderiaPageState extends State<PedidosMercaderiaPage> {
         _items = page.items;
         _total = page.total;
         _estado = estado;
+        _ultimoPedidoAprobado = ultimoAprobado;
         _loading = false;
       });
     } on ApiException catch (e) {
@@ -98,13 +111,17 @@ class _PedidosMercaderiaPageState extends State<PedidosMercaderiaPage> {
     }
   }
 
-  Future<void> _abrir({PedidoMercaderiaItem? existente}) async {
+  Future<void> _abrir({
+    PedidoMercaderiaItem? existente,
+    PedidoMercaderiaItem? plantilla,
+  }) async {
     final result = await Navigator.of(context).push<PedidoMercaderiaItem>(
       MaterialPageRoute(
         builder: (_) => _PedidoFormPage(
           apiClient: widget.apiClient,
           token: widget.token,
           existente: existente,
+          plantilla: plantilla,
         ),
       ),
     );
@@ -140,9 +157,9 @@ class _PedidosMercaderiaPageState extends State<PedidosMercaderiaPage> {
         id: item.id,
       );
       if (!mounted) return;
-      ScaffoldMessenger.of(context).showSnackBar(
-        const SnackBar(content: Text('Pedido cancelado.')),
-      );
+      ScaffoldMessenger.of(
+        context,
+      ).showSnackBar(const SnackBar(content: Text('Pedido cancelado.')));
       unawaited(_load());
     } on ApiException catch (e) {
       if (!mounted) return;
@@ -189,10 +206,7 @@ class _PedidosMercaderiaPageState extends State<PedidosMercaderiaPage> {
               label: const Text('Nuevo pedido'),
             )
           : null,
-      body: RefreshIndicator(
-        onRefresh: _load,
-        child: _buildBody(),
-      ),
+      body: RefreshIndicator(onRefresh: _load, child: _buildBody()),
     );
   }
 
@@ -221,44 +235,74 @@ class _PedidosMercaderiaPageState extends State<PedidosMercaderiaPage> {
       );
     }
 
-    return NotificationListener<ScrollNotification>(
-      onNotification: (n) {
-        if (n.metrics.pixels >= n.metrics.maxScrollExtent - 100) _loadMore();
-        return false;
+    return LayoutBuilder(
+      builder: (context, constraints) {
+        final maxWidth = constraints.maxWidth >= 1200
+            ? 1040.0
+            : constraints.maxWidth >= 900
+            ? 900.0
+            : double.infinity;
+        final hPad = constraints.maxWidth < 600 ? 16.0 : 24.0;
+        return NotificationListener<ScrollNotification>(
+          onNotification: (n) {
+            if (n.metrics.pixels >= n.metrics.maxScrollExtent - 100) {
+              _loadMore();
+            }
+            return false;
+          },
+          child: Center(
+            child: ConstrainedBox(
+              constraints: BoxConstraints(maxWidth: maxWidth),
+              child: ListView.builder(
+                physics: const AlwaysScrollableScrollPhysics(),
+                padding: EdgeInsets.fromLTRB(
+                  hPad,
+                  12,
+                  hPad,
+                  _puedeCrear ? 88 : 16,
+                ),
+                itemCount:
+                    1 +
+                    (_items.isNotEmpty ? _items.length : 1) +
+                    (_loadingMore ? 1 : 0),
+                itemBuilder: (context, index) {
+                  // Índice 0: banner de estado del mes actual
+                  if (index == 0) return _buildPeriodoBanner();
+
+                  final listIndex = index - 1;
+
+                  if (_items.isEmpty && listIndex == 0) {
+                    return const Padding(
+                      padding: EdgeInsets.only(top: 32),
+                      child: Center(
+                        child: Text('No hay pedidos de mercadería.'),
+                      ),
+                    );
+                  }
+                  if (_items.isNotEmpty && listIndex == _items.length) {
+                    return const Padding(
+                      padding: EdgeInsets.all(16),
+                      child: Center(
+                        child: CircularProgressIndicator(strokeWidth: 2),
+                      ),
+                    );
+                  }
+                  final item = _items[listIndex];
+                  return _PedidoCard(
+                    item: item,
+                    onEditar: item.estado == 'pendiente'
+                        ? () => _abrir(existente: item)
+                        : null,
+                    onCancelar: item.estado == 'pendiente'
+                        ? () => _cancelar(item)
+                        : null,
+                  );
+                },
+              ),
+            ),
+          ),
+        );
       },
-      child: ListView.builder(
-        physics: const AlwaysScrollableScrollPhysics(),
-        padding: EdgeInsets.fromLTRB(16, 12, 16, _puedeCrear ? 88 : 16),
-        itemCount: 1 + (_items.isNotEmpty ? _items.length : 1) + (_loadingMore ? 1 : 0),
-        itemBuilder: (context, index) {
-          // Índice 0: banner de estado del mes actual
-          if (index == 0) return _buildPeriodoBanner();
-
-          final listIndex = index - 1;
-
-          if (_items.isEmpty && listIndex == 0) {
-            return const Padding(
-              padding: EdgeInsets.only(top: 32),
-              child: Center(child: Text('No hay pedidos de mercadería.')),
-            );
-          }
-          if (_items.isNotEmpty && listIndex == _items.length) {
-            return const Padding(
-              padding: EdgeInsets.all(16),
-              child: Center(child: CircularProgressIndicator(strokeWidth: 2)),
-            );
-          }
-          final item = _items[listIndex];
-          return _PedidoCard(
-            item: item,
-            onEditar: item.estado == 'pendiente'
-                ? () => _abrir(existente: item)
-                : null,
-            onCancelar:
-                item.estado == 'pendiente' ? () => _cancelar(item) : null,
-          );
-        },
-      ),
     );
   }
 
@@ -267,6 +311,13 @@ class _PedidosMercaderiaPageState extends State<PedidosMercaderiaPage> {
     final cs = Theme.of(context).colorScheme;
     final pedido = _estado!.pedido;
     final periodo = _estado!.periodo;
+
+    final repetirAction = (_puedeCrear && _ultimoPedidoAprobado != null)
+        ? _ContextoBannerAction(
+            label: 'Repetir el anterior',
+            onTap: () => _abrir(plantilla: _ultimoPedidoAprobado),
+          )
+        : null;
 
     if (pedido == null) {
       return _ContextoBanner(
@@ -278,6 +329,7 @@ class _PedidosMercaderiaPageState extends State<PedidosMercaderiaPage> {
                 onTap: () => _abrir(),
               )
             : null,
+        secondaryAction: repetirAction,
         color: cs.primaryContainer,
         onColor: cs.onPrimaryContainer,
       );
@@ -285,40 +337,40 @@ class _PedidosMercaderiaPageState extends State<PedidosMercaderiaPage> {
 
     return switch (pedido.estado) {
       'pendiente' => _ContextoBanner(
-          icon: Icons.pending_outlined,
-          message: 'Tu pedido de $periodo está pendiente de aprobación.',
-          action: _ContextoBannerAction(
-            label: 'Editar',
-            onTap: () => _abrir(existente: pedido),
-          ),
-          color: cs.primaryContainer,
-          onColor: cs.onPrimaryContainer,
+        icon: Icons.pending_outlined,
+        message: 'Tu pedido de $periodo está pendiente de aprobación.',
+        action: _ContextoBannerAction(
+          label: 'Editar',
+          onTap: () => _abrir(existente: pedido),
         ),
+        color: cs.primaryContainer,
+        onColor: cs.onPrimaryContainer,
+      ),
       'aprobado' => _ContextoBanner(
-          icon: Icons.check_circle_outline,
-          message: 'Tu pedido de $periodo fue aprobado.',
-          color: Colors.green.shade100,
-          onColor: Colors.green.shade900,
-        ),
+        icon: Icons.check_circle_outline,
+        message: 'Tu pedido de $periodo fue aprobado.',
+        color: Colors.green.shade100,
+        onColor: Colors.green.shade900,
+      ),
       'rechazado' => _ContextoBanner(
-          icon: Icons.cancel_outlined,
-          message: pedido.motivoRechazo != null
-              ? 'Tu pedido de $periodo fue rechazado: ${pedido.motivoRechazo}'
-              : 'Tu pedido de $periodo fue rechazado.',
-          color: cs.errorContainer,
-          onColor: cs.onErrorContainer,
-        ),
+        icon: Icons.cancel_outlined,
+        message: pedido.motivoRechazo != null
+            ? 'Tu pedido de $periodo fue rechazado: ${pedido.motivoRechazo}'
+            : 'Tu pedido de $periodo fue rechazado.',
+        color: cs.errorContainer,
+        onColor: cs.onErrorContainer,
+      ),
       'cancelado' => _ContextoBanner(
-          icon: Icons.info_outline,
-          message:
-              'Tu pedido de $periodo fue cancelado. Podés armar uno nuevo.',
-          action: _ContextoBannerAction(
-            label: 'Nuevo pedido',
-            onTap: () => _abrir(),
-          ),
-          color: cs.surfaceContainerHighest,
-          onColor: cs.onSurfaceVariant,
+        icon: Icons.info_outline,
+        message: 'Tu pedido de $periodo fue cancelado. Podés armar uno nuevo.',
+        action: _ContextoBannerAction(
+          label: 'Nuevo pedido',
+          onTap: () => _abrir(),
         ),
+        secondaryAction: repetirAction,
+        color: cs.surfaceContainerHighest,
+        onColor: cs.onSurfaceVariant,
+      ),
       _ => const SizedBox.shrink(),
     };
   }
@@ -339,6 +391,7 @@ class _ContextoBanner extends StatelessWidget {
     required this.color,
     required this.onColor,
     this.action,
+    this.secondaryAction,
   });
 
   final IconData icon;
@@ -346,6 +399,7 @@ class _ContextoBanner extends StatelessWidget {
   final Color color;
   final Color onColor;
   final _ContextoBannerAction? action;
+  final _ContextoBannerAction? secondaryAction;
 
   @override
   Widget build(BuildContext context) {
@@ -365,24 +419,42 @@ class _ContextoBanner extends StatelessWidget {
             child: Column(
               crossAxisAlignment: CrossAxisAlignment.start,
               children: [
-                Text(
-                  message,
-                  style: TextStyle(color: onColor, fontSize: 13),
-                ),
-                if (action != null) ...[
+                Text(message, style: TextStyle(color: onColor, fontSize: 13)),
+                if (action != null || secondaryAction != null) ...[
                   const SizedBox(height: 6),
-                  GestureDetector(
-                    onTap: action!.onTap,
-                    child: Text(
-                      action!.label,
-                      style: TextStyle(
-                        color: onColor,
-                        fontSize: 13,
-                        fontWeight: FontWeight.w600,
-                        decoration: TextDecoration.underline,
-                        decorationColor: onColor,
-                      ),
-                    ),
+                  Wrap(
+                    spacing: 16,
+                    runSpacing: 4,
+                    children: [
+                      if (action != null)
+                        GestureDetector(
+                          onTap: action!.onTap,
+                          child: Text(
+                            action!.label,
+                            style: TextStyle(
+                              color: onColor,
+                              fontSize: 13,
+                              fontWeight: FontWeight.w600,
+                              decoration: TextDecoration.underline,
+                              decorationColor: onColor,
+                            ),
+                          ),
+                        ),
+                      if (secondaryAction != null)
+                        GestureDetector(
+                          onTap: secondaryAction!.onTap,
+                          child: Text(
+                            secondaryAction!.label,
+                            style: TextStyle(
+                              color: onColor,
+                              fontSize: 13,
+                              fontWeight: FontWeight.w600,
+                              decoration: TextDecoration.underline,
+                              decorationColor: onColor,
+                            ),
+                          ),
+                        ),
+                    ],
                   ),
                 ],
               ],
@@ -423,14 +495,14 @@ class _PedidoCard extends StatelessWidget {
                     style: const TextStyle(fontWeight: FontWeight.w600),
                   ),
                 ),
-                if (item.totalBultos != null)
+                if (item.totalBultos != null || item.totalUnidades != null)
                   Padding(
                     padding: const EdgeInsets.only(right: 8),
                     child: Text(
-                      '${item.totalBultos} bulto${item.totalBultos == 1 ? '' : 's'}',
+                      '${item.totalBultos ?? 0} bultos · ${item.totalUnidades ?? 0} unidades',
                       style: Theme.of(context).textTheme.bodySmall?.copyWith(
-                            color: cs.onSurfaceVariant,
-                          ),
+                        color: cs.onSurfaceVariant,
+                      ),
                     ),
                   ),
                 _EstadoChip(estado: item.estado),
@@ -453,10 +525,13 @@ class _PedidoCard extends StatelessWidget {
                         ),
                       ),
                       Text(
-                        '${l.cantidadBultos} bulto${l.cantidadBultos == 1 ? '' : 's'}',
+                        _formatPedidoCantidades(
+                          l.cantidadBultos,
+                          l.cantidadUnidades,
+                        ),
                         style: Theme.of(context).textTheme.bodySmall?.copyWith(
-                              color: cs.onSurfaceVariant,
-                            ),
+                          color: cs.onSurfaceVariant,
+                        ),
                       ),
                     ],
                   ),
@@ -473,9 +548,9 @@ class _PedidoCard extends StatelessWidget {
                   Expanded(
                     child: Text(
                       item.motivoRechazo!,
-                      style: Theme.of(context).textTheme.bodySmall?.copyWith(
-                            color: cs.error,
-                          ),
+                      style: Theme.of(
+                        context,
+                      ).textTheme.bodySmall?.copyWith(color: cs.error),
                     ),
                   ),
                 ],
@@ -497,9 +572,7 @@ class _PedidoCard extends StatelessWidget {
                       onPressed: onCancelar,
                       icon: const Icon(Icons.close, size: 18),
                       label: const Text('Cancelar'),
-                      style: TextButton.styleFrom(
-                        foregroundColor: cs.error,
-                      ),
+                      style: TextButton.styleFrom(foregroundColor: cs.error),
                     ),
                 ],
               ),
@@ -521,22 +594,14 @@ class _EstadoChip extends StatelessWidget {
     final cs = Theme.of(context).colorScheme;
     final (label, bg, fg) = switch (estado) {
       'pendiente' => ('Pendiente', cs.primaryContainer, cs.onPrimaryContainer),
-      'aprobado' => (
-          'Aprobado',
-          Colors.green.shade100,
-          Colors.green.shade900,
-        ),
+      'aprobado' => ('Aprobado', Colors.green.shade100, Colors.green.shade900),
       'rechazado' => ('Rechazado', cs.errorContainer, cs.onErrorContainer),
       'cancelado' => (
-          'Cancelado',
-          cs.surfaceContainerHighest,
-          cs.onSurfaceVariant,
-        ),
-      _ => (
-          estado ?? '?',
-          cs.surfaceContainerHighest,
-          cs.onSurfaceVariant,
-        ),
+        'Cancelado',
+        cs.surfaceContainerHighest,
+        cs.onSurfaceVariant,
+      ),
+      _ => (estado ?? '?', cs.surfaceContainerHighest, cs.onSurfaceVariant),
     };
     return Container(
       padding: const EdgeInsets.symmetric(horizontal: 8, vertical: 3),
@@ -546,10 +611,10 @@ class _EstadoChip extends StatelessWidget {
       ),
       child: Text(
         label,
-        style: Theme.of(context)
-            .textTheme
-            .labelSmall
-            ?.copyWith(color: fg, fontWeight: FontWeight.w600),
+        style: Theme.of(context).textTheme.labelSmall?.copyWith(
+          color: fg,
+          fontWeight: FontWeight.w600,
+        ),
       ),
     );
   }
@@ -562,11 +627,15 @@ class _PedidoFormPage extends StatefulWidget {
     required this.apiClient,
     required this.token,
     this.existente,
+    this.plantilla,
   });
 
   final MobileApiClient apiClient;
   final String token;
   final PedidoMercaderiaItem? existente;
+  // Pedido aprobado anterior usado como base para "repetir pedido".
+  // Solo aplica cuando `existente` es null (pedido nuevo).
+  final PedidoMercaderiaItem? plantilla;
 
   @override
   State<_PedidoFormPage> createState() => _PedidoFormPageState();
@@ -591,17 +660,27 @@ class _PedidoFormPageState extends State<_PedidoFormPage> {
   bool _submitting = false;
   String? _submitError;
 
+  late bool _mostrarAvisoPlantilla =
+      widget.plantilla != null && widget.existente == null;
+
   @override
   void initState() {
     super.initState();
-    if (widget.existente != null) {
-      for (final l in widget.existente!.items) {
-        _lineas.add(_LineaEntry(
-          articuloId: l.articuloId,
-          descripcion:
-              l.descripcion ?? l.codigoArticulo ?? 'Artículo #${l.articuloId}',
-          cantidadBultos: l.cantidadBultos,
-        ));
+    final base = widget.existente ?? widget.plantilla;
+    if (base != null) {
+      for (final l in base.items) {
+        _lineas.add(
+          _LineaEntry(
+            articuloId: l.articuloId,
+            descripcion:
+                l.descripcion ??
+                l.codigoArticulo ??
+                'Artículo #${l.articuloId}',
+            cantidadBultos: l.cantidadBultos,
+            cantidadUnidades: l.cantidadUnidades,
+            unidadesPorBulto: l.unidadesPorBulto ?? 0,
+          ),
+        );
       }
     }
     _searchCtrl.addListener(_onQueryChanged);
@@ -641,12 +720,9 @@ class _PedidoFormPageState extends State<_PedidoFormPage> {
         page++;
       }
       if (!mounted) return;
-      final divs = collected
-          .map((a) => a.division)
-          .whereType<String>()
-          .toSet()
-          .toList()
-        ..sort();
+      final divs =
+          collected.map((a) => a.division).whereType<String>().toSet().toList()
+            ..sort();
       setState(() {
         _allItems = collected;
         _divisions = divs;
@@ -675,26 +751,51 @@ class _PedidoFormPageState extends State<_PedidoFormPage> {
     }).toList();
   }
 
-  void _addOrUpdate(CatalogoPedidoMercaderiaItem articulo, int cantidad) {
-    if (cantidad <= 0) {
-      setState(
-        () => _lineas.removeWhere((l) => l.articuloId == articulo.id),
-      );
+  void _addOrUpdate(
+    CatalogoPedidoMercaderiaItem articulo,
+    _PedidoCantidad cantidad,
+  ) {
+    if (cantidad.bultos <= 0 && cantidad.unidades <= 0) {
+      setState(() => _lineas.removeWhere((l) => l.articuloId == articulo.id));
       return;
     }
     setState(() {
       final idx = _lineas.indexWhere((l) => l.articuloId == articulo.id);
       final entry = _LineaEntry(
         articuloId: articulo.id,
-        descripcion: articulo.descripcion ??
+        descripcion:
+            articulo.descripcion ??
             articulo.codigoArticulo ??
             'Artículo #${articulo.id}',
-        cantidadBultos: cantidad,
+        cantidadBultos: cantidad.bultos,
+        cantidadUnidades: cantidad.unidades,
+        unidadesPorBulto: articulo.unidadesPorBulto ?? 0,
       );
       if (idx >= 0) {
         _lineas[idx] = entry;
       } else {
         _lineas.add(entry);
+      }
+    });
+  }
+
+  Future<void> _editarLineaDesdeCarrito(_LineaEntry l) async {
+    final result = await _promptLineaCantidad(context, l);
+    if (result == null || !mounted) return;
+    setState(() {
+      if (result.isEmpty) {
+        _lineas.removeWhere((e) => e.articuloId == l.articuloId);
+        return;
+      }
+      final idx = _lineas.indexWhere((e) => e.articuloId == l.articuloId);
+      if (idx >= 0) {
+        _lineas[idx] = _LineaEntry(
+          articuloId: l.articuloId,
+          descripcion: l.descripcion,
+          cantidadBultos: result.bultos,
+          cantidadUnidades: result.unidades,
+          unidadesPorBulto: l.unidadesPorBulto,
+        );
       }
     });
   }
@@ -725,10 +826,13 @@ class _PedidoFormPageState extends State<_PedidoFormPage> {
     });
     try {
       final lineas = _lineas
-          .map((l) => PedidoMercaderiaLinea(
-                articuloId: l.articuloId,
-                cantidadBultos: l.cantidadBultos,
-              ))
+          .map(
+            (l) => PedidoMercaderiaLinea(
+              articuloId: l.articuloId,
+              cantidadBultos: l.cantidadBultos,
+              cantidadUnidades: l.cantidadUnidades,
+            ),
+          )
           .toList();
 
       final PedidoMercaderiaItem pedido;
@@ -765,23 +869,67 @@ class _PedidoFormPageState extends State<_PedidoFormPage> {
   Widget build(BuildContext context) {
     final esEdicion = widget.existente != null;
     final totalBultos = _lineas.fold(0, (s, l) => s + l.cantidadBultos);
+    final totalUnidades = _lineas.fold(0, (s, l) => s + l.totalUnidades);
 
     return Scaffold(
-      appBar: AppBar(
-        title: Text(esEdicion ? 'Editar pedido' : 'Nuevo pedido'),
-      ),
-      bottomNavigationBar: _buildBottomBar(totalBultos),
-      body: Column(
-        children: [
-          if (_lineas.isNotEmpty) _buildCarrito(),
-          _buildFilters(),
-          Expanded(child: _buildCatalog()),
-        ],
+      appBar: AppBar(title: Text(esEdicion ? 'Editar pedido' : 'Nuevo pedido')),
+      bottomNavigationBar: _buildBottomBar(totalBultos, totalUnidades),
+      body: LayoutBuilder(
+        builder: (context, constraints) {
+          final maxWidth = constraints.maxWidth >= 1200
+              ? 1040.0
+              : constraints.maxWidth >= 900
+              ? 900.0
+              : double.infinity;
+          return Center(
+            child: ConstrainedBox(
+              constraints: BoxConstraints(maxWidth: maxWidth),
+              child: Column(
+                children: [
+                  if (_mostrarAvisoPlantilla) _buildAvisoPlantilla(),
+                  if (_lineas.isNotEmpty) _buildCarrito(),
+                  _buildFilters(),
+                  Expanded(child: _buildCatalog()),
+                ],
+              ),
+            ),
+          );
+        },
       ),
     );
   }
 
-  Widget _buildBottomBar(int totalBultos) {
+  Widget _buildAvisoPlantilla() {
+    final cs = Theme.of(context).colorScheme;
+    return Material(
+      color: cs.secondaryContainer,
+      child: Padding(
+        padding: const EdgeInsets.symmetric(horizontal: 16, vertical: 10),
+        child: Row(
+          children: [
+            Icon(Icons.history, size: 18, color: cs.onSecondaryContainer),
+            const SizedBox(width: 8),
+            Expanded(
+              child: Text(
+                'Precargamos los artículos de tu último pedido aprobado. '
+                'Revisá las cantidades antes de enviar.',
+                style: TextStyle(color: cs.onSecondaryContainer, fontSize: 13),
+              ),
+            ),
+            IconButton(
+              icon: const Icon(Icons.close, size: 18),
+              onPressed: () => setState(() => _mostrarAvisoPlantilla = false),
+              color: cs.onSecondaryContainer,
+              padding: EdgeInsets.zero,
+              constraints: const BoxConstraints(),
+            ),
+          ],
+        ),
+      ),
+    );
+  }
+
+  Widget _buildBottomBar(int totalBultos, int totalUnidades) {
     final cs = Theme.of(context).colorScheme;
     return SafeArea(
       child: Column(
@@ -796,55 +944,61 @@ class _PedidoFormPageState extends State<_PedidoFormPage> {
                 top: BorderSide(color: cs.outlineVariant, width: 0.5),
               ),
             ),
-            child: Row(
-              children: [
-                Expanded(
-                  child: _lineas.isEmpty
-                      ? Text(
-                          'Agregá artículos al pedido',
-                          style: Theme.of(context).textTheme.bodySmall?.copyWith(
-                                color: cs.onSurfaceVariant,
-                              ),
-                        )
-                      : Column(
-                          crossAxisAlignment: CrossAxisAlignment.start,
-                          mainAxisSize: MainAxisSize.min,
-                          children: [
-                            Text(
-                              '${_lineas.length} artículo${_lineas.length == 1 ? '' : 's'}',
-                              style: const TextStyle(
-                                fontWeight: FontWeight.w600,
-                                fontSize: 14,
-                              ),
-                            ),
-                            Text(
-                              '$totalBultos bulto${totalBultos == 1 ? '' : 's'} en total',
-                              style: Theme.of(context)
-                                  .textTheme
-                                  .bodySmall
+            child: Center(
+              child: ConstrainedBox(
+                constraints: const BoxConstraints(maxWidth: 1040),
+                child: Row(
+                  children: [
+                    Expanded(
+                      child: _lineas.isEmpty
+                          ? Text(
+                              'Agregá artículos al pedido',
+                              style: Theme.of(context).textTheme.bodySmall
                                   ?.copyWith(color: cs.onSurfaceVariant),
+                            )
+                          : Column(
+                              crossAxisAlignment: CrossAxisAlignment.start,
+                              mainAxisSize: MainAxisSize.min,
+                              children: [
+                                Text(
+                                  '${_lineas.length} artículo${_lineas.length == 1 ? '' : 's'}',
+                                  style: const TextStyle(
+                                    fontWeight: FontWeight.w600,
+                                    fontSize: 14,
+                                  ),
+                                ),
+                                Text(
+                                  '${_formatPedidoCantidades(totalBultos, _lineas.fold(0, (s, l) => s + l.cantidadUnidades))} · $totalUnidades unidades equivalentes',
+                                  style: Theme.of(context).textTheme.bodySmall
+                                      ?.copyWith(color: cs.onSurfaceVariant),
+                                ),
+                              ],
                             ),
-                          ],
-                        ),
+                    ),
+                    const SizedBox(width: 12),
+                    FilledButton.icon(
+                      onPressed: _lineas.isNotEmpty && !_submitting
+                          ? _confirmAndSubmit
+                          : null,
+                      icon: _submitting
+                          ? const SizedBox(
+                              width: 18,
+                              height: 18,
+                              child: CircularProgressIndicator(
+                                strokeWidth: 2,
+                                color: Colors.white,
+                              ),
+                            )
+                          : const Icon(Icons.send_outlined, size: 18),
+                      label: Text(
+                        widget.existente != null
+                            ? 'Guardar cambios'
+                            : 'Enviar pedido',
+                      ),
+                    ),
+                  ],
                 ),
-                const SizedBox(width: 12),
-                FilledButton.icon(
-                  onPressed: _lineas.isNotEmpty && !_submitting
-                      ? _confirmAndSubmit
-                      : null,
-                  icon: _submitting
-                      ? const SizedBox(
-                          width: 18,
-                          height: 18,
-                          child: CircularProgressIndicator(
-                            strokeWidth: 2,
-                            color: Colors.white,
-                          ),
-                        )
-                      : const Icon(Icons.send_outlined, size: 18),
-                  label: Text(widget.existente != null ? 'Guardar cambios' : 'Enviar pedido'),
-                ),
-              ],
+              ),
             ),
           ),
         ],
@@ -912,11 +1066,12 @@ class _PedidoFormPageState extends State<_PedidoFormPage> {
               separatorBuilder: (_, __) => const SizedBox(width: 6),
               itemBuilder: (_, i) {
                 final l = _lineas[i];
-                return Chip(
+                return InputChip(
                   label: Text(
-                    '${l.descripcion} ×${l.cantidadBultos}',
+                    '${l.descripcion}: ${_formatPedidoCantidades(l.cantidadBultos, l.cantidadUnidades)}',
                     maxLines: 1,
                   ),
+                  onPressed: () => _editarLineaDesdeCarrito(l),
                   onDeleted: () => setState(
                     () => _lineas.removeWhere(
                       (e) => e.articuloId == l.articuloId,
@@ -1022,24 +1177,57 @@ class _PedidoFormPageState extends State<_PedidoFormPage> {
         ),
       );
     }
-    final items = _filtered;
-    if (items.isEmpty) {
+    final rows = _catalogRows();
+    if (rows.isEmpty) {
       return const Center(child: Text('Sin resultados.'));
     }
     return ListView.builder(
       padding: const EdgeInsets.symmetric(horizontal: 16),
-      itemCount: items.length,
+      itemCount: rows.length,
       itemBuilder: (context, index) {
-        final art = items[index];
-        final existing =
-            _lineas.where((l) => l.articuloId == art.id).firstOrNull;
+        final row = rows[index];
+        if (row is String) {
+          return _DivisionHeader(label: row);
+        }
+        final art = row as CatalogoPedidoMercaderiaItem;
+        final existing = _lineas
+            .where((l) => l.articuloId == art.id)
+            .firstOrNull;
         return _ArticuloTile(
           articulo: art,
-          cantidadActual: existing?.cantidadBultos ?? 0,
-          onChanged: (qty) => _addOrUpdate(art, qty),
+          cantidadActual: _PedidoCantidad(
+            bultos: existing?.cantidadBultos ?? 0,
+            unidades: existing?.cantidadUnidades ?? 0,
+          ),
+          onChanged: (cantidad) => _addOrUpdate(art, cantidad),
         );
       },
     );
+  }
+
+  /// Agrupa el catálogo por división para que sea más rápido de escanear.
+  /// Se omite el agrupamiento si ya hay un filtro de división o búsqueda
+  /// activos, ya que en ese caso el listado plano es más directo.
+  List<Object> _catalogRows() {
+    final items = _filtered;
+    if (_query.isNotEmpty || _divisionFiltro != null) return items.cast();
+    final sorted = [...items]
+      ..sort((a, b) {
+        final cmp = (a.division ?? '').compareTo(b.division ?? '');
+        if (cmp != 0) return cmp;
+        return (a.descripcion ?? '').compareTo(b.descripcion ?? '');
+      });
+    final rows = <Object>[];
+    String? lastDivision;
+    for (final art in sorted) {
+      final div = art.division ?? 'Sin división';
+      if (div != lastDivision) {
+        rows.add(div);
+        lastDivision = div;
+      }
+      rows.add(art);
+    }
+    return rows;
   }
 }
 
@@ -1075,10 +1263,31 @@ class _DivisionChip extends StatelessWidget {
         child: Text(
           label,
           style: Theme.of(context).textTheme.labelMedium?.copyWith(
-                color: selected ? cs.onPrimaryContainer : cs.onSurfaceVariant,
-                fontWeight:
-                    selected ? FontWeight.w600 : FontWeight.normal,
-              ),
+            color: selected ? cs.onPrimaryContainer : cs.onSurfaceVariant,
+            fontWeight: selected ? FontWeight.w600 : FontWeight.normal,
+          ),
+        ),
+      ),
+    );
+  }
+}
+
+class _DivisionHeader extends StatelessWidget {
+  const _DivisionHeader({required this.label});
+
+  final String label;
+
+  @override
+  Widget build(BuildContext context) {
+    final cs = Theme.of(context).colorScheme;
+    return Padding(
+      padding: const EdgeInsets.only(top: 14, bottom: 4),
+      child: Text(
+        label.toUpperCase(),
+        style: Theme.of(context).textTheme.labelMedium?.copyWith(
+          color: cs.primary,
+          fontWeight: FontWeight.w700,
+          letterSpacing: 0.4,
         ),
       ),
     );
@@ -1090,11 +1299,26 @@ class _LineaEntry {
     required this.articuloId,
     required this.descripcion,
     required this.cantidadBultos,
+    required this.cantidadUnidades,
+    required this.unidadesPorBulto,
   });
 
   final int articuloId;
   final String descripcion;
   final int cantidadBultos;
+  final int cantidadUnidades;
+  final int unidadesPorBulto;
+
+  int get totalUnidades => cantidadBultos * unidadesPorBulto + cantidadUnidades;
+}
+
+class _PedidoCantidad {
+  const _PedidoCantidad({required this.bultos, required this.unidades});
+
+  final int bultos;
+  final int unidades;
+
+  bool get isEmpty => bultos == 0 && unidades == 0;
 }
 
 class _ArticuloTile extends StatelessWidget {
@@ -1105,8 +1329,8 @@ class _ArticuloTile extends StatelessWidget {
   });
 
   final CatalogoPedidoMercaderiaItem articulo;
-  final int cantidadActual;
-  final ValueChanged<int> onChanged;
+  final _PedidoCantidad cantidadActual;
+  final ValueChanged<_PedidoCantidad> onChanged;
 
   Widget? _buildSubtitle() {
     final parts = <String>[
@@ -1127,7 +1351,7 @@ class _ArticuloTile extends StatelessWidget {
   @override
   Widget build(BuildContext context) {
     final cs = Theme.of(context).colorScheme;
-    final inCart = cantidadActual > 0;
+    final inCart = !cantidadActual.isEmpty;
     return Material(
       color: inCart
           ? cs.primaryContainer.withValues(alpha: 0.35)
@@ -1136,6 +1360,12 @@ class _ArticuloTile extends StatelessWidget {
       child: ListTile(
         contentPadding: const EdgeInsets.symmetric(horizontal: 8, vertical: 2),
         shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(10)),
+        leading: SizedBox(
+          width: 22,
+          child: inCart
+              ? Icon(Icons.check_circle, color: cs.primary, size: 22)
+              : null,
+        ),
         title: Text(
           articulo.descripcion ??
               articulo.codigoArticulo ??
@@ -1144,43 +1374,151 @@ class _ArticuloTile extends StatelessWidget {
           overflow: TextOverflow.ellipsis,
         ),
         subtitle: _buildSubtitle(),
-        trailing: cantidadActual == 0
-            ? IconButton(
-                icon: const Icon(Icons.add_circle_outline),
-                onPressed: () => onChanged(1),
-              )
-            : Row(
-                mainAxisSize: MainAxisSize.min,
-                children: [
-                  IconButton(
-                    icon: const Icon(Icons.remove_circle_outline),
-                    onPressed: () => onChanged(cantidadActual - 1),
-                  ),
-                  Text(
-                    '$cantidadActual',
-                    style: const TextStyle(
-                      fontWeight: FontWeight.w600,
-                      fontSize: 16,
+        trailing: SizedBox(
+          width: 184,
+          child: Row(
+            children: [
+              Expanded(
+                child: _CantidadStepper(
+                  label: 'Bultos',
+                  value: cantidadActual.bultos,
+                  onChanged: (value) => onChanged(
+                    _PedidoCantidad(
+                      bultos: value,
+                      unidades: cantidadActual.unidades,
                     ),
                   ),
-                  IconButton(
-                    icon: const Icon(Icons.add_circle_outline),
-                    onPressed: () => onChanged(cantidadActual + 1),
-                  ),
-                ],
+                ),
               ),
+              const SizedBox(width: 4),
+              Expanded(
+                child: _CantidadStepper(
+                  label: 'Unidades',
+                  value: cantidadActual.unidades,
+                  onChanged: (value) => onChanged(
+                    _PedidoCantidad(
+                      bultos: cantidadActual.bultos,
+                      unidades: value,
+                    ),
+                  ),
+                ),
+              ),
+            ],
+          ),
+        ),
       ),
     );
   }
 }
 
+class _CantidadStepper extends StatelessWidget {
+  const _CantidadStepper({
+    required this.label,
+    required this.value,
+    required this.onChanged,
+  });
+
+  final String label;
+  final int value;
+  final ValueChanged<int> onChanged;
+
+  Future<void> _editar(BuildContext context) async {
+    final result = await _promptQuantity(context, label: label, initial: value);
+    if (result != null) onChanged(result);
+  }
+
+  @override
+  Widget build(BuildContext context) {
+    return SizedBox(
+      height: 48,
+      child: Column(
+        mainAxisAlignment: MainAxisAlignment.center,
+        children: [
+          Text(label, style: Theme.of(context).textTheme.labelSmall),
+          SizedBox(
+            height: 30,
+            child: Row(
+              mainAxisAlignment: MainAxisAlignment.center,
+              children: [
+                IconButton(
+                  constraints: const BoxConstraints.tightFor(
+                    width: 28,
+                    height: 28,
+                  ),
+                  visualDensity: VisualDensity.compact,
+                  padding: EdgeInsets.zero,
+                  icon: const Icon(Icons.remove_circle_outline, size: 19),
+                  onPressed: value > 0 ? () => onChanged(value - 1) : null,
+                ),
+                InkWell(
+                  onTap: () => _editar(context),
+                  borderRadius: BorderRadius.circular(6),
+                  child: SizedBox(
+                    width: 28,
+                    child: Text(
+                      '$value',
+                      textAlign: TextAlign.center,
+                      style: const TextStyle(fontWeight: FontWeight.w600),
+                    ),
+                  ),
+                ),
+                IconButton(
+                  constraints: const BoxConstraints.tightFor(
+                    width: 28,
+                    height: 28,
+                  ),
+                  visualDensity: VisualDensity.compact,
+                  padding: EdgeInsets.zero,
+                  icon: const Icon(Icons.add_circle_outline, size: 19),
+                  onPressed: () => onChanged(value + 1),
+                ),
+              ],
+            ),
+          ),
+        ],
+      ),
+    );
+  }
+}
+
+/// Muestra un diálogo simple para tipear una cantidad en lugar de tocar +/-
+/// repetidamente. Devuelve null si se cancela.
+Future<int?> _promptQuantity(
+  BuildContext context, {
+  required String label,
+  required int initial,
+}) {
+  final ctrl = TextEditingController(text: initial == 0 ? '' : '$initial');
+  return showDialog<int>(
+    context: context,
+    builder: (ctx) => AlertDialog(
+      title: Text(label),
+      content: TextField(
+        controller: ctrl,
+        autofocus: true,
+        keyboardType: TextInputType.number,
+        textAlign: TextAlign.center,
+        style: const TextStyle(fontSize: 24, fontWeight: FontWeight.w600),
+        onSubmitted: (_) => Navigator.of(ctx).pop(_parseQuantity(ctrl.text)),
+      ),
+      actions: [
+        TextButton(
+          onPressed: () => Navigator.of(ctx).pop(),
+          child: const Text('Cancelar'),
+        ),
+        FilledButton(
+          onPressed: () => Navigator.of(ctx).pop(_parseQuantity(ctrl.text)),
+          child: const Text('Listo'),
+        ),
+      ],
+    ),
+  );
+}
+
 // ─── Sheet de confirmación ────────────────────────────────────────────────────
 
 class _PedidoConfirmSheet extends StatelessWidget {
-  const _PedidoConfirmSheet({
-    required this.lineas,
-    required this.esEdicion,
-  });
+  const _PedidoConfirmSheet({required this.lineas, required this.esEdicion});
 
   final List<_LineaEntry> lineas;
   final bool esEdicion;
@@ -1189,6 +1527,8 @@ class _PedidoConfirmSheet extends StatelessWidget {
   Widget build(BuildContext context) {
     final cs = Theme.of(context).colorScheme;
     final totalBultos = lineas.fold(0, (s, l) => s + l.cantidadBultos);
+    final unidadesSueltas = lineas.fold(0, (s, l) => s + l.cantidadUnidades);
+    final totalUnidades = lineas.fold(0, (s, l) => s + l.totalUnidades);
 
     return Padding(
       padding: EdgeInsets.fromLTRB(
@@ -1197,110 +1537,201 @@ class _PedidoConfirmSheet extends StatelessWidget {
         24,
         24 + MediaQuery.of(context).viewInsets.bottom,
       ),
-      child: Column(
-        mainAxisSize: MainAxisSize.min,
-        crossAxisAlignment: CrossAxisAlignment.start,
-        children: [
-          Center(
-            child: Container(
-              width: 36,
-              height: 4,
-              decoration: BoxDecoration(
-                color: cs.outlineVariant,
-                borderRadius: BorderRadius.circular(2),
-              ),
-            ),
-          ),
-          const SizedBox(height: 20),
-          Text(
-            esEdicion ? 'Confirmar cambios' : 'Confirmar pedido',
-            style: Theme.of(context)
-                .textTheme
-                .titleLarge
-                ?.copyWith(fontWeight: FontWeight.w700),
-          ),
-          const SizedBox(height: 4),
-          Text(
-            'Revisá los artículos antes de enviar.',
-            style: Theme.of(context)
-                .textTheme
-                .bodySmall
-                ?.copyWith(color: cs.onSurfaceVariant),
-          ),
-          const SizedBox(height: 16),
-          ConstrainedBox(
-            constraints: const BoxConstraints(maxHeight: 260),
-            child: ListView.separated(
-              shrinkWrap: true,
-              itemCount: lineas.length,
-              separatorBuilder: (_, __) => const Divider(height: 1),
-              itemBuilder: (_, i) {
-                final l = lineas[i];
-                return Padding(
-                  padding: const EdgeInsets.symmetric(vertical: 10),
-                  child: Row(
-                    children: [
-                      Expanded(
-                        child: Text(
-                          l.descripcion,
-                          style: const TextStyle(fontWeight: FontWeight.w500),
-                        ),
-                      ),
-                      const SizedBox(width: 12),
-                      Text(
-                        '${l.cantidadBultos} bulto${l.cantidadBultos == 1 ? '' : 's'}',
-                        style: TextStyle(color: cs.onSurfaceVariant),
-                      ),
-                    ],
+      child: Center(
+        child: ConstrainedBox(
+          constraints: const BoxConstraints(maxWidth: 480),
+          child: Column(
+            mainAxisSize: MainAxisSize.min,
+            crossAxisAlignment: CrossAxisAlignment.start,
+            children: [
+              Center(
+                child: Container(
+                  width: 36,
+                  height: 4,
+                  decoration: BoxDecoration(
+                    color: cs.outlineVariant,
+                    borderRadius: BorderRadius.circular(2),
                   ),
-                );
-              },
-            ),
-          ),
-          const Divider(),
-          Padding(
-            padding: const EdgeInsets.symmetric(vertical: 6),
-            child: Row(
-              mainAxisAlignment: MainAxisAlignment.spaceBetween,
-              children: [
-                Text(
-                  'Total',
-                  style: Theme.of(context)
-                      .textTheme
-                      .titleSmall
-                      ?.copyWith(fontWeight: FontWeight.w600),
                 ),
-                Text(
-                  '$totalBultos bulto${totalBultos == 1 ? '' : 's'}',
-                  style: Theme.of(context)
-                      .textTheme
-                      .titleSmall
-                      ?.copyWith(fontWeight: FontWeight.w700),
+              ),
+              const SizedBox(height: 20),
+              Text(
+                esEdicion ? 'Confirmar cambios' : 'Confirmar pedido',
+                style: Theme.of(
+                  context,
+                ).textTheme.titleLarge?.copyWith(fontWeight: FontWeight.w700),
+              ),
+              const SizedBox(height: 4),
+              Text(
+                'Revisá los artículos antes de enviar.',
+                style: Theme.of(
+                  context,
+                ).textTheme.bodySmall?.copyWith(color: cs.onSurfaceVariant),
+              ),
+              const SizedBox(height: 16),
+              ConstrainedBox(
+                constraints: const BoxConstraints(maxHeight: 260),
+                child: ListView.separated(
+                  shrinkWrap: true,
+                  itemCount: lineas.length,
+                  separatorBuilder: (_, __) => const Divider(height: 1),
+                  itemBuilder: (_, i) {
+                    final l = lineas[i];
+                    return Padding(
+                      padding: const EdgeInsets.symmetric(vertical: 10),
+                      child: Row(
+                        children: [
+                          Expanded(
+                            child: Text(
+                              l.descripcion,
+                              style: const TextStyle(
+                                fontWeight: FontWeight.w500,
+                              ),
+                            ),
+                          ),
+                          const SizedBox(width: 12),
+                          Text(
+                            _formatPedidoCantidades(
+                              l.cantidadBultos,
+                              l.cantidadUnidades,
+                            ),
+                            style: TextStyle(color: cs.onSurfaceVariant),
+                          ),
+                        ],
+                      ),
+                    );
+                  },
                 ),
-              ],
+              ),
+              const Divider(),
+              Padding(
+                padding: const EdgeInsets.symmetric(vertical: 6),
+                child: Row(
+                  mainAxisAlignment: MainAxisAlignment.spaceBetween,
+                  children: [
+                    Text(
+                      'Total',
+                      style: Theme.of(context).textTheme.titleSmall?.copyWith(
+                        fontWeight: FontWeight.w600,
+                      ),
+                    ),
+                    Text(
+                      '${_formatPedidoCantidades(totalBultos, unidadesSueltas)} · $totalUnidades unidades equivalentes',
+                      style: Theme.of(context).textTheme.titleSmall?.copyWith(
+                        fontWeight: FontWeight.w700,
+                      ),
+                    ),
+                  ],
+                ),
+              ),
+              const SizedBox(height: 16),
+              SizedBox(
+                height: 50,
+                width: double.infinity,
+                child: FilledButton.icon(
+                  onPressed: () => Navigator.of(context).pop(true),
+                  icon: const Icon(Icons.send_outlined),
+                  label: Text(esEdicion ? 'Guardar cambios' : 'Enviar pedido'),
+                ),
+              ),
+              const SizedBox(height: 8),
+              SizedBox(
+                height: 46,
+                width: double.infinity,
+                child: OutlinedButton(
+                  onPressed: () => Navigator.of(context).pop(false),
+                  child: const Text('Revisar pedido'),
+                ),
+              ),
+            ],
+          ),
+        ),
+      ),
+    );
+  }
+}
+
+/// Diálogo para editar bultos y unidades de una línea ya agregada al carrito,
+/// sin tener que volver a buscar el artículo en el catálogo completo.
+/// Devuelve null si se cancela.
+Future<_PedidoCantidad?> _promptLineaCantidad(
+  BuildContext context,
+  _LineaEntry linea,
+) {
+  final bultosCtrl = TextEditingController(
+    text: linea.cantidadBultos == 0 ? '' : '${linea.cantidadBultos}',
+  );
+  final unidadesCtrl = TextEditingController(
+    text: linea.cantidadUnidades == 0 ? '' : '${linea.cantidadUnidades}',
+  );
+  return showDialog<_PedidoCantidad>(
+    context: context,
+    builder: (ctx) => AlertDialog(
+      title: Text(
+        linea.descripcion,
+        maxLines: 2,
+        overflow: TextOverflow.ellipsis,
+      ),
+      content: Row(
+        mainAxisSize: MainAxisSize.min,
+        children: [
+          Expanded(
+            child: TextField(
+              controller: bultosCtrl,
+              autofocus: true,
+              keyboardType: TextInputType.number,
+              textAlign: TextAlign.center,
+              decoration: const InputDecoration(labelText: 'Bultos'),
             ),
           ),
-          const SizedBox(height: 16),
-          SizedBox(
-            height: 50,
-            width: double.infinity,
-            child: FilledButton.icon(
-              onPressed: () => Navigator.of(context).pop(true),
-              icon: const Icon(Icons.send_outlined),
-              label: Text(esEdicion ? 'Guardar cambios' : 'Enviar pedido'),
-            ),
-          ),
-          const SizedBox(height: 8),
-          SizedBox(
-            height: 46,
-            width: double.infinity,
-            child: OutlinedButton(
-              onPressed: () => Navigator.of(context).pop(false),
-              child: const Text('Revisar pedido'),
+          const SizedBox(width: 12),
+          Expanded(
+            child: TextField(
+              controller: unidadesCtrl,
+              keyboardType: TextInputType.number,
+              textAlign: TextAlign.center,
+              decoration: const InputDecoration(labelText: 'Unidades'),
             ),
           ),
         ],
       ),
-    );
+      actions: [
+        TextButton(
+          onPressed: () => Navigator.of(
+            ctx,
+          ).pop(const _PedidoCantidad(bultos: 0, unidades: 0)),
+          child: const Text('Quitar del pedido'),
+        ),
+        TextButton(
+          onPressed: () => Navigator.of(ctx).pop(),
+          child: const Text('Cancelar'),
+        ),
+        FilledButton(
+          onPressed: () => Navigator.of(ctx).pop(
+            _PedidoCantidad(
+              bultos: _parseQuantity(bultosCtrl.text),
+              unidades: _parseQuantity(unidadesCtrl.text),
+            ),
+          ),
+          child: const Text('Guardar'),
+        ),
+      ],
+    ),
+  );
+}
+
+int _parseQuantity(String text) {
+  final parsed = int.tryParse(text.trim()) ?? 0;
+  return parsed < 0 ? 0 : parsed;
+}
+
+String _formatPedidoCantidades(int bultos, int unidades) {
+  final parts = <String>[];
+  if (bultos > 0) {
+    parts.add('$bultos bulto${bultos == 1 ? '' : 's'}');
   }
+  if (unidades > 0) {
+    parts.add('$unidades unidad${unidades == 1 ? '' : 'es'}');
+  }
+  return parts.isEmpty ? 'Sin cantidad' : parts.join(' + ');
 }

@@ -412,9 +412,7 @@ class _FeedbackPageState extends State<FeedbackPage> {
     final dashboard = _dashboard;
     return RefreshIndicator(
       onRefresh: _refresh,
-      child: ListView(
-        physics: const AlwaysScrollableScrollPhysics(),
-        padding: const EdgeInsets.all(16),
+      child: _ResponsiveTabList(
         children: [
           if (_dashboardError != null) ...[
             _ErrorCard(message: _dashboardError!, onRetry: _refresh),
@@ -492,9 +490,7 @@ class _FeedbackPageState extends State<FeedbackPage> {
   Widget _buildHistorialTab() {
     return RefreshIndicator(
       onRefresh: _refresh,
-      child: ListView(
-        physics: const AlwaysScrollableScrollPhysics(),
-        padding: const EdgeInsets.all(16),
+      child: _ResponsiveTabList(
         children: [
           if (_historialError != null) ...[
             _ErrorCard(message: _historialError!, onRetry: _refresh),
@@ -548,9 +544,7 @@ class _FeedbackPageState extends State<FeedbackPage> {
   Widget _buildBandejaTab() {
     return RefreshIndicator(
       onRefresh: _refresh,
-      child: ListView(
-        physics: const AlwaysScrollableScrollPhysics(),
-        padding: const EdgeInsets.all(16),
+      child: _ResponsiveTabList(
         children: [
           if (_bandejaError != null) ...[
             _ErrorCard(message: _bandejaError!, onRetry: _refresh),
@@ -784,192 +778,213 @@ class _FeedbackDetailSheetState extends State<FeedbackDetailSheet> {
                 Expanded(
                   child: _loading
                       ? const Center(child: CircularProgressIndicator())
-                      : ListView(
-                          controller: scrollController,
-                          padding: const EdgeInsets.fromLTRB(16, 14, 16, 24),
-                          children: [
-                            Row(
+                      : Center(
+                          child: ConstrainedBox(
+                            constraints: const BoxConstraints(maxWidth: 640),
+                            child: ListView(
+                              controller: scrollController,
+                              padding: const EdgeInsets.fromLTRB(
+                                16,
+                                14,
+                                16,
+                                24,
+                              ),
                               children: [
-                                Container(
-                                  padding: const EdgeInsets.all(10),
-                                  decoration: BoxDecoration(
-                                    color: statusColor.withValues(alpha: 0.12),
-                                    shape: BoxShape.circle,
-                                  ),
-                                  child: Icon(
-                                    item.isResolved
-                                        ? Icons.check_circle_outline
-                                        : Icons.campaign_outlined,
-                                    color: statusColor,
-                                  ),
-                                ),
-                                const SizedBox(width: 12),
-                                Expanded(
-                                  child: Column(
-                                    crossAxisAlignment:
-                                        CrossAxisAlignment.start,
-                                    children: [
-                                      Text(
-                                        'Feedback #${item.id ?? widget.feedbackId}',
-                                        style: Theme.of(context)
-                                            .textTheme
-                                            .titleLarge
-                                            ?.copyWith(
-                                              fontWeight: FontWeight.w700,
-                                            ),
+                                Row(
+                                  children: [
+                                    Container(
+                                      padding: const EdgeInsets.all(10),
+                                      decoration: BoxDecoration(
+                                        color: statusColor.withValues(
+                                          alpha: 0.12,
+                                        ),
+                                        shape: BoxShape.circle,
                                       ),
-                                      const SizedBox(height: 4),
-                                      Wrap(
-                                        spacing: 8,
-                                        runSpacing: 8,
+                                      child: Icon(
+                                        item.isResolved
+                                            ? Icons.check_circle_outline
+                                            : Icons.campaign_outlined,
+                                        color: statusColor,
+                                      ),
+                                    ),
+                                    const SizedBox(width: 12),
+                                    Expanded(
+                                      child: Column(
+                                        crossAxisAlignment:
+                                            CrossAxisAlignment.start,
                                         children: [
-                                          _StatusChip(
-                                            label: statusLabel,
-                                            color: statusColor,
+                                          Text(
+                                            'Feedback #${item.id ?? widget.feedbackId}',
+                                            style: Theme.of(context)
+                                                .textTheme
+                                                .titleLarge
+                                                ?.copyWith(
+                                                  fontWeight: FontWeight.w700,
+                                                ),
                                           ),
-                                          if (item.resueltoEnSla != null)
-                                            _StatusChip(
-                                              label: item.resueltoEnSla!
-                                                  ? 'Resuelto en SLA'
-                                                  : 'Fuera de SLA',
-                                              color: item.resueltoEnSla!
-                                                  ? Colors.green
-                                                  : Colors.red,
-                                            ),
+                                          const SizedBox(height: 4),
+                                          Wrap(
+                                            spacing: 8,
+                                            runSpacing: 8,
+                                            children: [
+                                              _StatusChip(
+                                                label: statusLabel,
+                                                color: statusColor,
+                                              ),
+                                              if (item.resueltoEnSla != null)
+                                                _StatusChip(
+                                                  label: item.resueltoEnSla!
+                                                      ? 'Resuelto en SLA'
+                                                      : 'Fuera de SLA',
+                                                  color: item.resueltoEnSla!
+                                                      ? Colors.green
+                                                      : Colors.red,
+                                                ),
+                                            ],
+                                          ),
                                         ],
                                       ),
-                                    ],
-                                  ),
-                                ),
-                                IconButton(
-                                  onPressed: () => Navigator.of(context).pop(),
-                                  icon: const Icon(Icons.close),
-                                ),
-                              ],
-                            ),
-                            if (_error != null) ...[
-                              const SizedBox(height: 12),
-                              _ErrorCard(message: _error!, onRetry: _load),
-                            ],
-                            const SizedBox(height: 16),
-                            _SectionCard(
-                              title: 'Descripción',
-                              icon: Icons.description_outlined,
-                              child: Text(
-                                item.descripcion?.trim().isNotEmpty == true
-                                    ? item.descripcion!.trim()
-                                    : 'Sin descripcion.',
-                              ),
-                            ),
-                            const SizedBox(height: 12),
-                            _SectionCard(
-                              title: 'Datos',
-                              icon: Icons.info_outline,
-                              child: Column(
-                                children: [
-                                  _DetailRow(
-                                    label: 'Cliente',
-                                    value: item.cliente?.displayName ?? '-',
-                                  ),
-                                  _DetailRow(
-                                    label: 'Motivo',
-                                    value: item.motivo?.displayName ?? '-',
-                                  ),
-                                  _DetailRow(
-                                    label: 'Empleado',
-                                    value: item.empleado?.displayName ?? '-',
-                                  ),
-                                  _DetailRow(
-                                    label: 'Jefe directo',
-                                    value: item.jefeDirecto?.displayName ?? '-',
-                                  ),
-                                  _DetailRow(
-                                    label: 'Creado',
-                                    value:
-                                        DateFormatter.formatApiDateForDisplay(
-                                          item.createdAt,
-                                        ),
-                                  ),
-                                  _DetailRow(
-                                    label: 'Vence',
-                                    value:
-                                        DateFormatter.formatApiDateForDisplay(
-                                          item.fechaVencimiento,
-                                        ),
-                                  ),
-                                  _DetailRow(
-                                    label: 'Actualizado',
-                                    value:
-                                        DateFormatter.formatApiDateForDisplay(
-                                          item.updatedAt,
-                                        ),
-                                  ),
-                                  _DetailRow(
-                                    label: 'Resolución',
-                                    value:
-                                        item.resolucionDescripcion
-                                                ?.trim()
-                                                .isNotEmpty ==
-                                            true
-                                        ? item.resolucionDescripcion!.trim()
-                                        : '-',
-                                  ),
-                                  _DetailRow(
-                                    label: 'Resuelto por',
-                                    value: item.resueltoPor?.displayName ?? '-',
-                                  ),
-                                ],
-                              ),
-                            ),
-                            if (item.diasRestantes != null) ...[
-                              const SizedBox(height: 12),
-                              _SectionCard(
-                                title: 'SLA',
-                                icon: Icons.timer_outlined,
-                                child: Text(
-                                  item.diasRestantes! >= 0
-                                      ? 'Quedan ${item.diasRestantes} dias'
-                                      : 'Vencido hace ${item.diasRestantes!.abs()} dias',
-                                ),
-                              ),
-                            ],
-                            if (widget.allowActions && !item.isResolved) ...[
-                              const SizedBox(height: 12),
-                              _SectionCard(
-                                title: 'Acciones',
-                                icon: Icons.manage_search_outlined,
-                                child: Column(
-                                  crossAxisAlignment:
-                                      CrossAxisAlignment.stretch,
-                                  children: [
-                                    if (status != 'en_proceso')
-                                      FilledButton.icon(
-                                        onPressed: _busy ? null : _take,
-                                        icon: _busy
-                                            ? const SizedBox(
-                                                width: 16,
-                                                height: 16,
-                                                child:
-                                                    CircularProgressIndicator(
-                                                      strokeWidth: 2,
-                                                    ),
-                                              )
-                                            : const Icon(Icons.play_arrow),
-                                        label: const Text('Tomar'),
-                                      ),
-                                    if (status != 'resuelto') ...[
-                                      const SizedBox(height: 8),
-                                      OutlinedButton.icon(
-                                        onPressed: _busy ? null : _resolve,
-                                        icon: const Icon(Icons.check_circle),
-                                        label: const Text('Resolver'),
-                                      ),
-                                    ],
+                                    ),
+                                    IconButton(
+                                      onPressed: () =>
+                                          Navigator.of(context).pop(),
+                                      icon: const Icon(Icons.close),
+                                    ),
                                   ],
                                 ),
-                              ),
-                            ],
-                          ],
+                                if (_error != null) ...[
+                                  const SizedBox(height: 12),
+                                  _ErrorCard(message: _error!, onRetry: _load),
+                                ],
+                                const SizedBox(height: 16),
+                                _SectionCard(
+                                  title: 'Descripción',
+                                  icon: Icons.description_outlined,
+                                  child: Text(
+                                    item.descripcion?.trim().isNotEmpty == true
+                                        ? item.descripcion!.trim()
+                                        : 'Sin descripcion.',
+                                  ),
+                                ),
+                                const SizedBox(height: 12),
+                                _SectionCard(
+                                  title: 'Datos',
+                                  icon: Icons.info_outline,
+                                  child: Column(
+                                    children: [
+                                      _DetailRow(
+                                        label: 'Cliente',
+                                        value: item.cliente?.displayName ?? '-',
+                                      ),
+                                      _DetailRow(
+                                        label: 'Motivo',
+                                        value: item.motivo?.displayName ?? '-',
+                                      ),
+                                      _DetailRow(
+                                        label: 'Empleado',
+                                        value:
+                                            item.empleado?.displayName ?? '-',
+                                      ),
+                                      _DetailRow(
+                                        label: 'Jefe directo',
+                                        value:
+                                            item.jefeDirecto?.displayName ??
+                                            '-',
+                                      ),
+                                      _DetailRow(
+                                        label: 'Creado',
+                                        value:
+                                            DateFormatter.formatApiDateForDisplay(
+                                              item.createdAt,
+                                            ),
+                                      ),
+                                      _DetailRow(
+                                        label: 'Vence',
+                                        value:
+                                            DateFormatter.formatApiDateForDisplay(
+                                              item.fechaVencimiento,
+                                            ),
+                                      ),
+                                      _DetailRow(
+                                        label: 'Actualizado',
+                                        value:
+                                            DateFormatter.formatApiDateForDisplay(
+                                              item.updatedAt,
+                                            ),
+                                      ),
+                                      _DetailRow(
+                                        label: 'Resolución',
+                                        value:
+                                            item.resolucionDescripcion
+                                                    ?.trim()
+                                                    .isNotEmpty ==
+                                                true
+                                            ? item.resolucionDescripcion!.trim()
+                                            : '-',
+                                      ),
+                                      _DetailRow(
+                                        label: 'Resuelto por',
+                                        value:
+                                            item.resueltoPor?.displayName ??
+                                            '-',
+                                      ),
+                                    ],
+                                  ),
+                                ),
+                                if (item.diasRestantes != null) ...[
+                                  const SizedBox(height: 12),
+                                  _SectionCard(
+                                    title: 'SLA',
+                                    icon: Icons.timer_outlined,
+                                    child: Text(
+                                      item.diasRestantes! >= 0
+                                          ? 'Quedan ${item.diasRestantes} dias'
+                                          : 'Vencido hace ${item.diasRestantes!.abs()} dias',
+                                    ),
+                                  ),
+                                ],
+                                if (widget.allowActions &&
+                                    !item.isResolved) ...[
+                                  const SizedBox(height: 12),
+                                  _SectionCard(
+                                    title: 'Acciones',
+                                    icon: Icons.manage_search_outlined,
+                                    child: Column(
+                                      crossAxisAlignment:
+                                          CrossAxisAlignment.stretch,
+                                      children: [
+                                        if (status != 'en_proceso')
+                                          FilledButton.icon(
+                                            onPressed: _busy ? null : _take,
+                                            icon: _busy
+                                                ? const SizedBox(
+                                                    width: 16,
+                                                    height: 16,
+                                                    child:
+                                                        CircularProgressIndicator(
+                                                          strokeWidth: 2,
+                                                        ),
+                                                  )
+                                                : const Icon(Icons.play_arrow),
+                                            label: const Text('Tomar'),
+                                          ),
+                                        if (status != 'resuelto') ...[
+                                          const SizedBox(height: 8),
+                                          OutlinedButton.icon(
+                                            onPressed: _busy ? null : _resolve,
+                                            icon: const Icon(
+                                              Icons.check_circle,
+                                            ),
+                                            label: const Text('Resolver'),
+                                          ),
+                                        ],
+                                      ],
+                                    ),
+                                  ),
+                                ],
+                              ],
+                            ),
+                          ),
                         ),
                 ),
               ],
@@ -1158,7 +1173,12 @@ class _FeedbackCreateSheetState extends State<FeedbackCreateSheet> {
       );
       if (!mounted || requestVersion != _searchRequestVersion) return;
       if (_searchCtrl.text.trim() != effectiveQuery) return;
-      final clientes = _filterClientes(result.items, effectiveQuery);
+      // El backend ya filtró por `q` (y busca en más campos que el catálogo
+      // local, como tipo_codigo/descripcion_localidad/descripcion_provincia).
+      // Solo reordenamos por relevancia acá: volver a filtrar localmente con
+      // _filterClientes descartaba resultados válidos que no calzaban con el
+      // conjunto de campos/normalización del cliente.
+      final clientes = _sortClientesByRelevance(result.items, effectiveQuery);
       setState(() {
         _searchQuery = effectiveQuery;
         _clientes = clientes;
@@ -1194,7 +1214,29 @@ class _FeedbackCreateSheetState extends State<FeedbackCreateSheet> {
         .where((cliente) => _clienteMatches(cliente, terms))
         .toList(growable: false);
 
-    filtered.sort((left, right) {
+    return _sortByRelevance(filtered, terms);
+  }
+
+  /// Reordena resultados que el backend ya filtró por `q`, sin excluir
+  /// ninguno. A diferencia de [_filterClientes], no vuelve a aplicar el
+  /// matching local (que usa menos campos que la búsqueda del servidor).
+  List<FeedbackCliente> _sortClientesByRelevance(
+    List<FeedbackCliente> clientes,
+    String query,
+  ) {
+    final terms = _searchTerms(query);
+    if (terms.isEmpty) {
+      return List<FeedbackCliente>.from(clientes);
+    }
+    return _sortByRelevance(List<FeedbackCliente>.from(clientes), terms);
+  }
+
+  List<FeedbackCliente> _sortByRelevance(
+    List<FeedbackCliente> clientes,
+    List<String> terms,
+  ) {
+    final sorted = List<FeedbackCliente>.from(clientes);
+    sorted.sort((left, right) {
       final leftScore = _clientMatchScore(left, terms);
       final rightScore = _clientMatchScore(right, terms);
       if (leftScore != rightScore) {
@@ -1204,8 +1246,7 @@ class _FeedbackCreateSheetState extends State<FeedbackCreateSheet> {
         right.displayName.toLowerCase(),
       );
     });
-
-    return filtered;
+    return sorted;
   }
 
   bool _clienteMatches(FeedbackCliente cliente, List<String> terms) {
@@ -1400,51 +1441,167 @@ class _FeedbackCreateSheetState extends State<FeedbackCreateSheet> {
                 Expanded(
                   child: _loading
                       ? const Center(child: CircularProgressIndicator())
-                      : ListView(
-                          controller: scrollController,
-                          padding: const EdgeInsets.fromLTRB(16, 14, 16, 24),
-                          children: [
-                            Row(
-                              children: [
-                                Text(
-                                  'Nuevo feedback',
-                                  style: Theme.of(context).textTheme.titleLarge
-                                      ?.copyWith(fontWeight: FontWeight.w700),
-                                ),
-                                const Spacer(),
-                                IconButton(
-                                  onPressed: () => Navigator.of(context).pop(),
-                                  icon: const Icon(Icons.close),
-                                ),
-                              ],
-                            ),
-                            if (_error != null) ...[
-                              const SizedBox(height: 8),
-                              Text(
-                                _error!,
-                                style: TextStyle(
-                                  color: Theme.of(context).colorScheme.error,
-                                ),
+                      : Center(
+                          child: ConstrainedBox(
+                            constraints: const BoxConstraints(maxWidth: 640),
+                            child: ListView(
+                              controller: scrollController,
+                              padding: const EdgeInsets.fromLTRB(
+                                16,
+                                14,
+                                16,
+                                24,
                               ),
-                            ],
-                            const SizedBox(height: 12),
-                            TextField(
-                              controller: _searchCtrl,
-                              textInputAction: TextInputAction.search,
-                              onChanged: _onSearchChanged,
-                              onSubmitted: (_) => _searchClientes(),
-                              decoration: InputDecoration(
-                                labelText: 'Buscar cliente',
-                                hintText:
-                                    'Número, razón social o nombre del negocio',
-                                helperText:
-                                    'La búsqueda consulta el catálogo mientras escribís.',
-                                border: const OutlineInputBorder(),
-                                suffixIcon: IconButton(
-                                  onPressed: _searching
-                                      ? null
-                                      : _searchClientes,
-                                  icon: _searching
+                              children: [
+                                Row(
+                                  children: [
+                                    Text(
+                                      'Nuevo feedback',
+                                      style: Theme.of(context)
+                                          .textTheme
+                                          .titleLarge
+                                          ?.copyWith(
+                                            fontWeight: FontWeight.w700,
+                                          ),
+                                    ),
+                                    const Spacer(),
+                                    IconButton(
+                                      onPressed: () =>
+                                          Navigator.of(context).pop(),
+                                      icon: const Icon(Icons.close),
+                                    ),
+                                  ],
+                                ),
+                                if (_error != null) ...[
+                                  const SizedBox(height: 8),
+                                  Text(
+                                    _error!,
+                                    style: TextStyle(
+                                      color: Theme.of(
+                                        context,
+                                      ).colorScheme.error,
+                                    ),
+                                  ),
+                                ],
+                                const SizedBox(height: 12),
+                                TextField(
+                                  controller: _searchCtrl,
+                                  textInputAction: TextInputAction.search,
+                                  onChanged: _onSearchChanged,
+                                  onSubmitted: (_) => _searchClientes(),
+                                  decoration: InputDecoration(
+                                    labelText: 'Buscar cliente',
+                                    hintText:
+                                        'Número, razón social o nombre del negocio',
+                                    helperText:
+                                        'La búsqueda consulta el catálogo mientras escribís.',
+                                    border: const OutlineInputBorder(),
+                                    suffixIcon: IconButton(
+                                      onPressed: _searching
+                                          ? null
+                                          : _searchClientes,
+                                      icon: _searching
+                                          ? const SizedBox(
+                                              width: 16,
+                                              height: 16,
+                                              child: CircularProgressIndicator(
+                                                strokeWidth: 2,
+                                              ),
+                                            )
+                                          : const Icon(Icons.search),
+                                    ),
+                                  ),
+                                ),
+                                const SizedBox(height: 14),
+                                _SectionCard(
+                                  title: 'Motivo',
+                                  icon: Icons.label_outlined,
+                                  child:
+                                      DropdownButtonFormField<FeedbackMotivo>(
+                                        initialValue: _selectedMotivo,
+                                        isExpanded: true,
+                                        items: [
+                                          for (final motivo in _motivos)
+                                            DropdownMenuItem(
+                                              value: motivo,
+                                              child: Text(
+                                                motivo.displayName,
+                                                overflow: TextOverflow.ellipsis,
+                                              ),
+                                            ),
+                                        ],
+                                        onChanged: (value) {
+                                          setState(
+                                            () => _selectedMotivo = value,
+                                          );
+                                        },
+                                        decoration: const InputDecoration(
+                                          border: OutlineInputBorder(),
+                                        ),
+                                      ),
+                                ),
+                                const SizedBox(height: 14),
+                                _SectionCard(
+                                  title: 'Cliente',
+                                  icon: Icons.storefront_outlined,
+                                  child: Column(
+                                    crossAxisAlignment:
+                                        CrossAxisAlignment.stretch,
+                                    children: [
+                                      if (_selectedCliente != null)
+                                        _SelectedClientCard(
+                                          cliente: _selectedCliente!,
+                                        ),
+                                      const SizedBox(height: 8),
+                                      if (_clientes.isEmpty)
+                                        _EmptyInline(
+                                          text: _searchQuery.isEmpty
+                                              ? 'No hay clientes para mostrar.'
+                                              : 'No se encontraron clientes para "'
+                                                    '$_searchQuery". Probá con otro término o tocá buscar para consultar todo el catálogo.',
+                                        )
+                                      else
+                                        ..._clientes.map(
+                                          (cliente) => Padding(
+                                            padding: const EdgeInsets.only(
+                                              bottom: 8,
+                                            ),
+                                            child: _ClientResultTile(
+                                              cliente: cliente,
+                                              selected:
+                                                  _selectedCliente?.id ==
+                                                  cliente.id,
+                                              onTap: () {
+                                                setState(() {
+                                                  _selectedCliente = cliente;
+                                                });
+                                              },
+                                            ),
+                                          ),
+                                        ),
+                                    ],
+                                  ),
+                                ),
+                                const SizedBox(height: 14),
+                                _SectionCard(
+                                  title: 'Descripción',
+                                  icon: Icons.description_outlined,
+                                  child: TextField(
+                                    controller: _descripcionCtrl,
+                                    maxLines: 5,
+                                    maxLength: 400,
+                                    decoration: const InputDecoration(
+                                      border: OutlineInputBorder(),
+                                      alignLabelWithHint: true,
+                                      hintText:
+                                          'Contanos qué pasó en la calle...',
+                                    ),
+                                  ),
+                                ),
+                                const SizedBox(height: 16),
+                                FilledButton.icon(
+                                  onPressed: _saving ? null : _submit,
+                                  icon: _saving
                                       ? const SizedBox(
                                           width: 16,
                                           height: 16,
@@ -1452,102 +1609,12 @@ class _FeedbackCreateSheetState extends State<FeedbackCreateSheet> {
                                             strokeWidth: 2,
                                           ),
                                         )
-                                      : const Icon(Icons.search),
+                                      : const Icon(Icons.send),
+                                  label: const Text('Crear feedback'),
                                 ),
-                              ),
+                              ],
                             ),
-                            const SizedBox(height: 14),
-                            _SectionCard(
-                              title: 'Motivo',
-                              icon: Icons.label_outlined,
-                              child: DropdownButtonFormField<FeedbackMotivo>(
-                                initialValue: _selectedMotivo,
-                                items: [
-                                  for (final motivo in _motivos)
-                                    DropdownMenuItem(
-                                      value: motivo,
-                                      child: Text(motivo.displayName),
-                                    ),
-                                ],
-                                onChanged: (value) {
-                                  setState(() => _selectedMotivo = value);
-                                },
-                                decoration: const InputDecoration(
-                                  border: OutlineInputBorder(),
-                                ),
-                              ),
-                            ),
-                            const SizedBox(height: 14),
-                            _SectionCard(
-                              title: 'Cliente',
-                              icon: Icons.storefront_outlined,
-                              child: Column(
-                                crossAxisAlignment: CrossAxisAlignment.stretch,
-                                children: [
-                                  if (_selectedCliente != null)
-                                    _SelectedClientCard(
-                                      cliente: _selectedCliente!,
-                                    ),
-                                  const SizedBox(height: 8),
-                                  if (_clientes.isEmpty)
-                                    _EmptyInline(
-                                      text: _searchQuery.isEmpty
-                                          ? 'No hay clientes para mostrar.'
-                                          : 'No se encontraron clientes para "'
-                                                '$_searchQuery". Probá con otro término o tocá buscar para consultar todo el catálogo.',
-                                    )
-                                  else
-                                    ..._clientes.map(
-                                      (cliente) => Padding(
-                                        padding: const EdgeInsets.only(
-                                          bottom: 8,
-                                        ),
-                                        child: _ClientResultTile(
-                                          cliente: cliente,
-                                          selected:
-                                              _selectedCliente?.id ==
-                                              cliente.id,
-                                          onTap: () {
-                                            setState(() {
-                                              _selectedCliente = cliente;
-                                            });
-                                          },
-                                        ),
-                                      ),
-                                    ),
-                                ],
-                              ),
-                            ),
-                            const SizedBox(height: 14),
-                            _SectionCard(
-                              title: 'Descripción',
-                              icon: Icons.description_outlined,
-                              child: TextField(
-                                controller: _descripcionCtrl,
-                                maxLines: 5,
-                                maxLength: 400,
-                                decoration: const InputDecoration(
-                                  border: OutlineInputBorder(),
-                                  alignLabelWithHint: true,
-                                  hintText: 'Contanos qué pasó en la calle...',
-                                ),
-                              ),
-                            ),
-                            const SizedBox(height: 16),
-                            FilledButton.icon(
-                              onPressed: _saving ? null : _submit,
-                              icon: _saving
-                                  ? const SizedBox(
-                                      width: 16,
-                                      height: 16,
-                                      child: CircularProgressIndicator(
-                                        strokeWidth: 2,
-                                      ),
-                                    )
-                                  : const Icon(Icons.send),
-                              label: const Text('Crear feedback'),
-                            ),
-                          ],
+                          ),
                         ),
                 ),
               ],
@@ -1964,6 +2031,40 @@ class _SelectedClientCard extends StatelessWidget {
           ),
         ],
       ),
+    );
+  }
+}
+
+/// Lista con scroll usada en las 3 pestañas de Feedback. Centra el
+/// contenido y limita su ancho en pantallas grandes (tablet/desktop/web)
+/// para que no se estire de borde a borde, siguiendo el mismo patrón que
+/// el resto de la app (ver security_events_page.dart / employee_stats_page.dart).
+class _ResponsiveTabList extends StatelessWidget {
+  const _ResponsiveTabList({required this.children});
+
+  final List<Widget> children;
+
+  @override
+  Widget build(BuildContext context) {
+    return LayoutBuilder(
+      builder: (context, constraints) {
+        final maxWidth = constraints.maxWidth >= 1200
+            ? 1040.0
+            : constraints.maxWidth >= 900
+            ? 900.0
+            : double.infinity;
+        final hPad = constraints.maxWidth < 600 ? 16.0 : 24.0;
+        return Center(
+          child: ConstrainedBox(
+            constraints: BoxConstraints(maxWidth: maxWidth),
+            child: ListView(
+              physics: const AlwaysScrollableScrollPhysics(),
+              padding: EdgeInsets.all(hPad),
+              children: children,
+            ),
+          ),
+        );
+      },
     );
   }
 }
