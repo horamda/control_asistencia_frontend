@@ -18,7 +18,8 @@ class KpisSectorPage extends StatefulWidget {
   State<KpisSectorPage> createState() => _KpisSectorPageState();
 }
 
-class _KpisSectorPageState extends State<KpisSectorPage> with TickerProviderStateMixin {
+class _KpisSectorPageState extends State<KpisSectorPage>
+    with TickerProviderStateMixin {
   static const _limitMeses = 6;
 
   bool _loading = true;
@@ -38,8 +39,7 @@ class _KpisSectorPageState extends State<KpisSectorPage> with TickerProviderStat
   List<KpiSectorialItem> get _kpis =>
       _summary?.kpis ?? _legacyData?.kpis ?? const [];
 
-  KpisSectorialSector? get _sector =>
-      _summary?.sector ?? _legacyData?.sector;
+  KpisSectorialSector? get _sector => _summary?.sector ?? _legacyData?.sector;
 
   @override
   void initState() {
@@ -174,8 +174,7 @@ class _KpisSectorPageState extends State<KpisSectorPage> with TickerProviderStat
     int kpiId,
   ) {
     if (_summary == null) return const [];
-    final result =
-        <({KpisSectorMesCerrado mes, KpiSectorMesItem item})>[];
+    final result = <({KpisSectorMesCerrado mes, KpiSectorMesItem item})>[];
     for (final mes in _summary!.mesesCerrados) {
       for (final item in mes.kpis) {
         if (item.kpiId == kpiId) {
@@ -225,8 +224,9 @@ class _KpisSectorPageState extends State<KpisSectorPage> with TickerProviderStat
             onRefresh: _load,
             child: LayoutBuilder(
               builder: (context, constraints) {
-                final maxWidth =
-                    constraints.maxWidth >= 900 ? 700.0 : double.infinity;
+                final maxWidth = constraints.maxWidth >= 900
+                    ? 700.0
+                    : double.infinity;
                 final hPad = constraints.maxWidth < 480 ? 12.0 : 16.0;
                 return Center(
                   child: ConstrainedBox(
@@ -325,7 +325,9 @@ class _KpisSectorPageState extends State<KpisSectorPage> with TickerProviderStat
             kpis: kpis,
             selectedIdx: selIdx,
             onPrev: selIdx > 0 ? () => _goToKpi(selIdx - 1) : null,
-            onNext: selIdx < kpis.length - 1 ? () => _goToKpi(selIdx + 1) : null,
+            onNext: selIdx < kpis.length - 1
+                ? () => _goToKpi(selIdx + 1)
+                : null,
             onDotTap: _goToKpi,
           ),
         ),
@@ -345,8 +347,8 @@ class _KpisSectorPageState extends State<KpisSectorPage> with TickerProviderStat
               final mesForCard = _selectedMes == null
                   ? null
                   : _historyFor(kpi.kpiId)
-                      .where((e) => e.mes.periodoMonth == _selectedMes)
-                      .firstOrNull;
+                        .where((e) => e.mes.periodoMonth == _selectedMes)
+                        .firstOrNull;
               return AnimatedScale(
                 scale: isSelected ? 1.0 : 0.90,
                 duration: const Duration(milliseconds: 220),
@@ -464,9 +466,9 @@ class _KpisSectorPageState extends State<KpisSectorPage> with TickerProviderStat
                   ? 'No tenés sector asignado.'
                   : 'Sin KPIs configurados para $_anio.',
               textAlign: TextAlign.center,
-              style: Theme.of(context).textTheme.bodyMedium?.copyWith(
-                    color: Colors.grey[600],
-                  ),
+              style: Theme.of(
+                context,
+              ).textTheme.bodyMedium?.copyWith(color: Colors.grey[600]),
             ),
           ],
         ),
@@ -547,9 +549,7 @@ class _KpisSectorPageState extends State<KpisSectorPage> with TickerProviderStat
                       const SizedBox(width: 8),
                       Text(
                         '${_fullMonthName(month)} $year',
-                        style: Theme.of(context)
-                            .textTheme
-                            .titleMedium
+                        style: Theme.of(context).textTheme.titleMedium
                             ?.copyWith(fontWeight: FontWeight.w700),
                       ),
                     ],
@@ -577,7 +577,12 @@ class _KpisSectorPageState extends State<KpisSectorPage> with TickerProviderStat
                 const SizedBox(height: 4),
                 // Grid del mes
                 _buildMonthGrid(
-                  year, month, daysInMonth, firstWeekday, now, datesWithData,
+                  year,
+                  month,
+                  daysInMonth,
+                  firstWeekday,
+                  now,
+                  datesWithData,
                 ),
                 const SizedBox(height: 20),
                 // Detalle del día seleccionado
@@ -604,20 +609,18 @@ class _KpisSectorPageState extends State<KpisSectorPage> with TickerProviderStat
                           children: [
                             Icon(
                               Icons.inbox_outlined,
-                              color: Theme.of(context)
-                                  .colorScheme
-                                  .onSurfaceVariant,
+                              color: Theme.of(
+                                context,
+                              ).colorScheme.onSurfaceVariant,
                             ),
                             const SizedBox(width: 12),
                             Text(
                               'Sin registros para este día.',
-                              style: Theme.of(context)
-                                  .textTheme
-                                  .bodyMedium
+                              style: Theme.of(context).textTheme.bodyMedium
                                   ?.copyWith(
-                                    color: Theme.of(context)
-                                        .colorScheme
-                                        .onSurfaceVariant,
+                                    color: Theme.of(
+                                      context,
+                                    ).colorScheme.onSurfaceVariant,
                                   ),
                             ),
                           ],
@@ -644,13 +647,11 @@ class _KpisSectorPageState extends State<KpisSectorPage> with TickerProviderStat
                           const SizedBox(height: 10),
                           Text(
                             'Tocá un día para ver los indicadores.',
-                            style: Theme.of(context)
-                                .textTheme
-                                .bodyMedium
+                            style: Theme.of(context).textTheme.bodyMedium
                                 ?.copyWith(
-                                  color: Theme.of(context)
-                                      .colorScheme
-                                      .onSurfaceVariant,
+                                  color: Theme.of(
+                                    context,
+                                  ).colorScheme.onSurfaceVariant,
                                 ),
                           ),
                         ],
@@ -708,8 +709,8 @@ class _KpisSectorPageState extends State<KpisSectorPage> with TickerProviderStat
                     color: isSelected
                         ? cs.primary
                         : isToday
-                            ? cs.primaryContainer
-                            : null,
+                        ? cs.primaryContainer
+                        : null,
                     borderRadius: BorderRadius.circular(8),
                   ),
                   child: Column(
@@ -725,10 +726,10 @@ class _KpisSectorPageState extends State<KpisSectorPage> with TickerProviderStat
                           color: isSelected
                               ? cs.onPrimary
                               : isFuture
-                                  ? const Color(0xFFBDBDBD)
-                                  : isToday
-                                      ? cs.primary
-                                      : cs.onSurface,
+                              ? const Color(0xFFBDBDBD)
+                              : isToday
+                              ? cs.primary
+                              : cs.onSurface,
                         ),
                       ),
                       if (hasData && !isFuture)
@@ -756,10 +757,7 @@ class _KpisSectorPageState extends State<KpisSectorPage> with TickerProviderStat
     );
   }
 
-  Widget _buildDiaDetailHeader(
-    String fecha,
-    KpisSectorDiaResponse? diaResp,
-  ) {
+  Widget _buildDiaDetailHeader(String fecha, KpisSectorDiaResponse? diaResp) {
     final cs = Theme.of(context).colorScheme;
     final parts = fecha.split('-');
     final day = parts.length == 3 ? int.tryParse(parts[2]) ?? 0 : 0;
@@ -775,17 +773,17 @@ class _KpisSectorPageState extends State<KpisSectorPage> with TickerProviderStat
       children: [
         Text(
           '$day $monthName',
-          style: Theme.of(context).textTheme.titleSmall?.copyWith(
-                fontWeight: FontWeight.w700,
-              ),
+          style: Theme.of(
+            context,
+          ).textTheme.titleSmall?.copyWith(fontWeight: FontWeight.w700),
         ),
         const SizedBox(width: 8),
         if (diaResp != null)
           Text(
             '· $kpisConDato/$totalKpis indicadores',
-            style: Theme.of(context).textTheme.labelSmall?.copyWith(
-                  color: cs.onSurfaceVariant,
-                ),
+            style: Theme.of(
+              context,
+            ).textTheme.labelSmall?.copyWith(color: cs.onSurfaceVariant),
           ),
       ],
     );
@@ -843,9 +841,9 @@ class _PeriodSelector extends StatelessWidget {
             ),
             Text(
               '$anio',
-              style: Theme.of(context).textTheme.titleMedium?.copyWith(
-                    fontWeight: FontWeight.w600,
-                  ),
+              style: Theme.of(
+                context,
+              ).textTheme.titleMedium?.copyWith(fontWeight: FontWeight.w600),
             ),
             IconButton(
               icon: const Icon(Icons.chevron_right),
@@ -904,8 +902,18 @@ class _PeriodSelector extends StatelessWidget {
 // Nombre corto del mes por número (1=Ene...12=Dic)
 String _shortMonthName(int month) {
   const names = [
-    'Ene', 'Feb', 'Mar', 'Abr', 'May', 'Jun',
-    'Jul', 'Ago', 'Sep', 'Oct', 'Nov', 'Dic',
+    'Ene',
+    'Feb',
+    'Mar',
+    'Abr',
+    'May',
+    'Jun',
+    'Jul',
+    'Ago',
+    'Sep',
+    'Oct',
+    'Nov',
+    'Dic',
   ];
   if (month < 1 || month > 12) return '$month';
   return names[month - 1];
@@ -914,8 +922,18 @@ String _shortMonthName(int month) {
 // Nombre completo del mes por número (1=Enero...12=Diciembre)
 String _fullMonthName(int month) {
   const names = [
-    'Enero', 'Febrero', 'Marzo', 'Abril', 'Mayo', 'Junio',
-    'Julio', 'Agosto', 'Septiembre', 'Octubre', 'Noviembre', 'Diciembre',
+    'Enero',
+    'Febrero',
+    'Marzo',
+    'Abril',
+    'Mayo',
+    'Junio',
+    'Julio',
+    'Agosto',
+    'Septiembre',
+    'Octubre',
+    'Noviembre',
+    'Diciembre',
   ];
   if (month < 1 || month > 12) return '$month';
   return names[month - 1];
@@ -934,6 +952,7 @@ class _MesChip extends StatelessWidget {
   final bool selected;
   final VoidCallback onTap;
   final String? semaforo;
+
   /// false = mes sin datos del backend (chip atenuado, sin dot)
   final bool hasData;
 
@@ -1024,10 +1043,7 @@ class _KpiNavBar extends StatelessWidget {
       crossAxisAlignment: CrossAxisAlignment.center,
       children: [
         // Flecha izquierda
-        _NavArrow(
-          icon: Icons.chevron_left,
-          onPressed: onPrev,
-        ),
+        _NavArrow(icon: Icons.chevron_left, onPressed: onPrev),
         // Centro: nombre + posición + dots
         Expanded(
           child: Column(
@@ -1039,9 +1055,9 @@ class _KpiNavBar extends StatelessWidget {
                 overflow: TextOverflow.ellipsis,
                 textAlign: TextAlign.center,
                 style: Theme.of(context).textTheme.titleSmall?.copyWith(
-                      fontWeight: FontWeight.w700,
-                      height: 1.2,
-                    ),
+                  fontWeight: FontWeight.w700,
+                  height: 1.2,
+                ),
               ),
               const SizedBox(height: 4),
               // Contador + dots (solo cuando hay ≤6 KPIs, si no solo el número)
@@ -1051,9 +1067,9 @@ class _KpiNavBar extends StatelessWidget {
                   Text(
                     '${selectedIdx + 1} / $total',
                     style: Theme.of(context).textTheme.labelSmall?.copyWith(
-                          color: cs.onSurfaceVariant,
-                          fontWeight: FontWeight.w600,
-                        ),
+                      color: cs.onSurfaceVariant,
+                      fontWeight: FontWeight.w600,
+                    ),
                   ),
                   if (total <= 6) ...[
                     const SizedBox(width: 8),
@@ -1067,7 +1083,9 @@ class _KpiNavBar extends StatelessWidget {
                           width: i == selectedIdx ? 16 : 6,
                           height: 6,
                           decoration: BoxDecoration(
-                            color: i == selectedIdx ? cs.primary : cs.outlineVariant,
+                            color: i == selectedIdx
+                                ? cs.primary
+                                : cs.outlineVariant,
                             borderRadius: BorderRadius.circular(3),
                           ),
                         ),
@@ -1079,10 +1097,7 @@ class _KpiNavBar extends StatelessWidget {
           ),
         ),
         // Flecha derecha
-        _NavArrow(
-          icon: Icons.chevron_right,
-          onPressed: onNext,
-        ),
+        _NavArrow(icon: Icons.chevron_right, onPressed: onNext),
       ],
     );
   }
@@ -1099,9 +1114,7 @@ class _NavArrow extends StatelessWidget {
     final cs = Theme.of(context).colorScheme;
     final enabled = onPressed != null;
     return Material(
-      color: enabled
-          ? cs.primaryContainer
-          : cs.surfaceContainerHighest,
+      color: enabled ? cs.primaryContainer : cs.surfaceContainerHighest,
       borderRadius: BorderRadius.circular(20),
       child: InkWell(
         borderRadius: BorderRadius.circular(20),
@@ -1111,7 +1124,9 @@ class _NavArrow extends StatelessWidget {
           child: Icon(
             icon,
             size: 22,
-            color: enabled ? cs.onPrimaryContainer : cs.onSurface.withValues(alpha: 0.3),
+            color: enabled
+                ? cs.onPrimaryContainer
+                : cs.onSurface.withValues(alpha: 0.3),
           ),
         ),
       ),
@@ -1140,9 +1155,9 @@ class _SectorHeader extends StatelessWidget {
               sector.nombre ?? 'Sector no asignado',
               maxLines: 1,
               overflow: TextOverflow.ellipsis,
-              style: Theme.of(context).textTheme.labelMedium?.copyWith(
-                    color: cs.onSurfaceVariant,
-                  ),
+              style: Theme.of(
+                context,
+              ).textTheme.labelMedium?.copyWith(color: cs.onSurfaceVariant),
             ),
           ),
         ],
@@ -1171,14 +1186,18 @@ class _CircularGaugeCard extends StatelessWidget {
     final semaforo = hasMes ? mesItem!.semaforo : kpi.semaforo;
     final fg = _semaforoFg(semaforo);
     final bg = _semaforoBg(semaforo);
-    final resultado = hasMes ? (mesItem!.resultadoMes ?? kpi.resultadoAcumulado) : kpi.resultadoAcumulado;
+    final resultado = hasMes
+        ? (mesItem!.resultadoMes ?? kpi.resultadoAcumulado)
+        : kpi.resultadoAcumulado;
     final gaugeValue = hasMes && mesItem != null
         ? _kpiGaugeValueMes(kpi, mesItem!)
         : _kpiGaugeValue(kpi);
     final isSuma = kpi.tipoAcumulacion == 'suma';
     final unidad = kpi.unidad != null ? '\n${kpi.unidad}' : '';
     // Para suma: mostrar % de progreso del gauge; para otros: el valor real
-    final progresoSuma = hasMes ? (mesItem?.progresoPct ?? kpi.progresoPct) : kpi.progresoPct;
+    final progresoSuma = hasMes
+        ? (mesItem?.progresoPct ?? kpi.progresoPct)
+        : kpi.progresoPct;
     final centerLabel = isSuma
         ? '${progresoSuma.toStringAsFixed(0)}%'
         : _fmt(resultado) + unidad;
@@ -1203,9 +1222,9 @@ class _CircularGaugeCard extends StatelessWidget {
               overflow: TextOverflow.ellipsis,
               textAlign: TextAlign.center,
               style: Theme.of(context).textTheme.labelMedium?.copyWith(
-                    fontWeight: FontWeight.w600,
-                    height: 1.2,
-                  ),
+                fontWeight: FontWeight.w600,
+                height: 1.2,
+              ),
             ),
             const SizedBox(height: 10),
             Stack(
@@ -1290,18 +1309,21 @@ class _RangeGaugeCard extends StatelessWidget {
               overflow: TextOverflow.ellipsis,
               textAlign: TextAlign.center,
               style: Theme.of(context).textTheme.labelMedium?.copyWith(
-                    fontWeight: FontWeight.w600,
-                    height: 1.2,
-                  ),
+                fontWeight: FontWeight.w600,
+                height: 1.2,
+              ),
             ),
             const SizedBox(height: 6),
-            Text(
-              '${_fmt(result)}$unidad',
-              style: TextStyle(
-                fontSize: 24,
-                fontWeight: FontWeight.w800,
-                color: fg,
-                height: 1,
+            FittedBox(
+              fit: BoxFit.scaleDown,
+              child: Text(
+                '${_fmt(result)}$unidad',
+                maxLines: 1,
+                style: Theme.of(context).textTheme.titleLarge?.copyWith(
+                  fontWeight: FontWeight.w800,
+                  color: fg,
+                  height: 1,
+                ),
               ),
             ),
             const SizedBox(height: 8),
@@ -1309,9 +1331,9 @@ class _RangeGaugeCard extends StatelessWidget {
             const SizedBox(height: 4),
             Text(
               '${_fmt(min)} – ${_fmt(max)}$unidad',
-              style: Theme.of(context).textTheme.labelSmall?.copyWith(
-                    color: cs.onSurfaceVariant,
-                  ),
+              style: Theme.of(
+                context,
+              ).textTheme.labelSmall?.copyWith(color: cs.onSurfaceVariant),
             ),
             const SizedBox(height: 6),
             _SemaforoChip(semaforo: semaforo, fg: fg, bg: bg),
@@ -1358,9 +1380,10 @@ class _KpiDetailPanel extends StatelessWidget {
                 Expanded(
                   child: Text(
                     kpi.nombre,
-                    style: const TextStyle(
+                    maxLines: 2,
+                    overflow: TextOverflow.ellipsis,
+                    style: Theme.of(context).textTheme.titleSmall?.copyWith(
                       fontWeight: FontWeight.w700,
-                      fontSize: 15,
                     ),
                   ),
                 ),
@@ -1376,9 +1399,9 @@ class _KpiDetailPanel extends StatelessWidget {
               Text(
                 kpi.recomendacion!,
                 style: Theme.of(context).textTheme.bodySmall?.copyWith(
-                      color: _fg,
-                      fontStyle: FontStyle.italic,
-                    ),
+                  color: _fg,
+                  fontStyle: FontStyle.italic,
+                ),
               ),
             ],
             const SizedBox(height: 16),
@@ -1400,19 +1423,15 @@ class _KpiDetailPanel extends StatelessWidget {
               Text(
                 'Evolución mensual',
                 style: Theme.of(context).textTheme.labelSmall?.copyWith(
-                      color: cs.onSurfaceVariant,
-                      fontWeight: FontWeight.w600,
-                    ),
+                  color: cs.onSurfaceVariant,
+                  fontWeight: FontWeight.w600,
+                ),
               ),
               const SizedBox(height: 8),
               (kpi.isBetween ||
                       kpi.tipoAcumulacion == 'promedio' ||
                       kpi.tipoAcumulacion == 'ultimo')
-                  ? _MiniLineChart(
-                      points: history,
-                      color: _fg,
-                      unidad: unidad,
-                    )
+                  ? _MiniLineChart(points: history, color: _fg, unidad: unidad)
                   : _MonthlyBarsChart(points: history, unidad: unidad),
             ],
             if (dailyPoints.isNotEmpty)
@@ -1455,7 +1474,8 @@ class _KpiDetailPanel extends StatelessWidget {
         large: true,
       ),
       _StatCellData(
-        label: 'Objetivo${kpi.condicionSimbolo != null ? ' (${kpi.condicionSimbolo})' : ''}',
+        label:
+            'Objetivo${kpi.condicionSimbolo != null ? ' (${kpi.condicionSimbolo})' : ''}',
         value: '${_fmt(kpi.objetivoAnual)}$unidad',
         color: cs.onSurfaceVariant,
       ),
@@ -1502,14 +1522,21 @@ class _KpiDetailPanel extends StatelessWidget {
               Column(
                 mainAxisSize: MainAxisSize.min,
                 children: [
-                  Text(
-                    centerLabel,
-                    textAlign: TextAlign.center,
-                    style: TextStyle(
-                      fontSize: isSuma ? 24 : 16,
-                      fontWeight: FontWeight.w800,
-                      color: _fg,
-                      height: 1,
+                  FittedBox(
+                    fit: BoxFit.scaleDown,
+                    child: Text(
+                      centerLabel,
+                      maxLines: 1,
+                      textAlign: TextAlign.center,
+                      style:
+                          (isSuma
+                                  ? Theme.of(context).textTheme.titleLarge
+                                  : Theme.of(context).textTheme.titleSmall)
+                              ?.copyWith(
+                                fontWeight: FontWeight.w800,
+                                color: _fg,
+                                height: 1,
+                              ),
                     ),
                   ),
                   if (isSuma) ...[
@@ -1551,20 +1578,24 @@ class _KpiDetailPanel extends StatelessWidget {
                   child: Column(
                     crossAxisAlignment: CrossAxisAlignment.start,
                     children: [
-                      Text(
-                        '${_fmt(result)}$unidad',
-                        style: TextStyle(
-                          fontSize: 32,
-                          fontWeight: FontWeight.w800,
-                          color: _fg,
-                          height: 1,
+                      FittedBox(
+                        fit: BoxFit.scaleDown,
+                        child: Text(
+                          '${_fmt(result)}$unidad',
+                          maxLines: 1,
+                          style: Theme.of(context).textTheme.headlineSmall
+                              ?.copyWith(
+                                fontWeight: FontWeight.w800,
+                                color: _fg,
+                                height: 1,
+                              ),
                         ),
                       ),
                       Text(
                         'Resultado actual',
                         style: Theme.of(context).textTheme.labelSmall?.copyWith(
-                              color: cs.onSurfaceVariant,
-                            ),
+                          color: cs.onSurfaceVariant,
+                        ),
                       ),
                     ],
                   ),
@@ -1598,21 +1629,21 @@ class _KpiDetailPanel extends StatelessWidget {
               children: [
                 Text(
                   _fmt(min),
-                  style: Theme.of(context).textTheme.labelSmall?.copyWith(
-                        color: cs.onSurfaceVariant,
-                      ),
+                  style: Theme.of(
+                    context,
+                  ).textTheme.labelSmall?.copyWith(color: cs.onSurfaceVariant),
                 ),
                 Text(
                   'Rango objetivo',
-                  style: Theme.of(context).textTheme.labelSmall?.copyWith(
-                        color: cs.onSurfaceVariant,
-                      ),
+                  style: Theme.of(
+                    context,
+                  ).textTheme.labelSmall?.copyWith(color: cs.onSurfaceVariant),
                 ),
                 Text(
                   _fmt(max),
-                  style: Theme.of(context).textTheme.labelSmall?.copyWith(
-                        color: cs.onSurfaceVariant,
-                      ),
+                  style: Theme.of(
+                    context,
+                  ).textTheme.labelSmall?.copyWith(color: cs.onSurfaceVariant),
                 ),
               ],
             ),
@@ -1669,8 +1700,8 @@ class _StatCell extends StatelessWidget {
           label,
           textAlign: align,
           style: Theme.of(context).textTheme.labelSmall?.copyWith(
-                color: Theme.of(context).colorScheme.onSurfaceVariant,
-              ),
+            color: Theme.of(context).colorScheme.onSurfaceVariant,
+          ),
         ),
         Text(
           value,
@@ -1735,8 +1766,8 @@ class _DeviationBanner extends StatelessWidget {
                 Text(
                   info.subtitle,
                   style: Theme.of(context).textTheme.bodySmall?.copyWith(
-                        color: Theme.of(context).colorScheme.onSurfaceVariant,
-                      ),
+                    color: Theme.of(context).colorScheme.onSurfaceVariant,
+                  ),
                 ),
               ],
             ),
@@ -1822,8 +1853,9 @@ class _DeviationBanner extends StatelessWidget {
       final mid = (min + max) / 2;
       final halfRange = (max - min) / 2;
       final distFromMid = (result - mid).abs();
-      final pctFromCenter =
-          halfRange > 0 ? (distFromMid / halfRange * 100) : 0.0;
+      final pctFromCenter = halfRange > 0
+          ? (distFromMid / halfRange * 100)
+          : 0.0;
       return _DeviationInfo(
         icon: Icons.check_circle_outline,
         color: Colors.green.shade700,
@@ -1903,9 +1935,9 @@ class _KpiHistorySection extends StatelessWidget {
                 const SizedBox(width: 6),
                 Text(
                   'Meses cerrados',
-                  style: Theme.of(context).textTheme.titleSmall?.copyWith(
-                        fontWeight: FontWeight.w600,
-                      ),
+                  style: Theme.of(
+                    context,
+                  ).textTheme.titleSmall?.copyWith(fontWeight: FontWeight.w600),
                 ),
               ],
             ),
@@ -1943,8 +1975,9 @@ class _MonthRow extends StatelessWidget {
     final cs = Theme.of(context).colorScheme;
     final rowFg = _semaforoFg(item.semaforo);
     final hasData = item.resultadoMes != null && item.registros > 0;
-    final barValue =
-        hasData ? (item.progresoPct / 100).clamp(0.0, 1.0).toDouble() : 0.0;
+    final barValue = hasData
+        ? (item.progresoPct / 100).clamp(0.0, 1.0).toDouble()
+        : 0.0;
 
     return Padding(
       padding: const EdgeInsets.only(bottom: 12),
@@ -1955,9 +1988,9 @@ class _MonthRow extends StatelessWidget {
             width: 36,
             child: Text(
               _shortMonthLabel(mes),
-              style: Theme.of(context).textTheme.labelMedium?.copyWith(
-                    fontWeight: FontWeight.w600,
-                  ),
+              style: Theme.of(
+                context,
+              ).textTheme.labelMedium?.copyWith(fontWeight: FontWeight.w600),
             ),
           ),
           const SizedBox(width: 8),
@@ -1984,9 +2017,7 @@ class _MonthRow extends StatelessWidget {
             child: ConstrainedBox(
               constraints: const BoxConstraints(maxWidth: 80, minWidth: 40),
               child: Text(
-                hasData
-                    ? '${_fmtNullable(item.resultadoMes)}$unidad'
-                    : '—',
+                hasData ? '${_fmtNullable(item.resultadoMes)}$unidad' : '—',
                 textAlign: TextAlign.right,
                 maxLines: 1,
                 overflow: TextOverflow.ellipsis,
@@ -2064,8 +2095,8 @@ class _UltimoCargadoCard extends StatelessWidget {
                   Text(
                     'Última carga',
                     style: Theme.of(context).textTheme.labelSmall?.copyWith(
-                          color: cs.onSurfaceVariant,
-                        ),
+                      color: cs.onSurfaceVariant,
+                    ),
                   ),
                   Text(
                     item.nombre,
@@ -2077,8 +2108,8 @@ class _UltimoCargadoCard extends StatelessWidget {
                     Text(
                       _shortDate(item.fechaResultado!),
                       style: Theme.of(context).textTheme.bodySmall?.copyWith(
-                            color: cs.onSurfaceVariant,
-                          ),
+                        color: cs.onSurfaceVariant,
+                      ),
                     ),
                 ],
               ),
@@ -2087,9 +2118,9 @@ class _UltimoCargadoCard extends StatelessWidget {
             Text(
               '${_fmt(item.resultado)}$unidad',
               style: Theme.of(context).textTheme.titleMedium?.copyWith(
-                    color: fg,
-                    fontWeight: FontWeight.w700,
-                  ),
+                color: fg,
+                fontWeight: FontWeight.w700,
+              ),
             ),
           ],
         ),
@@ -2399,7 +2430,8 @@ class _KpiTypeLabel extends StatelessWidget {
 
     if (kpi.isBetween) {
       icon = Icons.straighten_outlined;
-      label = 'Rango objetivo: ${_fmt(kpi.valorMin ?? 0)} – ${_fmt(kpi.valorMax ?? 0)}$unidad';
+      label =
+          'Rango objetivo: ${_fmt(kpi.valorMin ?? 0)} – ${_fmt(kpi.valorMax ?? 0)}$unidad';
     } else if (kpi.condicion == 'lte') {
       icon = Icons.arrow_downward;
       label = 'Límite máximo (≤ $obj$unidad) — menor es mejor';
@@ -2414,7 +2446,9 @@ class _KpiTypeLabel extends StatelessWidget {
       label = 'Acumulado anual — objetivo: $obj$unidad';
     } else {
       icon = Icons.info_outline;
-      label = kpi.objetivoAnual != 0 ? 'Objetivo: $obj$unidad' : 'Sin objetivo configurado';
+      label = kpi.objetivoAnual != 0
+          ? 'Objetivo: $obj$unidad'
+          : 'Sin objetivo configurado';
     }
 
     return Row(
@@ -2424,9 +2458,9 @@ class _KpiTypeLabel extends StatelessWidget {
         Flexible(
           child: Text(
             label,
-            style: Theme.of(context).textTheme.labelSmall?.copyWith(
-                  color: cs.onSurfaceVariant,
-                ),
+            style: Theme.of(
+              context,
+            ).textTheme.labelSmall?.copyWith(color: cs.onSurfaceVariant),
           ),
         ),
       ],
@@ -2508,17 +2542,17 @@ class _NoMonthDataPanel extends StatelessWidget {
             const SizedBox(height: 12),
             Text(
               '$mesNombre $anio',
-              style: Theme.of(context).textTheme.titleSmall?.copyWith(
-                    color: cs.onSurfaceVariant,
-                  ),
+              style: Theme.of(
+                context,
+              ).textTheme.titleSmall?.copyWith(color: cs.onSurfaceVariant),
             ),
             const SizedBox(height: 6),
             Text(
               'Sin datos cargados para $kpiNombre en este mes.',
               textAlign: TextAlign.center,
               style: Theme.of(context).textTheme.bodySmall?.copyWith(
-                    color: cs.onSurface.withValues(alpha: 0.5),
-                  ),
+                color: cs.onSurface.withValues(alpha: 0.5),
+              ),
             ),
           ],
         ),
@@ -2574,9 +2608,8 @@ class _KpiMonthDetailPanel extends StatelessWidget {
                       ),
                       Text(
                         mesNombre,
-                        style: Theme.of(context).textTheme.labelMedium?.copyWith(
-                              color: cs.onSurfaceVariant,
-                            ),
+                        style: Theme.of(context).textTheme.labelMedium
+                            ?.copyWith(color: cs.onSurfaceVariant),
                       ),
                     ],
                   ),
@@ -2593,8 +2626,8 @@ class _KpiMonthDetailPanel extends StatelessWidget {
                   child: Text(
                     'Sin datos para este mes',
                     style: Theme.of(context).textTheme.bodyMedium?.copyWith(
-                          color: cs.onSurfaceVariant,
-                        ),
+                      color: cs.onSurfaceVariant,
+                    ),
                   ),
                 ),
               )
@@ -2667,28 +2700,31 @@ class _KpiMonthDetailPanel extends StatelessWidget {
           ),
         ),
         const SizedBox(height: 16),
-        _StatsRow(cells: [
-          _StatCellData(
-            label: isPromedio
-                ? 'Promedio'
-                : kpi.tipoAcumulacion == 'ultimo'
-                ? 'Último valor'
-                : 'Resultado',
-            value: '${_fmt(result)}$unidad',
-            color: _fg,
-            large: true,
-          ),
-          _StatCellData(
-            label: 'Objetivo mes${kpi.condicionSimbolo != null ? ' (${kpi.condicionSimbolo})' : ''}',
-            value: '${_fmt(objetivo)}$unidad',
-            color: Theme.of(context).colorScheme.onSurfaceVariant,
-          ),
-          _StatCellData(
-            label: 'Progreso',
-            value: '${item.progresoPct.toStringAsFixed(1)}%',
-            color: _fg,
-          ),
-        ]),
+        _StatsRow(
+          cells: [
+            _StatCellData(
+              label: isPromedio
+                  ? 'Promedio'
+                  : kpi.tipoAcumulacion == 'ultimo'
+                  ? 'Último valor'
+                  : 'Resultado',
+              value: '${_fmt(result)}$unidad',
+              color: _fg,
+              large: true,
+            ),
+            _StatCellData(
+              label:
+                  'Objetivo mes${kpi.condicionSimbolo != null ? ' (${kpi.condicionSimbolo})' : ''}',
+              value: '${_fmt(objetivo)}$unidad',
+              color: Theme.of(context).colorScheme.onSurfaceVariant,
+            ),
+            _StatCellData(
+              label: 'Progreso',
+              value: '${item.progresoPct.toStringAsFixed(1)}%',
+              color: _fg,
+            ),
+          ],
+        ),
       ],
     );
   }
@@ -2709,20 +2745,24 @@ class _KpiMonthDetailPanel extends StatelessWidget {
               child: Column(
                 crossAxisAlignment: CrossAxisAlignment.start,
                 children: [
-                  Text(
-                    '${_fmt(result)}$unidad',
-                    style: TextStyle(
-                      fontSize: 32,
-                      fontWeight: FontWeight.w800,
-                      color: _fg,
-                      height: 1,
+                  FittedBox(
+                    fit: BoxFit.scaleDown,
+                    child: Text(
+                      '${_fmt(result)}$unidad',
+                      maxLines: 1,
+                      style: Theme.of(context).textTheme.headlineSmall
+                          ?.copyWith(
+                            fontWeight: FontWeight.w800,
+                            color: _fg,
+                            height: 1,
+                          ),
                     ),
                   ),
                   Text(
                     'Resultado del mes',
                     style: Theme.of(context).textTheme.labelSmall?.copyWith(
-                          color: cs.onSurfaceVariant,
-                        ),
+                      color: cs.onSurfaceVariant,
+                    ),
                   ),
                 ],
               ),
@@ -2754,9 +2794,24 @@ class _KpiMonthDetailPanel extends StatelessWidget {
         Row(
           mainAxisAlignment: MainAxisAlignment.spaceBetween,
           children: [
-            Text(_fmt(min), style: Theme.of(context).textTheme.labelSmall?.copyWith(color: cs.onSurfaceVariant)),
-            Text('Rango objetivo', style: Theme.of(context).textTheme.labelSmall?.copyWith(color: cs.onSurfaceVariant)),
-            Text(_fmt(max), style: Theme.of(context).textTheme.labelSmall?.copyWith(color: cs.onSurfaceVariant)),
+            Text(
+              _fmt(min),
+              style: Theme.of(
+                context,
+              ).textTheme.labelSmall?.copyWith(color: cs.onSurfaceVariant),
+            ),
+            Text(
+              'Rango objetivo',
+              style: Theme.of(
+                context,
+              ).textTheme.labelSmall?.copyWith(color: cs.onSurfaceVariant),
+            ),
+            Text(
+              _fmt(max),
+              style: Theme.of(
+                context,
+              ).textTheme.labelSmall?.copyWith(color: cs.onSurfaceVariant),
+            ),
           ],
         ),
       ],
@@ -2817,8 +2872,8 @@ class _MonthDeviationBanner extends StatelessWidget {
                 Text(
                   info.subtitle,
                   style: Theme.of(context).textTheme.bodySmall?.copyWith(
-                        color: Theme.of(context).colorScheme.onSurfaceVariant,
-                      ),
+                    color: Theme.of(context).colorScheme.onSurfaceVariant,
+                  ),
                 ),
               ],
             ),
@@ -2856,7 +2911,8 @@ class _MonthDeviationBanner extends StatelessWidget {
           icon: Icons.arrow_downward,
           color: Colors.orange.shade700,
           title: 'Bajo el mínimo del rango',
-          subtitle: 'Mínimo ${_fmt(min)}$unidad  ·  Resultado ${_fmt(result)}$unidad',
+          subtitle:
+              'Mínimo ${_fmt(min)}$unidad  ·  Resultado ${_fmt(result)}$unidad',
           badge: '-${_fmt(min - result)}$unidad',
         );
       } else {
@@ -2864,7 +2920,8 @@ class _MonthDeviationBanner extends StatelessWidget {
           icon: Icons.arrow_upward,
           color: Colors.orange.shade700,
           title: 'Sobre el máximo del rango',
-          subtitle: 'Máximo ${_fmt(max)}$unidad  ·  Resultado ${_fmt(item.resultadoMes!)}$unidad',
+          subtitle:
+              'Máximo ${_fmt(max)}$unidad  ·  Resultado ${_fmt(item.resultadoMes!)}$unidad',
           badge: '+${_fmt(item.resultadoMes! - max)}$unidad',
         );
       }
@@ -2893,8 +2950,11 @@ class _MonthDeviationBanner extends StatelessWidget {
       return _DeviationInfo(
         icon: hitTarget ? Icons.check_circle_outline : Icons.pending_outlined,
         color: hitTarget ? Colors.green.shade700 : Colors.orange.shade700,
-        title: hitTarget ? 'Objetivo del mes alcanzado' : 'Objetivo del mes no alcanzado',
-        subtitle: 'Objetivo ${_fmt(objetivo)}$unidad  ·  Resultado ${_fmt(result)}$unidad',
+        title: hitTarget
+            ? 'Objetivo del mes alcanzado'
+            : 'Objetivo del mes no alcanzado',
+        subtitle:
+            'Objetivo ${_fmt(objetivo)}$unidad  ·  Resultado ${_fmt(result)}$unidad',
         badge: '${item.progresoPct.toStringAsFixed(0)}%',
       );
     }
@@ -2903,7 +2963,8 @@ class _MonthDeviationBanner extends StatelessWidget {
       icon: good ? Icons.check_circle_outline : Icons.warning_amber_outlined,
       color: good ? Colors.green.shade700 : Colors.orange.shade700,
       title: _deviationTitle(good, kpi.condicion),
-      subtitle: 'Objetivo ${_fmt(objetivo)}$unidad  ·  Resultado ${_fmt(result)}$unidad',
+      subtitle:
+          'Objetivo ${_fmt(objetivo)}$unidad  ·  Resultado ${_fmt(result)}$unidad',
       badge: _deviationBadge(good, delta, unidad, kpi.condicion),
     );
   }
@@ -2958,15 +3019,15 @@ String _deviationTitle(bool good, String? condicion) {
     return switch (condicion) {
       'lte' => 'Dentro del límite',
       'gte' => 'Sobre el objetivo',
-      'eq'  => 'En el objetivo',
-      _     => 'Dentro del objetivo',
+      'eq' => 'En el objetivo',
+      _ => 'Dentro del objetivo',
     };
   } else {
     return switch (condicion) {
       'lte' => 'Supera el límite',
       'gte' => 'Bajo el objetivo',
-      'eq'  => 'Fuera del objetivo',
-      _     => 'Fuera del objetivo',
+      'eq' => 'Fuera del objetivo',
+      _ => 'Fuera del objetivo',
     };
   }
 }
@@ -2997,7 +3058,7 @@ String _diffLabel(bool good, String? condicion) {
   return switch (condicion) {
     'lte' => good ? 'Margen' : 'Exceso',
     'gte' => good ? 'Excedente' : 'Déficit',
-    _     => 'Diferencia',
+    _ => 'Diferencia',
   };
 }
 
@@ -3014,10 +3075,7 @@ String _diffValue(bool good, double delta, String unidad, String? condicion) {
 // ─── Snapshot de hoy ─────────────────────────────────────────────────────────
 
 class _HoySnapshotCard extends StatelessWidget {
-  const _HoySnapshotCard({
-    required this.diaHoy,
-    required this.selectedKpiId,
-  });
+  const _HoySnapshotCard({required this.diaHoy, required this.selectedKpiId});
 
   final KpisSectorDiaResponse diaHoy;
   final int selectedKpiId;
@@ -3027,7 +3085,9 @@ class _HoySnapshotCard extends StatelessWidget {
     final kpiDia = diaHoy.kpis
         .where((k) => k.kpiId == selectedKpiId)
         .firstOrNull;
-    if (kpiDia == null || !kpiDia.tieneResultado) return const SizedBox.shrink();
+    if (kpiDia == null || !kpiDia.tieneResultado) {
+      return const SizedBox.shrink();
+    }
 
     final cs = Theme.of(context).colorScheme;
     final fg = _semaforoFg(kpiDia.semaforoDia);
@@ -3058,9 +3118,9 @@ class _HoySnapshotCard extends StatelessWidget {
             const SizedBox(width: 6),
             Text(
               _shortDate(diaHoy.fecha),
-              style: Theme.of(context).textTheme.labelSmall?.copyWith(
-                    color: cs.onSurfaceVariant,
-                  ),
+              style: Theme.of(
+                context,
+              ).textTheme.labelSmall?.copyWith(color: cs.onSurfaceVariant),
             ),
             const Spacer(),
             if (kpiDia.resultadoDia != null) ...[
@@ -3125,8 +3185,8 @@ class _KpiDiaCard extends StatelessWidget {
                       Text(
                         kpi.codigo,
                         style: Theme.of(context).textTheme.labelSmall?.copyWith(
-                              color: cs.onSurfaceVariant,
-                            ),
+                          color: cs.onSurfaceVariant,
+                        ),
                       ),
                     ],
                   ),
@@ -3137,8 +3197,8 @@ class _KpiDiaCard extends StatelessWidget {
                   Text(
                     'Sin dato',
                     style: Theme.of(context).textTheme.labelSmall?.copyWith(
-                          color: cs.onSurfaceVariant,
-                        ),
+                      color: cs.onSurfaceVariant,
+                    ),
                   ),
               ],
             ),
@@ -3161,8 +3221,7 @@ class _KpiDiaCard extends StatelessWidget {
                   if (kpi.resultadoAcumuladoAFecha != null)
                     _DiaStatCol(
                       label: 'Acumulado',
-                      value:
-                          '${_fmt(kpi.resultadoAcumuladoAFecha!)}$unidad',
+                      value: '${_fmt(kpi.resultadoAcumuladoAFecha!)}$unidad',
                     ),
                 ],
               ),
@@ -3194,9 +3253,9 @@ class _DiaStatCol extends StatelessWidget {
         children: [
           Text(
             label,
-            style: Theme.of(context).textTheme.labelSmall?.copyWith(
-                  color: cs.onSurfaceVariant,
-                ),
+            style: Theme.of(
+              context,
+            ).textTheme.labelSmall?.copyWith(color: cs.onSurfaceVariant),
           ),
           Text(
             value,
@@ -3215,10 +3274,7 @@ class _DiaStatCol extends StatelessWidget {
 // ─── Serie diaria (sparkline de acumulado) ────────────────────────────────────
 
 class _DailySparklineSection extends StatelessWidget {
-  const _DailySparklineSection({
-    required this.points,
-    required this.kpi,
-  });
+  const _DailySparklineSection({required this.points, required this.kpi});
 
   final List<KpiSectorPuntoDiario> points;
   final KpiSectorialItem kpi;
@@ -3248,16 +3304,16 @@ class _DailySparklineSection extends StatelessWidget {
             Text(
               'Acumulado diario',
               style: Theme.of(context).textTheme.labelSmall?.copyWith(
-                    color: cs.onSurfaceVariant,
-                    fontWeight: FontWeight.w600,
-                  ),
+                color: cs.onSurfaceVariant,
+                fontWeight: FontWeight.w600,
+              ),
             ),
             const SizedBox(width: 4),
             Text(
               '(${points.length} días con dato)',
               style: Theme.of(context).textTheme.labelSmall?.copyWith(
-                    color: cs.onSurfaceVariant.withValues(alpha: 0.6),
-                  ),
+                color: cs.onSurfaceVariant.withValues(alpha: 0.6),
+              ),
             ),
           ],
         ),
@@ -3280,9 +3336,9 @@ class _DailySparklineSection extends StatelessWidget {
           children: [
             Text(
               _compactDate(first),
-              style: Theme.of(context).textTheme.labelSmall?.copyWith(
-                    color: cs.onSurfaceVariant,
-                  ),
+              style: Theme.of(
+                context,
+              ).textTheme.labelSmall?.copyWith(color: cs.onSurfaceVariant),
             ),
             if (lastVal != null)
               Text(
@@ -3295,9 +3351,9 @@ class _DailySparklineSection extends StatelessWidget {
               ),
             Text(
               _compactDate(last),
-              style: Theme.of(context).textTheme.labelSmall?.copyWith(
-                    color: cs.onSurfaceVariant,
-                  ),
+              style: Theme.of(
+                context,
+              ).textTheme.labelSmall?.copyWith(color: cs.onSurfaceVariant),
             ),
           ],
         ),
@@ -3329,10 +3385,7 @@ class _DailyAccumPainter extends CustomPainter {
     final validValues = valores.whereType<double>().toList();
     if (validValues.isEmpty) return;
 
-    final allValues = [
-      ...validValues,
-      ...objetivos.whereType<double>(),
-    ];
+    final allValues = [...validValues, ...objetivos.whereType<double>()];
     final minValue = allValues.reduce(math.min);
     final maxValue = allValues.reduce(math.max);
     final range = maxValue - minValue;
@@ -3354,7 +3407,9 @@ class _DailyAccumPainter extends CustomPainter {
       }
       if (objPts.length > 1) {
         final path = Path()..moveTo(objPts.first.dx, objPts.first.dy);
-        for (final p in objPts.skip(1)) { path.lineTo(p.dx, p.dy); }
+        for (final p in objPts.skip(1)) {
+          path.lineTo(p.dx, p.dy);
+        }
         canvas.drawPath(
           path,
           Paint()
@@ -3377,7 +3432,9 @@ class _DailyAccumPainter extends CustomPainter {
     }
     if (valPts.length > 1) {
       final path = Path()..moveTo(valPts.first.dx, valPts.first.dy);
-      for (final p in valPts.skip(1)) { path.lineTo(p.dx, p.dy); }
+      for (final p in valPts.skip(1)) {
+        path.lineTo(p.dx, p.dy);
+      }
       canvas.drawPath(
         path,
         Paint()

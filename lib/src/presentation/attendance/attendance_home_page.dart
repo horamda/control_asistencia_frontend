@@ -118,6 +118,7 @@ class _AttendanceHomePageState extends State<AttendanceHomePage>
   String? _clockActionPhase;
   int? _alertsCount;
   bool _alertsLoading = false;
+  bool _canCreateLegajoEventos = false;
 
   // ─── Trivia ────────────────────────────────────────────────────────────────
   TriviaEstadoResponse? _triviaEstado;
@@ -186,6 +187,7 @@ class _AttendanceHomePageState extends State<AttendanceHomePage>
     unawaited(_loadTurnoHoy());
     unawaited(_loadTriviaEstado());
     unawaited(_loadAlertsOverview());
+    unawaited(_loadLegajoEventosAdminPermisos());
     _loadPendingQueueState();
     Future<void>.microtask(() => _warmUpClockReadiness(forceGps: true));
     Future<void>.microtask(
@@ -402,6 +404,15 @@ class _AttendanceHomePageState extends State<AttendanceHomePage>
     );
   }
 
+  Future<void> _openLegajoEventoAdmin() async {
+    if (_submitting) return;
+    await _homeCoordinator.openLegajoEventoAdmin(
+      context,
+      apiClient: widget.apiClient,
+      token: widget.token,
+    );
+  }
+
   Future<void> _openPedidosMercaderia() async {
     if (_submitting) return;
     await _homeCoordinator.openPedidosMercaderia(
@@ -552,6 +563,19 @@ class _AttendanceHomePageState extends State<AttendanceHomePage>
       });
     } catch (_) {
       // Trivia es opcional — si falla no bloqueamos el home
+    }
+  }
+
+  Future<void> _loadLegajoEventosAdminPermisos() async {
+    try {
+      final permisos = await widget.apiClient.getLegajoEventosAdminPermisos(
+        token: widget.token,
+      );
+      if (!mounted) return;
+      setState(() => _canCreateLegajoEventos = permisos.puedeCargar);
+    } catch (_) {
+      if (!mounted) return;
+      setState(() => _canCreateLegajoEventos = false);
     }
   }
 
@@ -1187,6 +1211,7 @@ class _AttendanceHomePageState extends State<AttendanceHomePage>
       _loadDashboard(),
       _loadTurnoHoy(),
       _loadTriviaEstado(),
+      _loadLegajoEventosAdminPermisos(),
       _syncPendingClocks(isBackground: true),
       _warmUpClockReadiness(forceGps: true, refreshConfig: true),
     ]);
@@ -1286,6 +1311,10 @@ class _AttendanceHomePageState extends State<AttendanceHomePage>
       case AttendanceHomeActionIntent.openLegajo:
         return () {
           unawaited(_openLegajo());
+        };
+      case AttendanceHomeActionIntent.openLegajoEventoAdmin:
+        return () {
+          unawaited(_openLegajoEventoAdmin());
         };
       case AttendanceHomeActionIntent.openPedidosMercaderia:
         return () {
@@ -1655,6 +1684,7 @@ class _AttendanceHomePageState extends State<AttendanceHomePage>
       submitting: _submitting,
       locatingGps: _locatingGps,
       isBusy: _isBusy,
+      canCreateLegajoEventos: _canCreateLegajoEventos,
     );
     final cs = Theme.of(context).colorScheme;
     final alertsCount = _alertsCount ?? 0;

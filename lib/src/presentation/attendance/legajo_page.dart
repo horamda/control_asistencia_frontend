@@ -3,11 +3,7 @@ import 'package:flutter/material.dart';
 import '../../core/network/mobile_api_client.dart';
 
 class LegajoPage extends StatefulWidget {
-  const LegajoPage({
-    super.key,
-    required this.apiClient,
-    required this.token,
-  });
+  const LegajoPage({super.key, required this.apiClient, required this.token});
 
   final MobileApiClient apiClient;
   final String token;
@@ -234,9 +230,7 @@ class _ResumenTabState extends State<_ResumenTab>
           if (recientes.isNotEmpty) ...[
             _SectionHeader('Eventos recientes'),
             const SizedBox(height: 8),
-            ...recientes.map(
-              (e) => _LegajoEventoCard(item: e, compact: true),
-            ),
+            ...recientes.map((e) => _LegajoEventoCard(item: e, compact: true)),
           ],
         ],
       ),
@@ -278,8 +272,9 @@ class _StatCard extends StatelessWidget {
           children: [
             Text(
               value,
-              style: TextStyle(
-                fontSize: 22,
+              maxLines: 1,
+              overflow: TextOverflow.ellipsis,
+              style: Theme.of(context).textTheme.titleLarge?.copyWith(
                 fontWeight: FontWeight.w700,
                 color: color,
               ),
@@ -287,6 +282,9 @@ class _StatCard extends StatelessWidget {
             const SizedBox(height: 2),
             Text(
               label,
+              maxLines: 2,
+              overflow: TextOverflow.ellipsis,
+              textAlign: TextAlign.center,
               style: Theme.of(context).textTheme.bodySmall?.copyWith(
                 color: Theme.of(context).colorScheme.onSurfaceVariant,
               ),
@@ -314,17 +312,19 @@ class _SeveridadBadge extends StatelessWidget {
       children: [
         Text(
           '$count',
-          style: TextStyle(
-            fontSize: 20,
+          maxLines: 1,
+          overflow: TextOverflow.ellipsis,
+          style: Theme.of(context).textTheme.titleMedium?.copyWith(
             fontWeight: FontWeight.w700,
             color: color,
           ),
         ),
         Text(
           label,
-          style: Theme.of(context).textTheme.bodySmall?.copyWith(
-            color: color,
-          ),
+          maxLines: 1,
+          overflow: TextOverflow.ellipsis,
+          textAlign: TextAlign.center,
+          style: Theme.of(context).textTheme.bodySmall?.copyWith(color: color),
         ),
       ],
     );
@@ -360,6 +360,8 @@ class _TipoCard extends StatelessWidget {
                 children: [
                   Text(
                     item.nombre,
+                    maxLines: 2,
+                    overflow: TextOverflow.ellipsis,
                     style: const TextStyle(fontWeight: FontWeight.w600),
                   ),
                   if (item.ultimaFecha != null)
@@ -378,26 +380,27 @@ class _TipoCard extends StatelessWidget {
                 children: [
                   Text(
                     '${item.total}',
-                    style: TextStyle(
+                    maxLines: 1,
+                    overflow: TextOverflow.ellipsis,
+                    style: Theme.of(context).textTheme.titleSmall?.copyWith(
                       fontWeight: FontWeight.w700,
-                      fontSize: 18,
                       color: cs.primary,
                     ),
                   ),
                   Text(
                     '${item.vigentes} vigente${item.vigentes != 1 ? 's' : ''}',
-                    style: Theme.of(context).textTheme.bodySmall?.copyWith(
-                      color: cs.onSurfaceVariant,
-                    ),
+                    style: Theme.of(
+                      context,
+                    ).textTheme.bodySmall?.copyWith(color: cs.onSurfaceVariant),
                   ),
                 ],
               )
             else
               Text(
                 'Sin eventos',
-                style: Theme.of(context).textTheme.bodySmall?.copyWith(
-                  color: cs.onSurfaceVariant,
-                ),
+                style: Theme.of(
+                  context,
+                ).textTheme.bodySmall?.copyWith(color: cs.onSurfaceVariant),
               ),
           ],
         ),
@@ -428,7 +431,7 @@ class _EventosTabState extends State<_EventosTab>
   static const _per = 20;
 
   // Filtros activos
-  String? _filterEstado;    // 'vigente' | 'anulado'
+  String? _filterEstado; // 'vigente' | 'anulado'
   String? _filterSeveridad; // 'grave' | 'media' | 'leve'
 
   @override
@@ -568,11 +571,7 @@ class _EventosTabState extends State<_EventosTab>
                   () => _setEstado('anulado'),
                 ),
                 const SizedBox(width: 8),
-                Container(
-                  width: 1,
-                  height: 20,
-                  color: cs.outlineVariant,
-                ),
+                Container(width: 1, height: 20, color: cs.outlineVariant),
                 const SizedBox(width: 8),
                 chip(
                   'Grave',
@@ -591,9 +590,8 @@ class _EventosTabState extends State<_EventosTab>
                 chip(
                   'Leve',
                   _filterSeveridad == 'leve',
-                  () => _setSeveridad(
-                    _filterSeveridad == 'leve' ? null : 'leve',
-                  ),
+                  () =>
+                      _setSeveridad(_filterSeveridad == 'leve' ? null : 'leve'),
                 ),
               ],
             ),
@@ -635,7 +633,9 @@ class _EventosTabState extends State<_EventosTab>
           physics: const AlwaysScrollableScrollPhysics(),
           children: const [
             SizedBox(height: 80),
-            Center(child: Text('No hay eventos con los filtros seleccionados.')),
+            Center(
+              child: Text('No hay eventos con los filtros seleccionados.'),
+            ),
           ],
         ),
       );
@@ -658,9 +658,7 @@ class _EventosTabState extends State<_EventosTab>
             if (index == _items.length) {
               return const Padding(
                 padding: EdgeInsets.all(16),
-                child: Center(
-                  child: CircularProgressIndicator(strokeWidth: 2),
-                ),
+                child: Center(child: CircularProgressIndicator(strokeWidth: 2)),
               );
             }
             return _LegajoEventoCard(item: _items[index]);
@@ -712,8 +710,7 @@ class _LegajoEventoCard extends StatelessWidget {
                     item.tipoNombre ?? item.tipoCodigo ?? 'Evento',
                     style: TextStyle(
                       fontWeight: FontWeight.w600,
-                      decoration:
-                          anulado ? TextDecoration.lineThrough : null,
+                      decoration: anulado ? TextDecoration.lineThrough : null,
                       color: anulado ? cs.onSurfaceVariant : null,
                     ),
                   ),
@@ -721,9 +718,9 @@ class _LegajoEventoCard extends StatelessWidget {
                 if (item.fechaEvento != null)
                   Text(
                     item.fechaEvento!,
-                    style: Theme.of(context).textTheme.bodySmall?.copyWith(
-                      color: cs.onSurfaceVariant,
-                    ),
+                    style: Theme.of(
+                      context,
+                    ).textTheme.bodySmall?.copyWith(color: cs.onSurfaceVariant),
                   ),
               ],
             ),
@@ -738,9 +735,9 @@ class _LegajoEventoCard extends StatelessWidget {
               const SizedBox(height: 4),
               Text(
                 item.descripcion!,
-                style: Theme.of(context).textTheme.bodySmall?.copyWith(
-                  color: cs.onSurfaceVariant,
-                ),
+                style: Theme.of(
+                  context,
+                ).textTheme.bodySmall?.copyWith(color: cs.onSurfaceVariant),
               ),
             ],
             if (severidad != null || anulado) ...[
@@ -784,9 +781,9 @@ class _LegajoEventoCard extends StatelessWidget {
               const SizedBox(height: 4),
               Text(
                 'Vigencia: ${item.fechaDesde ?? '—'} → ${item.fechaHasta ?? 'indefinida'}',
-                style: Theme.of(context).textTheme.bodySmall?.copyWith(
-                  color: cs.onSurfaceVariant,
-                ),
+                style: Theme.of(
+                  context,
+                ).textTheme.bodySmall?.copyWith(color: cs.onSurfaceVariant),
               ),
             ],
           ],

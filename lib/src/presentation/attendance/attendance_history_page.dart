@@ -112,11 +112,7 @@ class _AttendanceHistoryPageState extends State<AttendanceHistoryPage> {
     if (_calendarLoading) return;
     final requestedMonth = _calendarMonth;
     final monthStart = requestedMonth;
-    final monthEnd = DateTime(
-      requestedMonth.year,
-      requestedMonth.month + 1,
-      0,
-    );
+    final monthEnd = DateTime(requestedMonth.year, requestedMonth.month + 1, 0);
     setState(() => _calendarLoading = true);
     try {
       final result = await widget.apiClient.getAsistencias(
@@ -137,11 +133,7 @@ class _AttendanceHistoryPageState extends State<AttendanceHistoryPage> {
       setState(() => _calendarError = e.message);
     } catch (_) {
       if (!mounted) return;
-      setState(
-        () =>
-            _calendarError =
-                'No se pudo cargar el calendario.',
-      );
+      setState(() => _calendarError = 'No se pudo cargar el calendario.');
     } finally {
       if (mounted) setState(() => _calendarLoading = false);
     }
@@ -156,20 +148,16 @@ class _AttendanceHistoryPageState extends State<AttendanceHistoryPage> {
           ? _DayStatus.ok
           : _DayStatus.issue;
       final current = map[date];
-      map[date] =
-          (current == _DayStatus.issue || next == _DayStatus.issue)
-              ? _DayStatus.issue
-              : _DayStatus.ok;
+      map[date] = (current == _DayStatus.issue || next == _DayStatus.issue)
+          ? _DayStatus.issue
+          : _DayStatus.ok;
     }
     return map;
   }
 
   void _changeCalendarMonth(int delta) {
     final today = _today();
-    final next = DateTime(
-      _calendarMonth.year,
-      _calendarMonth.month + delta,
-    );
+    final next = DateTime(_calendarMonth.year, _calendarMonth.month + delta);
     if (next.isAfter(DateTime(today.year, today.month, 1))) return;
     setState(() {
       _calendarMonth = DateTime(next.year, next.month, 1);
@@ -258,8 +246,8 @@ class _AttendanceHistoryPageState extends State<AttendanceHistoryPage> {
                     child: Text(
                       '$_total asistencia${_total == 1 ? '' : 's'} — página $_page',
                       style: Theme.of(context).textTheme.bodySmall?.copyWith(
-                            color: cs.onSurfaceVariant,
-                          ),
+                        color: cs.onSurfaceVariant,
+                      ),
                     ),
                   ),
                   const SizedBox(height: 4),
@@ -275,9 +263,7 @@ class _AttendanceHistoryPageState extends State<AttendanceHistoryPage> {
 
                   // ── Items ──────────────────────────────────────────
                   if (_items.isEmpty)
-                    _EmptyCard(
-                      hasFilters: _desde != null || _hasta != null,
-                    ),
+                    _EmptyCard(hasFilters: _desde != null || _hasta != null),
                   ...(_items.map(
                     (item) => Padding(
                       padding: const EdgeInsets.only(bottom: 8),
@@ -476,8 +462,18 @@ class _CalendarCard extends StatelessWidget {
   final VoidCallback? onNextMonth;
 
   static const _monthNames = [
-    'Enero', 'Febrero', 'Marzo', 'Abril', 'Mayo', 'Junio',
-    'Julio', 'Agosto', 'Septiembre', 'Octubre', 'Noviembre', 'Diciembre',
+    'Enero',
+    'Febrero',
+    'Marzo',
+    'Abril',
+    'Mayo',
+    'Junio',
+    'Julio',
+    'Agosto',
+    'Septiembre',
+    'Octubre',
+    'Noviembre',
+    'Diciembre',
   ];
 
   bool get _canGoNext {
@@ -512,8 +508,8 @@ class _CalendarCard extends StatelessWidget {
                     '${_monthNames[month.month - 1]} ${month.year}',
                     textAlign: TextAlign.center,
                     style: Theme.of(context).textTheme.titleSmall?.copyWith(
-                          fontWeight: FontWeight.w700,
-                        ),
+                      fontWeight: FontWeight.w700,
+                    ),
                   ),
                 ),
                 IconButton(
@@ -528,8 +524,12 @@ class _CalendarCard extends StatelessWidget {
             // Weekday headers
             const Row(
               children: [
-                _WeekLabel('L'), _WeekLabel('M'), _WeekLabel('X'),
-                _WeekLabel('J'), _WeekLabel('V'), _WeekLabel('S'),
+                _WeekLabel('L'),
+                _WeekLabel('M'),
+                _WeekLabel('X'),
+                _WeekLabel('J'),
+                _WeekLabel('V'),
+                _WeekLabel('S'),
                 _WeekLabel('D'),
               ],
             ),
@@ -544,8 +544,7 @@ class _CalendarCard extends StatelessWidget {
                 shrinkWrap: true,
                 physics: const NeverScrollableScrollPhysics(),
                 itemCount: totalCells,
-                gridDelegate:
-                    const SliverGridDelegateWithFixedCrossAxisCount(
+                gridDelegate: const SliverGridDelegateWithFixedCrossAxisCount(
                   crossAxisCount: 7,
                   crossAxisSpacing: 4,
                   mainAxisSpacing: 4,
@@ -556,8 +555,7 @@ class _CalendarCard extends StatelessWidget {
                   if (dayNum < 1 || dayNum > daysInMonth) {
                     return const SizedBox.shrink();
                   }
-                  final date =
-                      DateTime(month.year, month.month, dayNum);
+                  final date = DateTime(month.year, month.month, dayNum);
                   final status = statuses[date];
                   final isFuture = date.isAfter(today);
                   final colors = _dayColors(status, isFuture);
@@ -647,9 +645,9 @@ class _WeekLabel extends StatelessWidget {
         child: Text(
           label,
           style: Theme.of(context).textTheme.labelSmall?.copyWith(
-                color: const Color(0xFF5F6368),
-                fontWeight: FontWeight.w700,
-              ),
+            color: const Color(0xFF5F6368),
+            fontWeight: FontWeight.w700,
+          ),
         ),
       ),
     );
@@ -670,10 +668,7 @@ class _LegendDot extends StatelessWidget {
         Container(
           width: 10,
           height: 10,
-          decoration: BoxDecoration(
-            color: color,
-            shape: BoxShape.circle,
-          ),
+          decoration: BoxDecoration(color: color, shape: BoxShape.circle),
         ),
         const SizedBox(width: 5),
         Text(label, style: Theme.of(context).textTheme.labelSmall),
@@ -693,8 +688,7 @@ class _AsistenciaCard extends StatelessWidget {
   Widget build(BuildContext context) {
     final cs = Theme.of(context).colorScheme;
     final isOk = (item.estado ?? '').trim().toLowerCase() == 'ok';
-    final borderColor =
-        isOk ? Colors.green.shade700 : cs.error;
+    final borderColor = isOk ? Colors.green.shade700 : cs.error;
     final hasEntrada = (item.horaEntrada ?? '').isNotEmpty;
     final hasSalida = (item.horaSalida ?? '').isNotEmpty;
 
@@ -724,9 +718,7 @@ class _AsistenciaCard extends StatelessWidget {
                         Expanded(
                           child: Text(
                             DateFormatter.formatApiDateForDisplay(item.fecha),
-                            style: Theme.of(context)
-                                .textTheme
-                                .titleSmall
+                            style: Theme.of(context).textTheme.titleSmall
                                 ?.copyWith(fontWeight: FontWeight.w700),
                           ),
                         ),
@@ -755,23 +747,34 @@ class _AsistenciaCard extends StatelessWidget {
                       Row(
                         children: [
                           if (hasEntrada) ...[
-                            Icon(Icons.login_outlined, size: 13, color: const Color(0xFF1565C0)),
+                            Icon(
+                              Icons.login_outlined,
+                              size: 13,
+                              color: const Color(0xFF1565C0),
+                            ),
                             const SizedBox(width: 3),
                             Text(
                               'Entrada',
-                              style: Theme.of(context).textTheme.labelSmall?.copyWith(
+                              style: Theme.of(context).textTheme.labelSmall
+                                  ?.copyWith(
                                     color: const Color(0xFF1565C0),
                                     fontWeight: FontWeight.w600,
                                   ),
                             ),
                           ],
-                          if (hasEntrada && hasSalida) const SizedBox(width: 10),
+                          if (hasEntrada && hasSalida)
+                            const SizedBox(width: 10),
                           if (hasSalida) ...[
-                            Icon(Icons.logout_outlined, size: 13, color: Colors.orange.shade800),
+                            Icon(
+                              Icons.logout_outlined,
+                              size: 13,
+                              color: Colors.orange.shade800,
+                            ),
                             const SizedBox(width: 3),
                             Text(
                               'Salida',
-                              style: Theme.of(context).textTheme.labelSmall?.copyWith(
+                              style: Theme.of(context).textTheme.labelSmall
+                                  ?.copyWith(
                                     color: Colors.orange.shade800,
                                     fontWeight: FontWeight.w600,
                                   ),
@@ -785,8 +788,8 @@ class _AsistenciaCard extends StatelessWidget {
                       Text(
                         item.observaciones!,
                         style: Theme.of(context).textTheme.bodySmall?.copyWith(
-                              color: cs.onSurfaceVariant,
-                            ),
+                          color: cs.onSurfaceVariant,
+                        ),
                         maxLines: 1,
                         overflow: TextOverflow.ellipsis,
                       ),
@@ -865,12 +868,8 @@ class _AsistenciaDetailSheet extends StatelessWidget {
                           crossAxisAlignment: CrossAxisAlignment.start,
                           children: [
                             Text(
-                              DateFormatter.formatApiDateForDisplay(
-                                item.fecha,
-                              ),
-                              style: Theme.of(context)
-                                  .textTheme
-                                  .titleMedium
+                              DateFormatter.formatApiDateForDisplay(item.fecha),
+                              style: Theme.of(context).textTheme.titleMedium
                                   ?.copyWith(fontWeight: FontWeight.w700),
                             ),
                             Container(
@@ -884,9 +883,7 @@ class _AsistenciaDetailSheet extends StatelessWidget {
                                 borderRadius: BorderRadius.circular(20),
                               ),
                               child: Text(
-                                isOk
-                                    ? 'OK'
-                                    : _capitalize(item.estado ?? '-'),
+                                isOk ? 'OK' : _capitalize(item.estado ?? '-'),
                                 style: TextStyle(
                                   fontSize: 12,
                                   fontWeight: FontWeight.w700,
@@ -943,13 +940,10 @@ class _AsistenciaDetailSheet extends StatelessWidget {
                     const SizedBox(height: 16),
                     Text(
                       'Observaciones',
-                      style: Theme.of(context)
-                          .textTheme
-                          .labelMedium
-                          ?.copyWith(
-                            color: cs.onSurfaceVariant,
-                            fontWeight: FontWeight.w600,
-                          ),
+                      style: Theme.of(context).textTheme.labelMedium?.copyWith(
+                        color: cs.onSurfaceVariant,
+                        fontWeight: FontWeight.w600,
+                      ),
                     ),
                     const SizedBox(height: 6),
                     Container(
@@ -993,39 +987,50 @@ class _DetailCell extends StatelessWidget {
   @override
   Widget build(BuildContext context) {
     final cs = Theme.of(context).colorScheme;
-    return SizedBox(
-      width: 160,
-      child: Container(
-        padding: const EdgeInsets.symmetric(horizontal: 12, vertical: 10),
-        decoration: BoxDecoration(
-          color: cs.surfaceContainerLow,
-          borderRadius: BorderRadius.circular(10),
-        ),
-        child: Column(
-          crossAxisAlignment: CrossAxisAlignment.start,
-          children: [
-            Row(
+    return LayoutBuilder(
+      builder: (context, constraints) {
+        final width = constraints.maxWidth.isFinite
+            ? (constraints.maxWidth < 340 ? constraints.maxWidth : 160.0)
+            : 160.0;
+        return SizedBox(
+          width: width,
+          child: Container(
+            padding: const EdgeInsets.symmetric(horizontal: 12, vertical: 10),
+            decoration: BoxDecoration(
+              color: cs.surfaceContainerLow,
+              borderRadius: BorderRadius.circular(10),
+            ),
+            child: Column(
+              crossAxisAlignment: CrossAxisAlignment.start,
               children: [
-                Icon(icon, size: 13, color: cs.onSurfaceVariant),
-                const SizedBox(width: 4),
-                Text(
-                  label,
-                  style: Theme.of(context).textTheme.labelSmall?.copyWith(
+                Row(
+                  children: [
+                    Icon(icon, size: 13, color: cs.onSurfaceVariant),
+                    const SizedBox(width: 4),
+                    Text(
+                      label,
+                      maxLines: 1,
+                      overflow: TextOverflow.ellipsis,
+                      style: Theme.of(context).textTheme.labelSmall?.copyWith(
                         color: cs.onSurfaceVariant,
                       ),
+                    ),
+                  ],
+                ),
+                const SizedBox(height: 3),
+                Text(
+                  value,
+                  maxLines: 2,
+                  overflow: TextOverflow.ellipsis,
+                  style: Theme.of(
+                    context,
+                  ).textTheme.bodyMedium?.copyWith(fontWeight: FontWeight.w600),
                 ),
               ],
             ),
-            const SizedBox(height: 3),
-            Text(
-              value,
-              style: Theme.of(context).textTheme.bodyMedium?.copyWith(
-                    fontWeight: FontWeight.w600,
-                  ),
-            ),
-          ],
-        ),
-      ),
+          ),
+        );
+      },
     );
   }
 }
@@ -1124,9 +1129,10 @@ class _HistorySkeletonState extends State<_HistorySkeleton>
       vsync: this,
       duration: const Duration(milliseconds: 900),
     )..repeat(reverse: true);
-    _fade = Tween<double>(begin: 0.35, end: 0.75).animate(
-      CurvedAnimation(parent: _controller, curve: Curves.easeInOut),
-    );
+    _fade = Tween<double>(
+      begin: 0.35,
+      end: 0.75,
+    ).animate(CurvedAnimation(parent: _controller, curve: Curves.easeInOut));
   }
 
   @override
@@ -1146,14 +1152,29 @@ class _HistorySkeletonState extends State<_HistorySkeleton>
         physics: const NeverScrollableScrollPhysics(),
         children: [
           // Filtro placeholder
-          _SkeletonBox(color: base, height: 72, radius: 12, opacity: _fade.value),
+          _SkeletonBox(
+            color: base,
+            height: 72,
+            radius: 12,
+            opacity: _fade.value,
+          ),
           const SizedBox(height: 10),
           // Calendario placeholder
-          _SkeletonBox(color: base, height: 200, radius: 12, opacity: _fade.value),
+          _SkeletonBox(
+            color: base,
+            height: 200,
+            radius: 12,
+            opacity: _fade.value,
+          ),
           const SizedBox(height: 10),
           // Cards de items
           for (var i = 0; i < 6; i++) ...[
-            _SkeletonBox(color: base, height: 72, radius: 12, opacity: _fade.value),
+            _SkeletonBox(
+              color: base,
+              height: 72,
+              radius: 12,
+              opacity: _fade.value,
+            ),
             const SizedBox(height: 8),
           ],
         ],

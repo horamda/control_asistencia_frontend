@@ -140,6 +140,33 @@ class _SkapPageState extends State<SkapPage> {
     );
   }
 
+  Future<void> _openPlanEditor(SkapPlan plan) async {
+    final evaluacionId = plan.evaluacionId ?? _miDesarrollo?.evaluacion?.id;
+    if (evaluacionId == null || evaluacionId <= 0) {
+      if (!mounted) return;
+      ScaffoldMessenger.of(context).showSnackBar(
+        const SnackBar(
+          content: Text('No se pudo identificar la evaluacion del plan.'),
+        ),
+      );
+      return;
+    }
+    final changed = await showModalBottomSheet<bool>(
+      context: context,
+      isScrollControlled: true,
+      useSafeArea: true,
+      builder: (_) => _SkapPlanEditorSheet(
+        apiClient: widget.apiClient,
+        token: widget.token,
+        evaluacionId: evaluacionId,
+        plan: plan,
+      ),
+    );
+    if (changed == true) {
+      await _loadAll();
+    }
+  }
+
   @override
   Widget build(BuildContext context) {
     return DefaultTabController(
@@ -400,6 +427,15 @@ class _SkapPageState extends State<SkapPage> {
               subtitle: 'No hay plan cargado para el anio seleccionado.',
             )
           else ...[
+            Align(
+              alignment: Alignment.centerRight,
+              child: FilledButton.icon(
+                onPressed: () => unawaited(_openPlanEditor(currentPlan)),
+                icon: const Icon(Icons.edit_note_outlined),
+                label: const Text('Editar acciones'),
+              ),
+            ),
+            const SizedBox(height: 12),
             _SectionCard(
               title: 'Resumen del plan',
               icon: Icons.flag_outlined,
@@ -844,6 +880,311 @@ class _HeroCard extends StatelessWidget {
             ],
           ),
         ],
+      ),
+    );
+  }
+}
+
+class _SkapPlanEditorSheet extends StatefulWidget {
+  const _SkapPlanEditorSheet({
+    required this.apiClient,
+    required this.token,
+    required this.evaluacionId,
+    required this.plan,
+  });
+
+  final MobileApiClient apiClient;
+  final String token;
+  final int evaluacionId;
+  final SkapPlan plan;
+
+  @override
+  State<_SkapPlanEditorSheet> createState() => _SkapPlanEditorSheetState();
+}
+
+class _SkapPlanEditorSheetState extends State<_SkapPlanEditorSheet> {
+  final _formKey = GlobalKey<FormState>();
+  late List<_PlanActionDraft> _drafts;
+  bool _saving = false;
+
+  static const _categorias = ['S', 'K', 'A', 'P'];
+  static const _estados = ['pendiente', 'en_progreso', 'completado'];
+
+  @override
+  void initState() {
+    super.initState();
+    _drafts = widget.plan.acciones.isEmpty
+        ? [_PlanActionDraft.empty()]
+        : widget.plan.acciones.map(_PlanActionDraft.fromAction).toList();
+  }
+
+  @override
+  void dispose() {
+    for (final draft in _drafts) {
+      draft.dispose();
+    }
+    super.dispose();
+  }
+
+  void _addAction() {
+    setState(() => _drafts.add(_PlanActionDraft.empty()));
+  }
+
+  void _removeAction(int index) {
+    if (_drafts.length == 1) {
+      _drafts[index].clear();
+      setState(() {});
+      return;
+    }
+    final removed = _drafts.removeAt(index);
+    removed.dispose();
+    setState(() {});
+  }
+
+  Future<void> _save() async {
+    if (!_formKey.currentState!.validate()) return;
+    setState(() => _saving = true);
+    try {
+      final acciones = _drafts
+          .map((draft) => draft.toInput())
+          .where((input) => input.accion.trim().isNotEmpty)
+          .toList(growable: false);
+      await widget.apiClient.updateSkapPlan(
+        token: widget.token,
+        evaluacionId: widget.evaluacionId,
+        acciones: acciones,
+      );
+      if (!mounted) return;
+      Navigator.of(context).pop(true);
+    } on ApiException catch (e) {
+      if (!mounted) return;
+      ScaffoldMessenger.of(context).showSnackBar(
+        SnackBar(content: Text(e.message), backgroundColor: Colors.red),
+      );
+    } finally {
+      if (mounted) setState(() => _saving = false);
+    }
+  }
+
+  @override
+  Widget build(BuildContext context) {
+    final bottomInset = MediaQuery.viewInsetsOf(context).bottom;
+    return Padding(
+      padding: EdgeInsets.only(bottom: bottomInset),
+      child: DraggableScrollableSheet(
+        expand: false,
+        initialChildSize: 0.9,
+        minChildSize: 0.5,
+        maxChildSize: 0.97,
+        builder: (context, controller) => Material(
+          color: Theme.of(context).colorScheme.surface,
+          child: Form(
+            key: _formKey,
+            child: ListView(
+              controller: controller,
+              padding: const EdgeInsets.fromLTRB(16, 12, 16, 24),
+              children: [
+                Row(
+                  children: [
+                    Expanded(
+                      child: Text(
+                        'Editar acciones PDP',
+                        style: Theme.of(context).textTheme.titleLarge
+                            ?.copyWith(fontWeight: FontWeight.w800),
+                      ),
+                    ),
+                    IconButton(
+                      tooltip: 'Agregar accion',
+                      onPressed: _saving ? null : _addAction,
+                      icon: const Icon(Icons.add),
+                    ),
+                  ],
+                ),
+                const SizedBox(height: 12),
+                for (var i = 0; i < _drafts.length; i++) ...[
+                  _PlanActionDraftCard(
+                    draft: _drafts[i],
+                    categorias: _categorias,
+                    estados: _estados,
+                    onRemove: _saving ? null : () => _removeAction(i),
+                  ),
+                  const SizedBox(height: 10),
+                ],
+                const SizedBox(height: 8),
+                FilledButton.icon(
+                  onPressed: _saving ? null : _save,
+                  icon: _saving
+                      ? const SizedBox(
+                          width: 16,
+                          height: 16,
+                          child: CircularProgressIndicator(strokeWidth: 2),
+                        )
+                      : const Icon(Icons.save_outlined),
+                  label: const Text('Guardar plan'),
+                ),
+              ],
+            ),
+          ),
+        ),
+      ),
+    );
+  }
+}
+
+class _PlanActionDraft {
+  _PlanActionDraft({
+    required this.categoria,
+    required this.estado,
+    required String accion,
+    required String fechaCompromiso,
+    required String comentarios,
+  }) : accionController = TextEditingController(text: accion),
+       fechaController = TextEditingController(text: fechaCompromiso),
+       comentariosController = TextEditingController(text: comentarios);
+
+  String categoria;
+  String estado;
+  final TextEditingController accionController;
+  final TextEditingController fechaController;
+  final TextEditingController comentariosController;
+
+  factory _PlanActionDraft.empty() {
+    return _PlanActionDraft(
+      categoria: 'S',
+      estado: 'pendiente',
+      accion: '',
+      fechaCompromiso: '',
+      comentarios: '',
+    );
+  }
+
+  factory _PlanActionDraft.fromAction(SkapPlanAction action) {
+    return _PlanActionDraft(
+      categoria: action.categoria ?? 'S',
+      estado: action.estado ?? 'pendiente',
+      accion: action.accion ?? '',
+      fechaCompromiso: action.fechaCompromiso ?? '',
+      comentarios: action.comentarios ?? '',
+    );
+  }
+
+  SkapPlanActionInput toInput() {
+    return SkapPlanActionInput(
+      categoria: categoria,
+      accion: accionController.text.trim(),
+      fechaCompromiso: fechaController.text.trim(),
+      estado: estado,
+      comentarios: comentariosController.text.trim(),
+    );
+  }
+
+  void clear() {
+    categoria = 'S';
+    estado = 'pendiente';
+    accionController.clear();
+    fechaController.clear();
+    comentariosController.clear();
+  }
+
+  void dispose() {
+    accionController.dispose();
+    fechaController.dispose();
+    comentariosController.dispose();
+  }
+}
+
+class _PlanActionDraftCard extends StatefulWidget {
+  const _PlanActionDraftCard({
+    required this.draft,
+    required this.categorias,
+    required this.estados,
+    this.onRemove,
+  });
+
+  final _PlanActionDraft draft;
+  final List<String> categorias;
+  final List<String> estados;
+  final VoidCallback? onRemove;
+
+  @override
+  State<_PlanActionDraftCard> createState() => _PlanActionDraftCardState();
+}
+
+class _PlanActionDraftCardState extends State<_PlanActionDraftCard> {
+  @override
+  Widget build(BuildContext context) {
+    return Card(
+      child: Padding(
+        padding: const EdgeInsets.all(12),
+        child: Column(
+          children: [
+            Row(
+              children: [
+                Expanded(
+                  child: DropdownButtonFormField<String>(
+                    initialValue: widget.draft.categoria,
+                    decoration: const InputDecoration(labelText: 'Categoria'),
+                    items: [
+                      for (final value in widget.categorias)
+                        DropdownMenuItem(value: value, child: Text(value)),
+                    ],
+                    onChanged: (value) {
+                      if (value == null) return;
+                      setState(() => widget.draft.categoria = value);
+                    },
+                  ),
+                ),
+                const SizedBox(width: 10),
+                Expanded(
+                  child: DropdownButtonFormField<String>(
+                    initialValue: widget.draft.estado,
+                    decoration: const InputDecoration(labelText: 'Estado'),
+                    items: [
+                      for (final value in widget.estados)
+                        DropdownMenuItem(value: value, child: Text(value)),
+                    ],
+                    onChanged: (value) {
+                      if (value == null) return;
+                      setState(() => widget.draft.estado = value);
+                    },
+                  ),
+                ),
+                IconButton(
+                  tooltip: 'Quitar',
+                  onPressed: widget.onRemove,
+                  icon: const Icon(Icons.delete_outline),
+                ),
+              ],
+            ),
+            const SizedBox(height: 10),
+            TextFormField(
+              controller: widget.draft.accionController,
+              decoration: const InputDecoration(labelText: 'Accion'),
+              minLines: 2,
+              maxLines: 4,
+              validator: (value) {
+                final text = value?.trim() ?? '';
+                if (text.isEmpty) return 'La accion es obligatoria.';
+                return null;
+              },
+            ),
+            const SizedBox(height: 10),
+            TextFormField(
+              controller: widget.draft.fechaController,
+              decoration: const InputDecoration(
+                labelText: 'Fecha compromiso',
+                hintText: 'YYYY-MM-DD',
+              ),
+            ),
+            const SizedBox(height: 10),
+            TextFormField(
+              controller: widget.draft.comentariosController,
+              decoration: const InputDecoration(labelText: 'Comentarios'),
+              minLines: 1,
+              maxLines: 3,
+            ),
+          ],
+        ),
       ),
     );
   }

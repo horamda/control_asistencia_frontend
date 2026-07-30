@@ -146,12 +146,29 @@ class FeedbackCliente {
 }
 
 class FeedbackMotivo {
-  const FeedbackMotivo({this.id, this.nombre, this.descripcion, this.slaDias});
+  const FeedbackMotivo({
+    this.id,
+    this.nombre,
+    this.descripcion,
+    this.slaDias,
+    this.sectorResponsableId,
+    this.sectorResponsableNombre,
+    this.tiempoResolucionValor,
+    this.tiempoResolucionUnidad,
+    this.requiereFoto,
+    this.requiereObservacion,
+  });
 
   final int? id;
   final String? nombre;
   final String? descripcion;
   final int? slaDias;
+  final int? sectorResponsableId;
+  final String? sectorResponsableNombre;
+  final int? tiempoResolucionValor;
+  final String? tiempoResolucionUnidad;
+  final bool? requiereFoto;
+  final bool? requiereObservacion;
 
   String get displayName {
     final value = nombre?.trim();
@@ -164,6 +181,35 @@ class FeedbackMotivo {
       nombre: _asString(json['nombre']),
       descripcion: _asString(json['descripcion']),
       slaDias: _asInt(json['sla_dias']),
+      sectorResponsableId: _asInt(json['sector_responsable_id']),
+      sectorResponsableNombre: _asString(json['sector_responsable_nombre']),
+      tiempoResolucionValor: _asInt(json['tiempo_resolucion_valor']),
+      tiempoResolucionUnidad: _asString(json['tiempo_resolucion_unidad']),
+      requiereFoto: _asBool(json['requiere_foto']),
+      requiereObservacion: _asBool(json['requiere_observacion']),
+    );
+  }
+}
+
+class FeedbackEvidence {
+  const FeedbackEvidence({
+    this.filename,
+    this.mimeType,
+    this.sizeBytes,
+    this.url,
+  });
+
+  final String? filename;
+  final String? mimeType;
+  final int? sizeBytes;
+  final String? url;
+
+  factory FeedbackEvidence.fromJson(Map<String, dynamic> json) {
+    return FeedbackEvidence(
+      filename: _asString(json['filename']),
+      mimeType: _asString(json['mime_type']),
+      sizeBytes: _asInt(json['size_bytes']),
+      url: _asString(json['url']),
     );
   }
 }
@@ -171,17 +217,26 @@ class FeedbackMotivo {
 class FeedbackItem {
   const FeedbackItem({
     this.id,
+    this.numero,
     this.empresaId,
     this.estado,
     this.estadoActual,
+    this.condicionTemporal,
     this.descripcion,
     this.fechaVencimiento,
+    this.fechaLimite,
     this.createdAt,
     this.updatedAt,
     this.resueltoAt,
     this.resueltoEnSla,
     this.resolucionDescripcion,
+    this.evidencia,
     this.diasRestantes,
+    this.minutosRestantes,
+    this.sectorOrigen,
+    this.sucursal,
+    this.sectorResponsable,
+    this.responsable,
     this.empleado,
     this.jefeDirecto,
     this.cliente,
@@ -190,17 +245,26 @@ class FeedbackItem {
   });
 
   final int? id;
+  final String? numero;
   final int? empresaId;
   final String? estado;
   final String? estadoActual;
+  final String? condicionTemporal;
   final String? descripcion;
   final String? fechaVencimiento;
+  final String? fechaLimite;
   final String? createdAt;
   final String? updatedAt;
   final String? resueltoAt;
   final bool? resueltoEnSla;
   final String? resolucionDescripcion;
+  final FeedbackEvidence? evidencia;
   final int? diasRestantes;
+  final int? minutosRestantes;
+  final FeedbackSimpleRef? sectorOrigen;
+  final FeedbackSimpleRef? sucursal;
+  final FeedbackSimpleRef? sectorResponsable;
+  final FeedbackEmpleadoRef? responsable;
   final FeedbackEmpleadoRef? empleado;
   final FeedbackEmpleadoRef? jefeDirecto;
   final FeedbackCliente? cliente;
@@ -212,22 +276,46 @@ class FeedbackItem {
   factory FeedbackItem.fromJson(Map<String, dynamic> json) {
     final empleadoRaw = _asMap(json['empleado']);
     final jefeRaw = _asMap(json['jefe_directo']);
+    final responsableRaw = _asMap(json['responsable']);
+    final sectorOrigenRaw = _asMap(json['sector_origen']);
+    final sucursalRaw = _asMap(json['sucursal']);
+    final sectorResponsableRaw = _asMap(json['sector_responsable']);
     final clienteRaw = _asMap(json['cliente']);
     final motivoRaw = _asMap(json['motivo']);
     final resueltoPorRaw = _asMap(json['resuelto_por']);
+    final evidenciaRaw = _asMap(json['evidencia']);
     return FeedbackItem(
       id: _asInt(json['id']),
+      numero: _asString(json['numero']),
       empresaId: _asInt(json['empresa_id']),
       estado: _asString(json['estado']),
       estadoActual: _asString(json['estado_actual']),
+      condicionTemporal: _asString(json['condicion_temporal']),
       descripcion: _asString(json['descripcion']),
       fechaVencimiento: _asString(json['fecha_vencimiento']),
+      fechaLimite: _asString(json['fecha_limite']),
       createdAt: _asString(json['created_at']),
       updatedAt: _asString(json['updated_at']),
       resueltoAt: _asString(json['resuelto_at']),
       resueltoEnSla: _asBool(json['resuelto_en_sla']),
       resolucionDescripcion: _asString(json['resolucion_descripcion']),
+      evidencia: evidenciaRaw.isEmpty
+          ? null
+          : FeedbackEvidence.fromJson(evidenciaRaw),
       diasRestantes: _asInt(json['dias_restantes']),
+      minutosRestantes: _asInt(json['minutos_restantes']),
+      sectorOrigen: sectorOrigenRaw.isEmpty
+          ? null
+          : FeedbackSimpleRef.fromJson(sectorOrigenRaw),
+      sucursal: sucursalRaw.isEmpty
+          ? null
+          : FeedbackSimpleRef.fromJson(sucursalRaw),
+      sectorResponsable: sectorResponsableRaw.isEmpty
+          ? null
+          : FeedbackSimpleRef.fromJson(sectorResponsableRaw),
+      responsable: responsableRaw.isEmpty
+          ? null
+          : FeedbackEmpleadoRef.fromJson(responsableRaw),
       empleado: empleadoRaw.isEmpty
           ? null
           : FeedbackEmpleadoRef.fromJson(empleadoRaw),
@@ -239,6 +327,25 @@ class FeedbackItem {
       resueltoPor: resueltoPorRaw.isEmpty
           ? null
           : FeedbackEmpleadoRef.fromJson(resueltoPorRaw),
+    );
+  }
+}
+
+class FeedbackSimpleRef {
+  const FeedbackSimpleRef({this.id, this.nombre});
+
+  final int? id;
+  final String? nombre;
+
+  String get displayName {
+    final value = nombre?.trim();
+    return value == null || value.isEmpty ? '-' : value;
+  }
+
+  factory FeedbackSimpleRef.fromJson(Map<String, dynamic> json) {
+    return FeedbackSimpleRef(
+      id: _asInt(json['id']),
+      nombre: _asString(json['nombre']),
     );
   }
 }

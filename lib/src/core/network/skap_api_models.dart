@@ -274,6 +274,50 @@ class SkapPlanAction {
   }
 }
 
+class SkapPlanActionInput {
+  const SkapPlanActionInput({
+    required this.categoria,
+    required this.accion,
+    this.responsableEmpleadoId,
+    this.fechaCompromiso,
+    this.estado,
+    this.comentarios,
+  });
+
+  final String categoria;
+  final String accion;
+  final int? responsableEmpleadoId;
+  final String? fechaCompromiso;
+  final String? estado;
+  final String? comentarios;
+
+  Map<String, dynamic> toJson() {
+    return <String, dynamic>{
+      'categoria': categoria,
+      'accion': accion,
+      if (responsableEmpleadoId != null)
+        'responsable_empleado_id': responsableEmpleadoId,
+      if (fechaCompromiso != null && fechaCompromiso!.trim().isNotEmpty)
+        'fecha_compromiso': fechaCompromiso!.trim(),
+      if (estado != null && estado!.trim().isNotEmpty)
+        'estado': estado!.trim(),
+      if (comentarios != null && comentarios!.trim().isNotEmpty)
+        'comentarios': comentarios!.trim(),
+    };
+  }
+
+  factory SkapPlanActionInput.fromAction(SkapPlanAction action) {
+    return SkapPlanActionInput(
+      categoria: action.categoria ?? 'S',
+      accion: action.accion ?? '',
+      responsableEmpleadoId: action.responsableEmpleadoId,
+      fechaCompromiso: action.fechaCompromiso,
+      estado: action.estado,
+      comentarios: action.comentarios,
+    );
+  }
+}
+
 class SkapPromedios {
   const SkapPromedios({
     this.skills,

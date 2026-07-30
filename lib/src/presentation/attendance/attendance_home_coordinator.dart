@@ -16,6 +16,7 @@ import 'historial_adelantos_page.dart';
 import 'vacaciones_page.dart';
 import 'francos_page.dart';
 import 'legajo_page.dart';
+import 'legajo_evento_admin_page.dart';
 import 'justificaciones_page.dart';
 import 'marks_history_page.dart';
 import 'pedidos_mercaderia_page.dart';
@@ -206,6 +207,19 @@ class AttendanceHomeCoordinator {
     return Navigator.of(context).push(
       MaterialPageRoute(
         builder: (_) => LegajoPage(apiClient: apiClient, token: token),
+      ),
+    );
+  }
+
+  Future<void> openLegajoEventoAdmin(
+    BuildContext context, {
+    required MobileApiClient apiClient,
+    required String token,
+  }) {
+    return Navigator.of(context).push(
+      MaterialPageRoute(
+        builder: (_) =>
+            LegajoEventoAdminPage(apiClient: apiClient, token: token),
       ),
     );
   }

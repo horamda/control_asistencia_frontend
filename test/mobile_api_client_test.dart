@@ -556,6 +556,89 @@ void main() {
     },
   );
 
+  test('createLegajoEventoAdmin con adjuntos envia multipart', () async {
+    final sourceRoot = await Directory.systemTemp.createTemp(
+      'mobile-api-client-legajo-',
+    );
+
+    try {
+      final file = File('${sourceRoot.path}${Platform.pathSeparator}acta.pdf');
+      await file.writeAsBytes(const <int>[1, 2, 3, 4]);
+
+      final client = _QueuedClient([
+        _QueuedReply(
+          statusCode: 201,
+          body: const <String, dynamic>{
+            'ok': true,
+            'evento': {
+              'id': 77,
+              'empresa_id': 3,
+              'empleado_id': 20,
+              'tipo_id': 1,
+              'tipo_nombre': 'Observacion',
+              'fecha_evento': '2026-07-29',
+              'titulo': 'Observacion operativa',
+              'descripcion': 'Detalle desde mobile',
+              'estado': 'vigente',
+              'severidad': 'leve',
+            },
+            'adjuntos_guardados': 1,
+          },
+          inspect: (request) {
+            expect(request, isA<http.MultipartRequest>());
+            final multipart = request as http.MultipartRequest;
+            expect(multipart.method, 'POST');
+            expect(
+              multipart.url.path,
+              '/api/v1/mobile/me/legajo/eventos-admin',
+            );
+            expect(multipart.headers['Authorization'], 'Bearer abc');
+            expect(multipart.fields['empleado_id'], '20');
+            expect(multipart.fields['tipo_id'], '1');
+            expect(multipart.fields['fecha_evento'], '2026-07-29');
+            expect(multipart.fields['titulo'], 'Observacion operativa');
+            expect(multipart.fields['descripcion'], 'Detalle desde mobile');
+            expect(multipart.fields['severidad'], 'leve');
+            expect(multipart.files, hasLength(1));
+            expect(multipart.files.single.field, 'adjuntos');
+            expect(multipart.files.single.filename, 'acta.pdf');
+            expect(multipart.files.single.contentType.type, 'application');
+            expect(multipart.files.single.contentType.subtype, 'pdf');
+          },
+        ),
+      ]);
+
+      final apiClient = MobileApiClient(
+        baseUrl: 'https://example.com',
+        httpClient: client,
+      );
+
+      final result = await apiClient.createLegajoEventoAdmin(
+        token: 'abc',
+        empleadoId: 20,
+        tipoId: 1,
+        fechaEvento: '2026-07-29',
+        titulo: 'Observacion operativa',
+        descripcion: 'Detalle desde mobile',
+        severidad: 'leve',
+        adjuntos: [
+          JustificacionAdjuntoUpload(
+            filename: 'acta.pdf',
+            path: file.path,
+            sizeBytes: await file.length(),
+          ),
+        ],
+      );
+
+      expect(result.id, 77);
+      expect(result.descripcion, 'Detalle desde mobile');
+      expect(result.severidad, 'leve');
+      apiClient.dispose();
+    } finally {
+      await sourceRoot.delete(recursive: true);
+    }
+  });
+
   test('login envia telemetria cuando se proporcionan los campos', () async {
     final client = _QueuedClient([
       _QueuedReply(
@@ -880,6 +963,62 @@ void main() {
     expect(bandeja.perPage, 10);
     expect(bandeja.total, 11);
     expect(client.callCount, 3);
+    apiClient.dispose();
+  });
+
+  test('feedback con evidencia usa multipart foto', () async {
+    final client = _QueuedClient([
+      _QueuedReply(
+        statusCode: 201,
+        body: const <String, dynamic>{
+          'ok': true,
+          'feedback': {
+            'id': 125,
+            'estado': 'pendiente',
+            'evidencia': {
+              'filename': 'foto.png',
+              'mime_type': 'image/png',
+              'size_bytes': 4,
+              'url': '/media/feedback/evidencias/125',
+            },
+          },
+        },
+        inspect: (request) {
+          expect(request, isA<http.MultipartRequest>());
+          final multipart = request as http.MultipartRequest;
+          expect(multipart.method, 'POST');
+          expect(multipart.url.path, '/api/v1/feedback');
+          expect(multipart.headers['Authorization'], 'Bearer abc');
+          expect(multipart.fields['cliente_id'], '55');
+          expect(multipart.fields['motivo_id'], '1');
+          expect(multipart.fields['descripcion'], 'Falta producto');
+          expect(multipart.files, hasLength(1));
+          final file = multipart.files.single;
+          expect(file.field, 'foto');
+          expect(file.filename, 'foto.png');
+          expect(file.contentType.toString(), 'image/png');
+        },
+      ),
+    ]);
+    final apiClient = MobileApiClient(
+      baseUrl: 'https://example.com',
+      httpClient: client,
+    );
+
+    final result = await apiClient.createFeedback(
+      token: 'abc',
+      clienteId: 55,
+      motivoId: 1,
+      descripcion: 'Falta producto',
+      evidenciaBytes: Uint8List.fromList([1, 2, 3, 4]),
+      evidenciaFilename: 'foto.png',
+    );
+
+    expect(result.id, 125);
+    expect(result.evidencia?.filename, 'foto.png');
+    expect(result.evidencia?.mimeType, 'image/png');
+    expect(result.evidencia?.url, '/media/feedback/evidencias/125');
+    expect(client.callCount, 1);
     apiClient.dispose();
   });
 

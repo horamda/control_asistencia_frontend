@@ -1498,7 +1498,9 @@ Future<int?> _promptQuantity(
         autofocus: true,
         keyboardType: TextInputType.number,
         textAlign: TextAlign.center,
-        style: const TextStyle(fontSize: 24, fontWeight: FontWeight.w600),
+        style: Theme.of(
+          ctx,
+        ).textTheme.titleLarge?.copyWith(fontWeight: FontWeight.w600),
         onSubmitted: (_) => Navigator.of(ctx).pop(_parseQuantity(ctrl.text)),
       ),
       actions: [

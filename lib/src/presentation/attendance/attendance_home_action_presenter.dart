@@ -12,6 +12,7 @@ class AttendanceHomeActionPresenter {
     required bool submitting,
     required bool locatingGps,
     required bool isBusy,
+    bool canCreateLegajoEventos = false,
   }) {
     final syncEnabled = !(pendingQueue.syncing || submitting);
     final gpsEnabled = !(isBusy || locatingGps);
@@ -175,6 +176,13 @@ class AttendanceHomeActionPresenter {
           icon: Icons.folder_open_outlined,
           enabled: historyEnabled,
         ),
+        if (canCreateLegajoEventos)
+          AttendanceHomeActionSpec(
+            intent: AttendanceHomeActionIntent.openLegajoEventoAdmin,
+            label: 'Cargar legajo',
+            icon: Icons.assignment_add,
+            enabled: historyEnabled,
+          ),
         AttendanceHomeActionSpec(
           intent: AttendanceHomeActionIntent.openPedidosMercaderia,
           label: 'Mercadería',
@@ -277,6 +285,7 @@ enum AttendanceHomeActionIntent {
   openVacaciones,
   openFrancos,
   openLegajo,
+  openLegajoEventoAdmin,
   openPedidosMercaderia,
   openKpisSector,
   openFeedback,

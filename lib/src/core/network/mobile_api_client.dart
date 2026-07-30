@@ -350,6 +350,8 @@ class MobileApiClient {
     int page = 1,
     int per = 20,
     String? estado,
+    String? desde,
+    String? hasta,
   }) async {
     final query = <String, String>{
       'page': page.toString(),
@@ -357,6 +359,12 @@ class MobileApiClient {
     };
     if (estado != null && estado.trim().isNotEmpty) {
       query['estado'] = estado.trim();
+    }
+    if (desde != null && desde.trim().isNotEmpty) {
+      query['desde'] = desde.trim();
+    }
+    if (hasta != null && hasta.trim().isNotEmpty) {
+      query['hasta'] = hasta.trim();
     }
     final response = await _safeGet(
       _uri('/me/justificaciones').replace(queryParameters: query),
@@ -1029,6 +1037,176 @@ class MobileApiClient {
     return items;
   }
 
+  Future<LegajoEventosAdminPermisosResponse> getLegajoEventosAdminPermisos({
+    required String token,
+  }) async {
+    final response = await _safeGet(
+      _uri('/me/legajo/eventos-admin/permisos'),
+      headers: _headers(token: token),
+      actionLabel: 'consultar permisos de carga de legajo',
+    );
+    if (response.statusCode != 200) {
+      final error = _extractApiError(
+        response,
+        fallback: 'No se pudo consultar permisos de legajo.',
+      );
+      throw ApiException(
+        message: error.message,
+        statusCode: response.statusCode,
+        code: error.code,
+      );
+    }
+    return LegajoEventosAdminPermisosResponse.fromJson(
+      _decodeObject(response.body),
+    );
+  }
+
+  Future<LegajoEventosAdminEmpleadosResult> getLegajoEventosAdminEmpleados({
+    required String token,
+    String? queryText,
+    int page = 1,
+    int per = 20,
+  }) async {
+    final query = <String, String>{
+      'page': page.toString(),
+      'per_page': per.toString(),
+      if (queryText != null && queryText.trim().isNotEmpty)
+        'q': queryText.trim(),
+    };
+    final response = await _safeGet(
+      _uri(
+        '/me/legajo/eventos-admin/empleados',
+      ).replace(queryParameters: query),
+      headers: _headers(token: token),
+      actionLabel: 'buscar empleados para legajo',
+    );
+    if (response.statusCode != 200) {
+      final error = _extractApiError(
+        response,
+        fallback: 'No se pudieron buscar empleados.',
+      );
+      throw ApiException(
+        message: error.message,
+        statusCode: response.statusCode,
+        code: error.code,
+      );
+    }
+    return LegajoEventosAdminEmpleadosResult.fromJson(
+      _decodeObject(response.body),
+    );
+  }
+
+  Future<LegajoEventosAdminTiposResponse> getLegajoEventosAdminTipos({
+    required String token,
+  }) async {
+    final response = await _safeGet(
+      _uri('/me/legajo/eventos-admin/tipos'),
+      headers: _headers(token: token),
+      actionLabel: 'consultar tipos mobile de legajo',
+    );
+    if (response.statusCode != 200) {
+      final error = _extractApiError(
+        response,
+        fallback: 'No se pudieron obtener los tipos de evento.',
+      );
+      throw ApiException(
+        message: error.message,
+        statusCode: response.statusCode,
+        code: error.code,
+      );
+    }
+    return LegajoEventosAdminTiposResponse.fromJson(
+      _decodeObject(response.body),
+    );
+  }
+
+  Future<LegajoEventoItem> createLegajoEventoAdmin({
+    required String token,
+    required int empleadoId,
+    required int tipoId,
+    required String fechaEvento,
+    String? fechaDesde,
+    String? fechaHasta,
+    String? titulo,
+    required String descripcion,
+    String? severidad,
+    List<JustificacionAdjuntoUpload>? adjuntos,
+  }) async {
+    final body = <String, dynamic>{
+      'empleado_id': empleadoId,
+      'tipo_id': tipoId,
+      'fecha_evento': fechaEvento,
+      if (fechaDesde != null && fechaDesde.trim().isNotEmpty)
+        'fecha_desde': fechaDesde.trim(),
+      if (fechaHasta != null && fechaHasta.trim().isNotEmpty)
+        'fecha_hasta': fechaHasta.trim(),
+      if (titulo != null && titulo.trim().isNotEmpty) 'titulo': titulo.trim(),
+      'descripcion': descripcion.trim(),
+      if (severidad != null && severidad.trim().isNotEmpty)
+        'severidad': severidad.trim(),
+    };
+    final normalizedAdjuntos = _normalizeJustificacionAdjuntos(adjuntos);
+    final response = normalizedAdjuntos.isEmpty
+        ? await _safePost(
+            _uri('/me/legajo/eventos-admin'),
+            headers: _headers(token: token),
+            body: jsonEncode(body),
+            actionLabel: 'crear evento de legajo',
+          )
+        : await _sendLegajoEventoAdminMultipart(
+            token: token,
+            actionLabel: 'crear evento de legajo',
+            fields: body.map((key, value) => MapEntry(key, value.toString())),
+            adjuntos: normalizedAdjuntos,
+          );
+    if (response.statusCode != 201) {
+      final error = _extractApiError(
+        response,
+        fallback: 'No se pudo crear el evento de legajo.',
+      );
+      throw ApiException(
+        message: error.message,
+        statusCode: response.statusCode,
+        code: error.code,
+      );
+    }
+    final json = _decodeObject(response.body);
+    final evento = json['evento'];
+    if (evento is Map<String, dynamic>) {
+      return LegajoEventoItem.fromJson(evento);
+    }
+    if (evento is Map) {
+      return LegajoEventoItem.fromJson(Map<String, dynamic>.from(evento));
+    }
+    return LegajoEventoItem.fromJson(json);
+  }
+
+  Future<http.Response> _sendLegajoEventoAdminMultipart({
+    required String token,
+    required String actionLabel,
+    required Map<String, String> fields,
+    required List<JustificacionAdjuntoUpload> adjuntos,
+  }) {
+    return _sendMultipartWithAuthRecovery(
+      token: token,
+      actionLabel: actionLabel,
+      requestBuilder: (effectiveToken) async {
+        final request = http.MultipartRequest(
+          'POST',
+          _uri('/me/legajo/eventos-admin'),
+        );
+        if (effectiveToken.isNotEmpty) {
+          request.headers['Authorization'] = 'Bearer $effectiveToken';
+        }
+        request.fields.addAll(fields);
+        for (final adjunto in adjuntos) {
+          request.files.add(await _buildJustificacionMultipartFile(adjunto));
+        }
+        return request;
+      },
+    );
+  }
+
   Future<GenerarQrResponse> generarQr({
     required String token,
     String accion = 'auto',
@@ -1223,6 +1401,82 @@ class MobileApiClient {
       );
     }
     return JustificacionItem.fromJson(_decodeObject(response.body));
+  }
+
+  Future<List<JustificacionAdjuntoItem>> getJustificacionAdjuntos({
+    required String token,
+    required int id,
+  }) async {
+    final response = await _safeGet(
+      _uri('/me/justificaciones/$id/adjuntos'),
+      headers: _headers(token: token),
+      actionLabel: 'consultar adjuntos de justificaciÃ³n',
+    );
+    if (response.statusCode != 200) {
+      final error = _extractApiError(
+        response,
+        fallback: 'No se pudieron obtener los adjuntos.',
+      );
+      throw ApiException(
+        message: error.message,
+        statusCode: response.statusCode,
+        code: error.code,
+      );
+    }
+    final json = _decodeObject(response.body);
+    final rawItems = json['items'] is List ? json['items'] : json['adjuntos'];
+    if (rawItems is! List) return const <JustificacionAdjuntoItem>[];
+    return [
+      for (final raw in rawItems)
+        if (raw is Map)
+          JustificacionAdjuntoItem.fromJson(Map<String, dynamic>.from(raw)),
+    ];
+  }
+
+  Future<void> deleteJustificacionAdjunto({
+    required String token,
+    required int id,
+    required int adjuntoId,
+  }) async {
+    final response = await _safeDelete(
+      _uri('/me/justificaciones/$id/adjuntos/$adjuntoId'),
+      headers: _headers(token: token),
+      actionLabel: 'eliminar adjunto de justificaciÃ³n',
+    );
+    if (response.statusCode != 200 && response.statusCode != 204) {
+      final error = _extractApiError(
+        response,
+        fallback: 'No se pudo eliminar el adjunto.',
+      );
+      throw ApiException(
+        message: error.message,
+        statusCode: response.statusCode,
+        code: error.code,
+      );
+    }
+  }
+
+  Future<void> marcarJustificacionVista({
+    required String token,
+    required int id,
+  }) async {
+    final response = await _safePost(
+      _uri('/me/justificaciones/$id/marcar-vista'),
+      headers: _headers(token: token),
+      body: '{}',
+      actionLabel: 'marcar justificaciÃ³n como vista',
+    );
+    if (response.statusCode != 200 && response.statusCode != 204) {
+      final error = _extractApiError(
+        response,
+        fallback: 'No se pudo marcar la justificaciÃ³n como vista.',
+      );
+      throw ApiException(
+        message: error.message,
+        statusCode: response.statusCode,
+        code: error.code,
+      );
+    }
   }
 
   Future<MarcasPageResult> getMarcas({
@@ -2022,17 +2276,34 @@ class MobileApiClient {
     required int clienteId,
     required int motivoId,
     required String descripcion,
+    String? evidenciaPath,
+    Uint8List? evidenciaBytes,
+    String? evidenciaFilename,
   }) async {
-    final response = await _safePost(
-      _feedbackUri(''),
-      headers: _headers(token: token),
-      body: jsonEncode({
-        'cliente_id': clienteId,
-        'motivo_id': motivoId,
-        'descripcion': descripcion.trim(),
-      }),
-      actionLabel: 'crear feedback',
-    );
+    final hasEvidence =
+        (evidenciaPath?.trim().isNotEmpty ?? false) ||
+        (evidenciaBytes != null && evidenciaBytes.isNotEmpty);
+    final response = hasEvidence
+        ? await _sendFeedbackMultipart(
+            token: token,
+            clienteId: clienteId,
+            motivoId: motivoId,
+            descripcion: descripcion,
+            evidenciaPath: evidenciaPath,
+            evidenciaBytes: evidenciaBytes,
+            evidenciaFilename: evidenciaFilename,
+          )
+        : await _safePost(
+            _feedbackUri(''),
+            headers: _headers(token: token),
+            body: jsonEncode({
+              'cliente_id': clienteId,
+              'motivo_id': motivoId,
+              if (descripcion.trim().isNotEmpty)
+                'descripcion': descripcion.trim(),
+            }),
+            actionLabel: 'crear feedback',
+          );
     if (response.statusCode != 200 && response.statusCode != 201) {
       final error = _extractApiError(
         response,
@@ -2047,6 +2318,40 @@ class MobileApiClient {
     return FeedbackMutationResponse.fromJson(
       _decodeObject(response.body),
     ).feedback;
+  }
+
+  Future<http.Response> _sendFeedbackMultipart({
+    required String token,
+    required int clienteId,
+    required int motivoId,
+    required String descripcion,
+    String? evidenciaPath,
+    Uint8List? evidenciaBytes,
+    String? evidenciaFilename,
+  }) {
+    return _sendMultipartWithAuthRecovery(
+      token: token,
+      actionLabel: 'crear feedback',
+      requestBuilder: (effectiveToken) async {
+        final request = http.MultipartRequest('POST', _feedbackUri(''));
+        if (effectiveToken.isNotEmpty) {
+          request.headers['Authorization'] = 'Bearer $effectiveToken';
+        }
+        request.fields.addAll({
+          'cliente_id': clienteId.toString(),
+          'motivo_id': motivoId.toString(),
+          if (descripcion.trim().isNotEmpty) 'descripcion': descripcion.trim(),
+        });
+        request.files.add(
+          await _buildFeedbackEvidenceMultipartFile(
+            path: evidenciaPath,
+            bytes: evidenciaBytes,
+            filename: evidenciaFilename,
+          ),
+        );
+        return request;
+      },
+    );
   }
 
   Future<FeedbackItem> takeFeedback({
@@ -2244,6 +2549,45 @@ class MobileApiClient {
       );
     }
     return SkapPlanesResponse.fromJson(_decodeObject(response.body));
+  }
+
+  Future<SkapPlanesResponse> updateSkapPlan({
+    required String token,
+    required int evaluacionId,
+    required List<SkapPlanActionInput> acciones,
+  }) async {
+    final response = await _safePost(
+      _skapUri('/planes'),
+      headers: _headers(token: token),
+      body: jsonEncode(<String, dynamic>{
+        'evaluacion_id': evaluacionId,
+        'acciones': acciones.map((item) => item.toJson()).toList(),
+      }),
+      actionLabel: 'actualizar plan SKAP',
+    );
+    if (response.statusCode != 200) {
+      final error = _extractApiError(
+        response,
+        fallback: 'No se pudo actualizar el plan SKAP.',
+      );
+      throw ApiException(
+        message: error.message,
+        statusCode: response.statusCode,
+        code: error.code,
+      );
+    }
+    final decoded = _decodeObject(response.body);
+    if (decoded['data'] is Map && (decoded['data'] as Map)['plan'] is Map) {
+      final data = Map<String, dynamic>.from(decoded['data'] as Map);
+      return SkapPlanesResponse.fromJson({
+        'data': {
+          'total': 1,
+          'items': [data['plan']],
+          'current': data['plan'],
+        },
+      });
+    }
+    return SkapPlanesResponse.fromJson(decoded);
   }
 
   Future<PremiosResponse> getPremios({required String token, int? anio}) async {
@@ -2963,6 +3307,69 @@ class MobileApiClient {
       );
     }
     throw ArgumentError('El adjunto no tiene path ni bytes.');
+  }
+
+  Future<http.MultipartFile> _buildFeedbackEvidenceMultipartFile({
+    String? path,
+    Uint8List? bytes,
+    String? filename,
+  }) async {
+    final uploadFilename = _sanitizeFeedbackEvidenceFilename(
+      filename ?? path ?? 'evidencia.jpg',
+    );
+    final contentType = _contentTypeForFeedbackEvidenceFilename(uploadFilename);
+    final cleanPath = path?.trim();
+    if (cleanPath != null && cleanPath.isNotEmpty) {
+      return http.MultipartFile.fromPath(
+        'foto',
+        cleanPath,
+        filename: uploadFilename,
+        contentType: contentType,
+      );
+    }
+    if (bytes != null && bytes.isNotEmpty) {
+      return http.MultipartFile.fromBytes(
+        'foto',
+        bytes,
+        filename: uploadFilename,
+        contentType: contentType,
+      );
+    }
+    throw ArgumentError('La evidencia no tiene path ni bytes.');
+  }
+
+  String _sanitizeFeedbackEvidenceFilename(String rawName) {
+    final cleaned = rawName.trim().replaceAll(RegExp(r'[\\/]+'), ' ');
+    final fallbackName = cleaned.isEmpty ? 'evidencia.jpg' : cleaned;
+
+    var base = fallbackName;
+    var ext = 'jpg';
+    final dot = fallbackName.lastIndexOf('.');
+    if (dot > 0 && dot < fallbackName.length - 1) {
+      base = fallbackName.substring(0, dot);
+      ext = fallbackName.substring(dot + 1);
+    }
+
+    final safeBase = base
+        .replaceAll(RegExp(r'[^A-Za-z0-9]+'), '_')
+        .replaceAll(RegExp(r'_+'), '_')
+        .replaceAll(RegExp(r'^_+|_+$'), '');
+    final safeExt = ext.toLowerCase().replaceAll(RegExp(r'[^a-z0-9]'), '');
+    final finalBase = safeBase.isEmpty ? 'evidencia' : safeBase;
+    final finalExt = switch (safeExt) {
+      'jpg' || 'jpeg' || 'png' || 'webp' => safeExt,
+      _ => 'jpg',
+    };
+    return '$finalBase.$finalExt';
+  }
+
+  http.MediaType _contentTypeForFeedbackEvidenceFilename(String filename) {
+    final extension = filename.split('.').last.trim().toLowerCase();
+    return switch (extension) {
+      'png' => http.MediaType('image', 'png'),
+      'webp' => http.MediaType('image', 'webp'),
+      _ => http.MediaType('image', 'jpeg'),
+    };
   }
 
   String _sanitizeJustificacionFilename(String rawName) {
@@ -4713,6 +5120,20 @@ class JustificacionAdjuntoItem {
       downloadUrl: _jsonString(json['download_url']),
     );
   }
+
+  Map<String, dynamic> toJson() {
+    return <String, dynamic>{
+      'id': id,
+      if (eventoId != null) 'evento_id': eventoId,
+      if (nombreOriginal != null) 'nombre_original': nombreOriginal,
+      if (mimeType != null) 'mime_type': mimeType,
+      if (extension != null) 'extension': extension,
+      if (tamanoBytes != null) 'tamano_bytes': tamanoBytes,
+      if (estado != null) 'estado': estado,
+      if (createdAt != null) 'created_at': createdAt,
+      if (downloadUrl != null) 'download_url': downloadUrl,
+    };
+  }
 }
 
 class JustificacionItem {
@@ -4775,6 +5196,24 @@ class JustificacionItem {
       estado: _jsonString(json['estado']),
       createdAt: _jsonString(json['created_at']),
     );
+  }
+
+  Map<String, dynamic> toJson() {
+    return <String, dynamic>{
+      'id': id,
+      if (fecha != null) 'fecha': fecha,
+      if (fechaDesde != null) 'fecha_desde': fechaDesde,
+      if (fechaHasta != null) 'fecha_hasta': fechaHasta,
+      if (asistenciaId != null) 'asistencia_id': asistenciaId,
+      if (asistenciaFecha != null) 'asistencia_fecha': asistenciaFecha,
+      if (legajoEventoId != null) 'legajo_evento_id': legajoEventoId,
+      if (motivo != null) 'motivo': motivo,
+      if (archivo != null) 'archivo': archivo,
+      if (adjuntosCount != null) 'adjuntos_count': adjuntosCount,
+      'adjuntos': adjuntos.map((item) => item.toJson()).toList(),
+      if (estado != null) 'estado': estado,
+      if (createdAt != null) 'created_at': createdAt,
+    };
   }
 
   bool get hasAdjuntos =>
@@ -5776,6 +6215,160 @@ class LegajoHistorialPorTipoItem {
       total: _jsonInt(json['total']) ?? 0,
       vigentes: _jsonInt(json['vigentes']) ?? 0,
       ultimaFecha: _jsonString(json['ultima_fecha']),
+    );
+  }
+}
+
+class LegajoEventosAdminPermisosResponse {
+  const LegajoEventosAdminPermisosResponse({
+    required this.ok,
+    required this.puedeCargar,
+    this.permiso,
+    this.alcance,
+  });
+
+  final bool ok;
+  final bool puedeCargar;
+  final String? permiso;
+  final String? alcance;
+
+  factory LegajoEventosAdminPermisosResponse.fromJson(
+    Map<String, dynamic> json,
+  ) {
+    return LegajoEventosAdminPermisosResponse(
+      ok: _jsonBool(json['ok']) ?? true,
+      puedeCargar: _jsonBool(json['puede_cargar']) ?? false,
+      permiso: _jsonString(json['permiso']),
+      alcance: _jsonString(json['alcance']),
+    );
+  }
+}
+
+class LegajoEventosAdminEmpleadoItem {
+  const LegajoEventosAdminEmpleadoItem({
+    required this.id,
+    this.empresaId,
+    this.legajo,
+    this.dni,
+    this.apellido,
+    this.nombre,
+    this.displayName,
+    this.empresaNombre,
+    this.sucursalId,
+    this.sucursalNombre,
+    this.sectorId,
+    this.sectorNombre,
+  });
+
+  final int id;
+  final int? empresaId;
+  final String? legajo;
+  final String? dni;
+  final String? apellido;
+  final String? nombre;
+  final String? displayName;
+  final String? empresaNombre;
+  final int? sucursalId;
+  final String? sucursalNombre;
+  final int? sectorId;
+  final String? sectorNombre;
+
+  String get title {
+    final value = displayName?.trim();
+    if (value != null && value.isNotEmpty) return value;
+    return '${apellido ?? ''} ${nombre ?? ''}'.trim();
+  }
+
+  String get subtitle {
+    final parts = <String>[
+      if ((legajo ?? '').trim().isNotEmpty) 'Legajo ${legajo!.trim()}',
+      if ((dni ?? '').trim().isNotEmpty) 'DNI ${dni!.trim()}',
+      if ((sectorNombre ?? '').trim().isNotEmpty) sectorNombre!.trim(),
+    ];
+    return parts.join(' | ');
+  }
+
+  factory LegajoEventosAdminEmpleadoItem.fromJson(Map<String, dynamic> json) {
+    return LegajoEventosAdminEmpleadoItem(
+      id: _jsonInt(json['id']) ?? 0,
+      empresaId: _jsonInt(json['empresa_id']),
+      legajo: _jsonString(json['legajo']),
+      dni: _jsonString(json['dni']),
+      apellido: _jsonString(json['apellido']),
+      nombre: _jsonString(json['nombre']),
+      displayName: _jsonString(json['display_name']),
+      empresaNombre: _jsonString(json['empresa_nombre']),
+      sucursalId: _jsonInt(json['sucursal_id']),
+      sucursalNombre: _jsonString(json['sucursal_nombre']),
+      sectorId: _jsonInt(json['sector_id']),
+      sectorNombre: _jsonString(json['sector_nombre']),
+    );
+  }
+}
+
+class LegajoEventosAdminEmpleadosResult {
+  const LegajoEventosAdminEmpleadosResult({
+    required this.ok,
+    required this.items,
+    required this.total,
+    required this.page,
+    required this.perPage,
+    this.alcance,
+  });
+
+  final bool ok;
+  final List<LegajoEventosAdminEmpleadoItem> items;
+  final int total;
+  final int page;
+  final int perPage;
+  final String? alcance;
+
+  factory LegajoEventosAdminEmpleadosResult.fromJson(
+    Map<String, dynamic> json,
+  ) {
+    final rawItems = json['items'];
+    final items = <LegajoEventosAdminEmpleadoItem>[];
+    if (rawItems is List) {
+      for (final raw in rawItems) {
+        if (raw is Map<String, dynamic>) {
+          items.add(LegajoEventosAdminEmpleadoItem.fromJson(raw));
+        } else if (raw is Map) {
+          items.add(
+            LegajoEventosAdminEmpleadoItem.fromJson(
+              Map<String, dynamic>.from(raw),
+            ),
+          );
+        }
+      }
+    }
+    return LegajoEventosAdminEmpleadosResult(
+      ok: _jsonBool(json['ok']) ?? true,
+      items: items,
+      total: _jsonInt(json['total']) ?? items.length,
+      page: _jsonInt(json['page']) ?? 1,
+      perPage: _jsonInt(json['per_page']) ?? 20,
+      alcance: _jsonString(json['alcance']),
+    );
+  }
+}
+
+class LegajoEventosAdminTiposResponse {
+  const LegajoEventosAdminTiposResponse({
+    required this.ok,
+    required this.items,
+    required this.total,
+  });
+
+  final bool ok;
+  final List<LegajoTipoEventoItem> items;
+  final int total;
+
+  factory LegajoEventosAdminTiposResponse.fromJson(Map<String, dynamic> json) {
+    final base = LegajoTiposEventoResponse.fromJson(json);
+    return LegajoEventosAdminTiposResponse(
+      ok: base.ok,
+      items: base.items,
+      total: base.total,
     );
   }
 }

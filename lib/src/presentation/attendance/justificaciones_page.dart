@@ -31,6 +31,8 @@ class _JustificacionesPageState extends State<JustificacionesPage> {
   int _page = 1;
   int _total = 0;
   String? _filtroEstado;
+  DateTime? _filtroDesde;
+  DateTime? _filtroHasta;
   Map<String, int> _counts = {};
 
   static const _estados = ['pendiente', 'aprobada', 'rechazada'];
@@ -92,6 +94,12 @@ class _JustificacionesPageState extends State<JustificacionesPage> {
         token: widget.token,
         page: _page,
         estado: _filtroEstado,
+        desde: _filtroDesde == null
+            ? null
+            : DateFormatter.formatApiDate(_filtroDesde!),
+        hasta: _filtroHasta == null
+            ? null
+            : DateFormatter.formatApiDate(_filtroHasta!),
       );
       if (!mounted) return;
       setState(() {
@@ -146,6 +154,21 @@ class _JustificacionesPageState extends State<JustificacionesPage> {
     }
 
     try {
+      final adjuntos = await widget.apiClient.getJustificacionAdjuntos(
+        token: widget.token,
+        id: item.id,
+      );
+      if (adjuntos.isNotEmpty) {
+        final json = item.toJson();
+        json['adjuntos'] = adjuntos.map((a) => a.toJson()).toList();
+        json['adjuntos_count'] = adjuntos.length;
+        return JustificacionItem.fromJson(json);
+      }
+    } catch (_) {
+      // fallback to full detail below
+    }
+
+    try {
       return await widget.apiClient.getJustificacion(
         token: widget.token,
         id: item.id,
@@ -158,15 +181,23 @@ class _JustificacionesPageState extends State<JustificacionesPage> {
   Future<void> _showDetailSheet(JustificacionItem item) async {
     final detailItem = await _loadJustificacionDetail(item);
     if (!mounted) return;
+    unawaited(
+      widget.apiClient.marcarJustificacionVista(
+        token: widget.token,
+        id: detailItem.id,
+      ).catchError((_) {}),
+    );
 
     unawaited(
-      showModalBottomSheet<void>(
+      showModalBottomSheet<bool>(
         context: context,
         isScrollControlled: true,
         useSafeArea: true,
         builder: (_) => _DetailSheet(
           apiClient: widget.apiClient,
+          token: widget.token,
           item: detailItem,
+          onChanged: () => _load(reset: true),
           onDelete: detailItem.estado == 'pendiente'
               ? () {
                   Navigator.of(context).pop();
@@ -180,7 +211,9 @@ class _JustificacionesPageState extends State<JustificacionesPage> {
                 }
               : null,
         ),
-      ),
+      ).then((changed) {
+        if (changed == true && mounted) unawaited(_load(reset: true));
+      }),
     );
   }
 
@@ -247,10 +280,14 @@ class _JustificacionesPageState extends State<JustificacionesPage> {
           _FilterRow(
             selected: _filtroEstado,
             estados: _estados,
+            desde: _filtroDesde,
+            hasta: _filtroHasta,
             onSelect: (e) {
               setState(() => _filtroEstado = e);
               _load(reset: true);
             },
+            onDateRangeSelect: _selectDateRangeFilter,
+            onDateRangeClear: _clearDateRangeFilter,
           ),
           Expanded(
             child: _loading
@@ -319,6 +356,41 @@ class _JustificacionesPageState extends State<JustificacionesPage> {
         label: const Text('Nueva'),
       ),
     );
+  }
+
+  Future<void> _selectDateRangeFilter() async {
+    final now = DateTime.now();
+    final initial = _filtroDesde != null && _filtroHasta != null
+        ? DateTimeRange(start: _filtroDesde!, end: _filtroHasta!)
+        : DateTimeRange(start: now.subtract(const Duration(days: 30)), end: now);
+    final picked = await showDateRangePicker(
+      context: context,
+      initialDateRange: initial,
+      firstDate: DateTime(2020),
+      lastDate: now,
+    );
+    if (picked == null) return;
+    setState(() {
+      _filtroDesde = DateTime(
+        picked.start.year,
+        picked.start.month,
+        picked.start.day,
+      );
+      _filtroHasta = DateTime(
+        picked.end.year,
+        picked.end.month,
+        picked.end.day,
+      );
+    });
+    await _load(reset: true);
+  }
+
+  void _clearDateRangeFilter() {
+    setState(() {
+      _filtroDesde = null;
+      _filtroHasta = null;
+    });
+    unawaited(_load(reset: true));
   }
 
   Future<bool> _confirmSwipeDelete() async {
@@ -434,12 +506,20 @@ class _FilterRow extends StatelessWidget {
   const _FilterRow({
     required this.selected,
     required this.estados,
+    required this.desde,
+    required this.hasta,
     required this.onSelect,
+    required this.onDateRangeSelect,
+    required this.onDateRangeClear,
   });
 
   final String? selected;
   final List<String> estados;
+  final DateTime? desde;
+  final DateTime? hasta;
   final void Function(String?) onSelect;
+  final VoidCallback onDateRangeSelect;
+  final VoidCallback onDateRangeClear;
 
   @override
   Widget build(BuildContext context) {
@@ -451,6 +531,27 @@ class _FilterRow extends StatelessWidget {
         children: [
           _chip(context, cs, null, 'Todas'),
           ...estados.map((e) => _chip(context, cs, e, _capitalize(e))),
+          Padding(
+            padding: const EdgeInsets.only(right: 8),
+            child: ActionChip(
+              avatar: const Icon(Icons.date_range, size: 18),
+              label: Text(
+                desde == null || hasta == null
+                    ? 'Fechas'
+                    : _formatSelectedRange(desde, hasta),
+              ),
+              onPressed: onDateRangeSelect,
+            ),
+          ),
+          if (desde != null || hasta != null)
+            Padding(
+              padding: const EdgeInsets.only(right: 8),
+              child: ActionChip(
+                avatar: const Icon(Icons.clear, size: 18),
+                label: const Text('Limpiar fechas'),
+                onPressed: onDateRangeClear,
+              ),
+            ),
         ],
       ),
     );
@@ -657,18 +758,36 @@ class _JustificacionCard extends StatelessWidget {
 
 // ─── Detail bottom sheet ───────────────────────────────────────────────────────
 
-class _DetailSheet extends StatelessWidget {
+class _DetailSheet extends StatefulWidget {
   const _DetailSheet({
     required this.apiClient,
+    required this.token,
     required this.item,
+    required this.onChanged,
     this.onDelete,
     this.onEdit,
   });
 
   final MobileApiClient apiClient;
+  final String token;
   final JustificacionItem item;
+  final VoidCallback onChanged;
   final VoidCallback? onDelete;
   final VoidCallback? onEdit;
+
+  @override
+  State<_DetailSheet> createState() => _DetailSheetState();
+}
+
+class _DetailSheetState extends State<_DetailSheet> {
+  late List<JustificacionAdjuntoItem> _adjuntos;
+  bool _deletingAdjunto = false;
+
+  @override
+  void initState() {
+    super.initState();
+    _adjuntos = List<JustificacionAdjuntoItem>.from(widget.item.adjuntos);
+  }
 
   Color _estadoColor(BuildContext context, String? estado) {
     final cs = Theme.of(context).colorScheme;
@@ -692,7 +811,7 @@ class _DetailSheet extends StatelessWidget {
     if (value == null || value.isEmpty) {
       return;
     }
-    final uri = Uri.tryParse(apiClient.buildAbsoluteUrl(value));
+    final uri = Uri.tryParse(widget.apiClient.buildAbsoluteUrl(value));
     if (uri == null) {
       if (context.mounted) {
         ScaffoldMessenger.of(context).showSnackBar(
@@ -709,18 +828,68 @@ class _DetailSheet extends StatelessWidget {
     }
   }
 
+  Future<void> _deleteAdjunto(JustificacionAdjuntoItem adjunto) async {
+    if (_deletingAdjunto) return;
+    final confirmed = await showDialog<bool>(
+      context: context,
+      builder: (ctx) => AlertDialog(
+        title: const Text('Eliminar adjunto'),
+        content: Text('Â¿Eliminar ${adjunto.displayName}?'),
+        actions: [
+          TextButton(
+            onPressed: () => Navigator.pop(ctx, false),
+            child: const Text('Cancelar'),
+          ),
+          FilledButton(
+            onPressed: () => Navigator.pop(ctx, true),
+            child: const Text('Eliminar'),
+          ),
+        ],
+      ),
+    );
+    if (confirmed != true) return;
+
+    setState(() => _deletingAdjunto = true);
+    try {
+      await widget.apiClient.deleteJustificacionAdjunto(
+        token: widget.token,
+        id: widget.item.id,
+        adjuntoId: adjunto.id,
+      );
+      if (!mounted) return;
+      setState(() {
+        _adjuntos = _adjuntos
+            .where((item) => item.id != adjunto.id)
+            .toList(growable: false);
+      });
+      widget.onChanged();
+      ScaffoldMessenger.of(
+        context,
+      ).showSnackBar(const SnackBar(content: Text('Adjunto eliminado.')));
+    } on ApiException catch (e) {
+      if (!mounted) return;
+      ScaffoldMessenger.of(context).showSnackBar(
+        SnackBar(content: Text(e.message), backgroundColor: Colors.red),
+      );
+    } finally {
+      if (mounted) setState(() => _deletingAdjunto = false);
+    }
+  }
+
   @override
   Widget build(BuildContext context) {
     final cs = Theme.of(context).colorScheme;
+    final item = widget.item;
     final color = _estadoColor(context, item.estado);
     final fechaDisplay = _justificacionPeriodoDisplay(item);
     final creacion = item.createdAt != null
         ? DateFormatter.formatApiDateForDisplay(item.createdAt)
         : '—';
 
-    final hasServerAdjuntos = item.adjuntos.isNotEmpty;
+    final hasServerAdjuntos = _adjuntos.isNotEmpty;
     final hasLegacyArchivo = item.hasLegacyArchivo;
-    final effectiveAdjuntosCount = item.effectiveAdjuntosCount;
+    final effectiveAdjuntosCount =
+        _adjuntos.length + (hasLegacyArchivo ? 1 : 0);
 
     return DraggableScrollableSheet(
       expand: false,
@@ -847,7 +1016,7 @@ class _DetailSheet extends StatelessWidget {
                     ),
                     const SizedBox(height: 8),
                     if (hasServerAdjuntos)
-                      ...item.adjuntos.map(
+                      ..._adjuntos.map(
                         (adjunto) => _JustificacionAttachmentCard(
                           title: adjunto.displayName,
                           subtitle: _serverAttachmentSubtitle(adjunto),
@@ -857,6 +1026,10 @@ class _DetailSheet extends StatelessWidget {
                               _openAttachment(context, adjunto.downloadUrl),
                             );
                           },
+                          onRemove:
+                              item.estado == 'pendiente' && !_deletingAdjunto
+                              ? () => unawaited(_deleteAdjunto(adjunto))
+                              : null,
                         ),
                       ),
                     if (hasLegacyArchivo)
@@ -875,11 +1048,11 @@ class _DetailSheet extends StatelessWidget {
                         icon: Icons.attach_file,
                       ),
                   ],
-                  if (onEdit != null || onDelete != null) ...[
+                  if (widget.onEdit != null || widget.onDelete != null) ...[
                     const SizedBox(height: 24),
-                    if (onEdit != null)
+                    if (widget.onEdit != null)
                       FilledButton.icon(
-                        onPressed: onEdit,
+                        onPressed: widget.onEdit,
                         icon: const Icon(Icons.edit_outlined),
                         label: const Text('Editar motivo'),
                         style: FilledButton.styleFrom(
@@ -887,11 +1060,11 @@ class _DetailSheet extends StatelessWidget {
                           minimumSize: const Size(double.infinity, 0),
                         ),
                       ),
-                    if (onEdit != null && onDelete != null)
+                    if (widget.onEdit != null && widget.onDelete != null)
                       const SizedBox(height: 10),
-                    if (onDelete != null)
+                    if (widget.onDelete != null)
                       OutlinedButton.icon(
-                        onPressed: onDelete,
+                        onPressed: widget.onDelete,
                         icon: Icon(Icons.delete_outline, color: cs.error),
                         label: Text(
                           'Eliminar justificación',
@@ -1944,7 +2117,7 @@ class _JustificacionAttachmentCard extends StatelessWidget {
             ? null
             : IconButton(
                 tooltip: actionTooltip,
-                onPressed: onTap ?? onRemove,
+                onPressed: onRemove ?? onTap,
                 icon: Icon(actionIcon, size: 18),
               ),
       ),

@@ -1,6 +1,8 @@
 import 'dart:async';
+import 'dart:typed_data';
 
 import 'package:flutter/material.dart';
+import 'package:image_picker/image_picker.dart';
 
 import '../../core/network/feedback_api_models.dart';
 import '../../core/network/mobile_api_client.dart';
@@ -56,7 +58,7 @@ ThemeData _buildFacebookFeedbackTheme(ThemeData base) {
       titleTextStyle: const TextStyle(
         color: _facebookText,
         fontFamily: 'Segoe UI',
-        fontSize: 20,
+        fontSize: 18,
         fontWeight: FontWeight.w700,
       ),
     ),
@@ -67,10 +69,12 @@ ThemeData _buildFacebookFeedbackTheme(ThemeData base) {
       dividerColor: _facebookBorder,
       labelStyle: const TextStyle(
         fontFamily: 'Segoe UI',
+        fontSize: 13,
         fontWeight: FontWeight.w700,
       ),
       unselectedLabelStyle: const TextStyle(
         fontFamily: 'Segoe UI',
+        fontSize: 13,
         fontWeight: FontWeight.w600,
       ),
     ),
@@ -111,6 +115,7 @@ ThemeData _buildFacebookFeedbackTheme(ThemeData base) {
       labelStyle: const TextStyle(
         color: _facebookBlueDark,
         fontFamily: 'Segoe UI',
+        fontSize: 12,
         fontWeight: FontWeight.w700,
       ),
       side: const BorderSide(color: Color(0xFFB7D7FF)),
@@ -497,7 +502,7 @@ class _FeedbackPageState extends State<FeedbackPage> {
             const SizedBox(height: 12),
           ],
           _ListHeader(
-            title: 'Mis feedbacks',
+            title: 'Feedbacks del sector',
             subtitle:
                 'Pagina $_historialPage de ${(_historialTotal / _historialPerPage).ceil().clamp(1, 999)}',
             trailing: _loadingHistorialPage
@@ -513,7 +518,8 @@ class _FeedbackPageState extends State<FeedbackPage> {
             const _EmptyStateCard(
               icon: Icons.inbox_outlined,
               title: 'Sin historial',
-              subtitle: 'Los feedbacks que cargues van a aparecer acá.',
+              subtitle:
+                  'Los feedbacks originados en tu sector van a aparecer aca.',
             )
           else
             ..._historialItems.map(
@@ -551,7 +557,7 @@ class _FeedbackPageState extends State<FeedbackPage> {
             const SizedBox(height: 12),
           ],
           _ListHeader(
-            title: 'Bandeja del jefe directo',
+            title: 'Bandeja de sectores responsables',
             subtitle:
                 'Pagina $_bandejaPage de ${(_bandejaTotal / _bandejaPerPage).ceil().clamp(1, 999)}',
             trailing: _loadingBandejaPage
@@ -567,7 +573,8 @@ class _FeedbackPageState extends State<FeedbackPage> {
             const _EmptyStateCard(
               icon: Icons.task_outlined,
               title: 'Bandeja vacia',
-              subtitle: 'No tenes feedbacks pendientes de gestion.',
+              subtitle:
+                  'No tenes feedbacks asignados como responsable de sector.',
             )
           else
             ..._bandejaItems.map(
@@ -664,28 +671,6 @@ class _FeedbackDetailSheetState extends State<FeedbackDetailSheet> {
     }
   }
 
-  Future<void> _take() async {
-    final item = _item;
-    if (item == null || _busy) return;
-    setState(() => _busy = true);
-    try {
-      await widget.apiClient.takeFeedback(
-        token: widget.token,
-        feedbackId: item.id ?? widget.feedbackId,
-      );
-      if (!mounted) return;
-      Navigator.of(context).pop(true);
-    } on ApiException catch (e) {
-      if (!mounted) return;
-      setState(() => _error = e.message);
-    } catch (_) {
-      if (!mounted) return;
-      setState(() => _error = 'No se pudo tomar el feedback.');
-    } finally {
-      if (mounted) setState(() => _busy = false);
-    }
-  }
-
   Future<void> _resolve() async {
     final item = _item;
     if (item == null || _busy) return;
@@ -749,7 +734,7 @@ class _FeedbackDetailSheetState extends State<FeedbackDetailSheet> {
   @override
   Widget build(BuildContext context) {
     final item = _item ?? widget.initialItem;
-    final status = item.estadoActual ?? item.estado ?? 'pendiente';
+    final status = _effectiveStatus(item);
     final statusColor = _statusColor(status);
     final statusLabel = _statusLabel(status);
     final bottomInset = MediaQuery.viewInsetsOf(context).bottom;
@@ -815,9 +800,11 @@ class _FeedbackDetailSheetState extends State<FeedbackDetailSheet> {
                                         children: [
                                           Text(
                                             'Feedback #${item.id ?? widget.feedbackId}',
+                                            maxLines: 1,
+                                            overflow: TextOverflow.ellipsis,
                                             style: Theme.of(context)
                                                 .textTheme
-                                                .titleLarge
+                                                .titleMedium
                                                 ?.copyWith(
                                                   fontWeight: FontWeight.w700,
                                                 ),
@@ -866,6 +853,16 @@ class _FeedbackDetailSheetState extends State<FeedbackDetailSheet> {
                                         : 'Sin descripcion.',
                                   ),
                                 ),
+                                if (item.evidencia != null) ...[
+                                  const SizedBox(height: 12),
+                                  _SectionCard(
+                                    title: 'Evidencia',
+                                    icon: Icons.image_outlined,
+                                    child: _FeedbackEvidenceCard(
+                                      evidencia: item.evidencia!,
+                                    ),
+                                  ),
+                                ],
                                 const SizedBox(height: 12),
                                 _SectionCard(
                                   title: 'Datos',
@@ -886,8 +883,28 @@ class _FeedbackDetailSheetState extends State<FeedbackDetailSheet> {
                                             item.empleado?.displayName ?? '-',
                                       ),
                                       _DetailRow(
-                                        label: 'Jefe directo',
+                                        label: 'Sector origen',
                                         value:
+                                            item.sectorOrigen?.displayName ??
+                                            '-',
+                                      ),
+                                      _DetailRow(
+                                        label: 'Sucursal',
+                                        value:
+                                            item.sucursal?.displayName ?? '-',
+                                      ),
+                                      _DetailRow(
+                                        label: 'Sector responsable',
+                                        value:
+                                            item
+                                                .sectorResponsable
+                                                ?.displayName ??
+                                            '-',
+                                      ),
+                                      _DetailRow(
+                                        label: 'Responsable',
+                                        value:
+                                            item.responsable?.displayName ??
                                             item.jefeDirecto?.displayName ??
                                             '-',
                                       ),
@@ -902,7 +919,8 @@ class _FeedbackDetailSheetState extends State<FeedbackDetailSheet> {
                                         label: 'Vence',
                                         value:
                                             DateFormatter.formatApiDateForDisplay(
-                                              item.fechaVencimiento,
+                                              item.fechaLimite ??
+                                                  item.fechaVencimiento,
                                             ),
                                       ),
                                       _DetailRow(
@@ -953,31 +971,20 @@ class _FeedbackDetailSheetState extends State<FeedbackDetailSheet> {
                                       crossAxisAlignment:
                                           CrossAxisAlignment.stretch,
                                       children: [
-                                        if (status != 'en_proceso')
-                                          FilledButton.icon(
-                                            onPressed: _busy ? null : _take,
-                                            icon: _busy
-                                                ? const SizedBox(
-                                                    width: 16,
-                                                    height: 16,
-                                                    child:
-                                                        CircularProgressIndicator(
-                                                          strokeWidth: 2,
-                                                        ),
-                                                  )
-                                                : const Icon(Icons.play_arrow),
-                                            label: const Text('Tomar'),
-                                          ),
-                                        if (status != 'resuelto') ...[
-                                          const SizedBox(height: 8),
-                                          OutlinedButton.icon(
-                                            onPressed: _busy ? null : _resolve,
-                                            icon: const Icon(
-                                              Icons.check_circle,
-                                            ),
-                                            label: const Text('Resolver'),
-                                          ),
-                                        ],
+                                        FilledButton.icon(
+                                          onPressed: _busy ? null : _resolve,
+                                          icon: _busy
+                                              ? const SizedBox(
+                                                  width: 16,
+                                                  height: 16,
+                                                  child:
+                                                      CircularProgressIndicator(
+                                                        strokeWidth: 2,
+                                                      ),
+                                                )
+                                              : const Icon(Icons.check_circle),
+                                          label: const Text('Resolver'),
+                                        ),
                                       ],
                                     ),
                                   ),
@@ -999,7 +1006,9 @@ class _FeedbackDetailSheetState extends State<FeedbackDetailSheet> {
     final normalized = status.trim().toLowerCase();
     return switch (normalized) {
       'resuelto' => Colors.green,
-      'en_proceso' => Colors.blue,
+      'resuelto_en_termino' => Colors.green,
+      'resuelto_fuera_termino' => Colors.red,
+      'pendiente_vencido' => Colors.red,
       'vencido' => Colors.red,
       _ => Colors.orange,
     };
@@ -1009,7 +1018,10 @@ class _FeedbackDetailSheetState extends State<FeedbackDetailSheet> {
     final normalized = status.trim().toLowerCase();
     return switch (normalized) {
       'resuelto' => 'Resuelto',
-      'en_proceso' => 'En proceso',
+      'resuelto_en_termino' => 'Resuelto en termino',
+      'resuelto_fuera_termino' => 'Resuelto fuera de termino',
+      'pendiente_en_termino' => 'Pendiente en termino',
+      'pendiente_vencido' => 'Pendiente vencido',
       'vencido' => 'Vencido',
       _ => 'Pendiente',
     };
@@ -1036,6 +1048,7 @@ class _FeedbackCreateSheetState extends State<FeedbackCreateSheet> {
 
   final TextEditingController _searchCtrl = TextEditingController();
   final TextEditingController _descripcionCtrl = TextEditingController();
+  final ImagePicker _imagePicker = ImagePicker();
   Timer? _searchDebounce;
   int _searchRequestVersion = 0;
 
@@ -1050,6 +1063,7 @@ class _FeedbackCreateSheetState extends State<FeedbackCreateSheet> {
   List<FeedbackCliente> _clientes = const [];
   FeedbackMotivo? _selectedMotivo;
   FeedbackCliente? _selectedCliente;
+  XFile? _evidencia;
 
   @override
   void initState() {
@@ -1108,9 +1122,15 @@ class _FeedbackCreateSheetState extends State<FeedbackCreateSheet> {
     final cleanQuery = query.trim();
     if (cleanQuery.isEmpty) {
       _searchRequestVersion++;
+      if (_searching) {
+        setState(() => _searching = false);
+      }
       return;
     }
 
+    if (!_searching) {
+      setState(() => _searching = true);
+    }
     _searchDebounce = Timer(_remoteSearchDelay, () {
       if (!mounted) return;
       unawaited(_searchClientes(query: cleanQuery));
@@ -1182,6 +1202,7 @@ class _FeedbackCreateSheetState extends State<FeedbackCreateSheet> {
       setState(() {
         _searchQuery = effectiveQuery;
         _clientes = clientes;
+        _error = null;
         _selectedCliente = _preferredCliente(
           clientes,
           effectiveQuery,
@@ -1215,6 +1236,19 @@ class _FeedbackCreateSheetState extends State<FeedbackCreateSheet> {
         .toList(growable: false);
 
     return _sortByRelevance(filtered, terms);
+  }
+
+  String _clientEmptyMessage() {
+    if (_searching) {
+      return 'Buscando clientes...';
+    }
+    if (_error != null && _searchQuery.isNotEmpty) {
+      return 'No se pudo consultar el catalogo de clientes. Proba nuevamente.';
+    }
+    if (_searchQuery.isEmpty) {
+      return 'No hay clientes para mostrar.';
+    }
+    return 'No se encontraron clientes para "$_searchQuery". Proba con otro termino o toca buscar para consultar todo el catalogo.';
   }
 
   /// Reordena resultados que el backend ya filtró por `q`, sin excluir
@@ -1373,6 +1407,39 @@ class _FeedbackCreateSheetState extends State<FeedbackCreateSheet> {
         .trim();
   }
 
+  Future<void> _pickEvidence(ImageSource source) async {
+    try {
+      final image = await _imagePicker.pickImage(
+        source: source,
+        imageQuality: 82,
+        maxWidth: 1600,
+      );
+      if (!mounted || image == null) return;
+      setState(() {
+        _evidencia = image;
+        _error = null;
+      });
+    } catch (_) {
+      if (!mounted) return;
+      setState(() => _error = 'No se pudo seleccionar la evidencia.');
+    }
+  }
+
+  Future<({String? path, Uint8List? bytes, String filename})?>
+  _buildEvidenceUpload() async {
+    final evidencia = _evidencia;
+    if (evidencia == null) return null;
+    final filename = evidencia.name.trim().isNotEmpty
+        ? evidencia.name.trim()
+        : 'evidencia.jpg';
+    final path = evidencia.path.trim();
+    if (path.isNotEmpty && !path.startsWith('blob:')) {
+      return (path: path, bytes: null, filename: filename);
+    }
+    final bytes = await evidencia.readAsBytes();
+    return (path: null, bytes: bytes, filename: filename);
+  }
+
   Future<void> _submit() async {
     final cliente = _selectedCliente;
     final motivo = _selectedMotivo;
@@ -1385,8 +1452,17 @@ class _FeedbackCreateSheetState extends State<FeedbackCreateSheet> {
       setState(() => _error = 'Selecciona un motivo.');
       return;
     }
-    if (descripcion.isEmpty) {
-      setState(() => _error = 'La descripcion es obligatoria.');
+    if (motivo?.requiereObservacion == true && descripcion.isEmpty) {
+      setState(
+        () => _error = 'La descripcion es obligatoria para este motivo.',
+      );
+      return;
+    }
+    if (motivo?.requiereFoto == true && _evidencia == null) {
+      setState(
+        () => _error =
+            'La evidencia fotografica es obligatoria para este motivo.',
+      );
       return;
     }
 
@@ -1395,11 +1471,15 @@ class _FeedbackCreateSheetState extends State<FeedbackCreateSheet> {
       _error = null;
     });
     try {
+      final evidencia = await _buildEvidenceUpload();
       await widget.apiClient.createFeedback(
         token: widget.token,
         clienteId: cliente!.id!,
         motivoId: motivo!.id!,
         descripcion: descripcion,
+        evidenciaPath: evidencia?.path,
+        evidenciaBytes: evidencia?.bytes,
+        evidenciaFilename: evidencia?.filename,
       );
       if (!mounted) return;
       Navigator.of(context).pop(true);
@@ -1455,16 +1535,19 @@ class _FeedbackCreateSheetState extends State<FeedbackCreateSheet> {
                               children: [
                                 Row(
                                   children: [
-                                    Text(
-                                      'Nuevo feedback',
-                                      style: Theme.of(context)
-                                          .textTheme
-                                          .titleLarge
-                                          ?.copyWith(
-                                            fontWeight: FontWeight.w700,
-                                          ),
+                                    Expanded(
+                                      child: Text(
+                                        'Nuevo feedback',
+                                        maxLines: 1,
+                                        overflow: TextOverflow.ellipsis,
+                                        style: Theme.of(context)
+                                            .textTheme
+                                            .titleMedium
+                                            ?.copyWith(
+                                              fontWeight: FontWeight.w700,
+                                            ),
+                                      ),
                                     ),
-                                    const Spacer(),
                                     IconButton(
                                       onPressed: () =>
                                           Navigator.of(context).pop(),
@@ -1516,7 +1599,10 @@ class _FeedbackCreateSheetState extends State<FeedbackCreateSheet> {
                                 _SectionCard(
                                   title: 'Motivo',
                                   icon: Icons.label_outlined,
-                                  child:
+                                  child: Column(
+                                    crossAxisAlignment:
+                                        CrossAxisAlignment.stretch,
+                                    children: [
                                       DropdownButtonFormField<FeedbackMotivo>(
                                         initialValue: _selectedMotivo,
                                         isExpanded: true,
@@ -1539,6 +1625,12 @@ class _FeedbackCreateSheetState extends State<FeedbackCreateSheet> {
                                           border: OutlineInputBorder(),
                                         ),
                                       ),
+                                      if (_selectedMotivo != null) ...[
+                                        const SizedBox(height: 10),
+                                        _MotivoRules(motivo: _selectedMotivo!),
+                                      ],
+                                    ],
+                                  ),
                                 ),
                                 const SizedBox(height: 14),
                                 _SectionCard(
@@ -1555,10 +1647,7 @@ class _FeedbackCreateSheetState extends State<FeedbackCreateSheet> {
                                       const SizedBox(height: 8),
                                       if (_clientes.isEmpty)
                                         _EmptyInline(
-                                          text: _searchQuery.isEmpty
-                                              ? 'No hay clientes para mostrar.'
-                                              : 'No se encontraron clientes para "'
-                                                    '$_searchQuery". Probá con otro término o tocá buscar para consultar todo el catálogo.',
+                                          text: _clientEmptyMessage(),
                                         )
                                       else
                                         ..._clientes.map(
@@ -1598,6 +1687,29 @@ class _FeedbackCreateSheetState extends State<FeedbackCreateSheet> {
                                     ),
                                   ),
                                 ),
+                                const SizedBox(height: 14),
+                                _SectionCard(
+                                  title: 'Evidencia',
+                                  icon: Icons.photo_camera_outlined,
+                                  child: _EvidencePickerCard(
+                                    evidencia: _evidencia,
+                                    requiredByMotivo:
+                                        _selectedMotivo?.requiereFoto == true,
+                                    onCamera: _saving
+                                        ? null
+                                        : () =>
+                                              _pickEvidence(ImageSource.camera),
+                                    onGallery: _saving
+                                        ? null
+                                        : () => _pickEvidence(
+                                            ImageSource.gallery,
+                                          ),
+                                    onRemove: _saving
+                                        ? null
+                                        : () =>
+                                              setState(() => _evidencia = null),
+                                  ),
+                                ),
                                 const SizedBox(height: 16),
                                 FilledButton.icon(
                                   onPressed: _saving ? null : _submit,
@@ -1621,6 +1733,210 @@ class _FeedbackCreateSheetState extends State<FeedbackCreateSheet> {
             ),
           );
         },
+      ),
+    );
+  }
+}
+
+class _MotivoRules extends StatelessWidget {
+  const _MotivoRules({required this.motivo});
+
+  final FeedbackMotivo motivo;
+
+  @override
+  Widget build(BuildContext context) {
+    final cs = Theme.of(context).colorScheme;
+    final rules = <String>[
+      if (motivo.sectorResponsableNombre?.trim().isNotEmpty == true)
+        'Responsable: ${motivo.sectorResponsableNombre!.trim()}',
+      if (motivo.tiempoResolucionValor != null &&
+          motivo.tiempoResolucionUnidad?.trim().isNotEmpty == true)
+        'Plazo: ${motivo.tiempoResolucionValor} ${motivo.tiempoResolucionUnidad!.trim().toLowerCase()}',
+      motivo.requiereObservacion == true
+          ? 'Descripcion obligatoria'
+          : 'Descripcion opcional',
+      motivo.requiereFoto == true ? 'Foto obligatoria' : 'Foto opcional',
+    ];
+    return Wrap(
+      spacing: 8,
+      runSpacing: 8,
+      children: [
+        for (final rule in rules)
+          Chip(
+            label: Text(rule),
+            backgroundColor: cs.surfaceContainerHighest,
+            side: BorderSide(color: cs.outlineVariant),
+          ),
+      ],
+    );
+  }
+}
+
+class _EvidencePickerCard extends StatelessWidget {
+  const _EvidencePickerCard({
+    required this.evidencia,
+    required this.requiredByMotivo,
+    required this.onCamera,
+    required this.onGallery,
+    required this.onRemove,
+  });
+
+  final XFile? evidencia;
+  final bool requiredByMotivo;
+  final VoidCallback? onCamera;
+  final VoidCallback? onGallery;
+  final VoidCallback? onRemove;
+
+  @override
+  Widget build(BuildContext context) {
+    final cs = Theme.of(context).colorScheme;
+    final fileName = evidencia?.name.trim();
+    return Column(
+      crossAxisAlignment: CrossAxisAlignment.stretch,
+      children: [
+        if (evidencia == null && requiredByMotivo)
+          Text(
+            'Este motivo requiere una foto JPG, PNG o WebP.',
+            style: Theme.of(
+              context,
+            ).textTheme.bodySmall?.copyWith(color: cs.error),
+          )
+        else if (evidencia == null)
+          Text(
+            'Podés adjuntar una foto JPG, PNG o WebP como evidencia opcional.',
+            style: Theme.of(
+              context,
+            ).textTheme.bodySmall?.copyWith(color: cs.onSurfaceVariant),
+          )
+        else
+          Container(
+            padding: const EdgeInsets.symmetric(horizontal: 12, vertical: 10),
+            decoration: BoxDecoration(
+              color: cs.primaryContainer.withValues(alpha: 0.45),
+              borderRadius: BorderRadius.circular(8),
+              border: Border.all(color: cs.outlineVariant),
+            ),
+            child: Row(
+              children: [
+                Icon(Icons.image_outlined, color: cs.primary),
+                const SizedBox(width: 10),
+                Expanded(
+                  child: Text(
+                    fileName == null || fileName.isEmpty
+                        ? 'Evidencia seleccionada'
+                        : fileName,
+                    maxLines: 1,
+                    overflow: TextOverflow.ellipsis,
+                    style: Theme.of(context).textTheme.bodyMedium?.copyWith(
+                      fontWeight: FontWeight.w600,
+                    ),
+                  ),
+                ),
+                IconButton(
+                  tooltip: 'Quitar evidencia',
+                  onPressed: onRemove,
+                  icon: const Icon(Icons.close),
+                ),
+              ],
+            ),
+          ),
+        const SizedBox(height: 10),
+        Wrap(
+          spacing: 8,
+          runSpacing: 8,
+          children: [
+            OutlinedButton.icon(
+              onPressed: onCamera,
+              icon: const Icon(Icons.photo_camera_outlined),
+              label: const Text('Cámara'),
+            ),
+            OutlinedButton.icon(
+              onPressed: onGallery,
+              icon: const Icon(Icons.photo_library_outlined),
+              label: const Text('Galería'),
+            ),
+          ],
+        ),
+      ],
+    );
+  }
+}
+
+class _FeedbackEvidenceCard extends StatelessWidget {
+  const _FeedbackEvidenceCard({required this.evidencia});
+
+  final FeedbackEvidence evidencia;
+
+  String _formatSize(int? bytes) {
+    if (bytes == null || bytes <= 0) return '-';
+    if (bytes >= 1024 * 1024) {
+      return '${(bytes / (1024 * 1024)).toStringAsFixed(1)} MB';
+    }
+    if (bytes >= 1024) {
+      return '${(bytes / 1024).toStringAsFixed(1)} KB';
+    }
+    return '$bytes B';
+  }
+
+  @override
+  Widget build(BuildContext context) {
+    final cs = Theme.of(context).colorScheme;
+    final filename = evidencia.filename?.trim();
+    final mimeType = evidencia.mimeType?.trim();
+    final url = evidencia.url?.trim();
+    return Container(
+      padding: const EdgeInsets.symmetric(horizontal: 12, vertical: 10),
+      decoration: BoxDecoration(
+        color: cs.surfaceContainerHighest,
+        borderRadius: BorderRadius.circular(8),
+        border: Border.all(color: cs.outlineVariant),
+      ),
+      child: Row(
+        crossAxisAlignment: CrossAxisAlignment.start,
+        children: [
+          Icon(Icons.image_outlined, color: cs.primary),
+          const SizedBox(width: 10),
+          Expanded(
+            child: Column(
+              crossAxisAlignment: CrossAxisAlignment.start,
+              children: [
+                Text(
+                  filename == null || filename.isEmpty
+                      ? 'Evidencia adjunta'
+                      : filename,
+                  maxLines: 1,
+                  overflow: TextOverflow.ellipsis,
+                  style: Theme.of(
+                    context,
+                  ).textTheme.bodyMedium?.copyWith(fontWeight: FontWeight.w700),
+                ),
+                const SizedBox(height: 3),
+                Text(
+                  [
+                    if (mimeType != null && mimeType.isNotEmpty) mimeType,
+                    _formatSize(evidencia.sizeBytes),
+                  ].join(' - '),
+                  maxLines: 1,
+                  overflow: TextOverflow.ellipsis,
+                  style: Theme.of(
+                    context,
+                  ).textTheme.bodySmall?.copyWith(color: cs.onSurfaceVariant),
+                ),
+                if (url != null && url.isNotEmpty) ...[
+                  const SizedBox(height: 3),
+                  Text(
+                    url,
+                    maxLines: 1,
+                    overflow: TextOverflow.ellipsis,
+                    style: Theme.of(context).textTheme.labelSmall?.copyWith(
+                      color: cs.onSurfaceVariant,
+                    ),
+                  ),
+                ],
+              ],
+            ),
+          ),
+        ],
       ),
     );
   }
@@ -1669,17 +1985,20 @@ class _FeedbackHeroCard extends StatelessWidget {
                   children: [
                     Text(
                       'Feedback de calle',
-                      style: TextStyle(
+                      maxLines: 1,
+                      overflow: TextOverflow.ellipsis,
+                      style: Theme.of(context).textTheme.titleMedium?.copyWith(
                         color: cs.onSurface,
-                        fontSize: 20,
                         fontWeight: FontWeight.w800,
-                        letterSpacing: -0.2,
+                        letterSpacing: 0,
                       ),
                     ),
                     const SizedBox(height: 6),
                     Text(
                       'Seguí el estado de tus cargas y la respuesta de tu jefe directo.',
-                      style: TextStyle(color: cs.onSurfaceVariant),
+                      style: Theme.of(context).textTheme.bodyMedium?.copyWith(
+                        color: cs.onSurfaceVariant,
+                      ),
                     ),
                   ],
                 ),
@@ -1736,7 +2055,11 @@ class _SummaryGrid extends StatelessWidget {
     ];
     return LayoutBuilder(
       builder: (context, constraints) {
-        final cols = constraints.maxWidth >= 700 ? 3 : 2;
+        final cols = constraints.maxWidth >= 700
+            ? 3
+            : constraints.maxWidth < 380
+            ? 1
+            : 2;
         final spacing = 10.0;
         final tileWidth = (constraints.maxWidth - spacing * (cols - 1)) / cols;
         return Wrap(
@@ -1831,6 +2154,7 @@ class _TopMotivoTile extends StatelessWidget {
       ),
       padding: const EdgeInsets.all(14),
       child: Row(
+        crossAxisAlignment: CrossAxisAlignment.center,
         children: [
           Container(
             padding: const EdgeInsets.all(10),
@@ -1850,16 +2174,26 @@ class _TopMotivoTile extends StatelessWidget {
               children: [
                 Text(
                   item.motivoNombre ?? 'Motivo',
-                  style: const TextStyle(fontWeight: FontWeight.w700),
+                  maxLines: 2,
+                  overflow: TextOverflow.ellipsis,
+                  style: Theme.of(
+                    context,
+                  ).textTheme.bodyMedium?.copyWith(fontWeight: FontWeight.w700),
                 ),
                 const SizedBox(height: 4),
-                Text('Resueltos: ${item.resueltos ?? 0}'),
+                Text(
+                  'Resueltos: ${item.resueltos ?? 0}',
+                  style: Theme.of(context).textTheme.bodySmall,
+                ),
               ],
             ),
           ),
+          const SizedBox(width: 8),
           Text(
             '${item.total ?? 0}',
-            style: const TextStyle(fontWeight: FontWeight.w800, fontSize: 18),
+            style: Theme.of(
+              context,
+            ).textTheme.titleMedium?.copyWith(fontWeight: FontWeight.w800),
           ),
         ],
       ),
@@ -1899,10 +2233,17 @@ class _RankingTile extends StatelessWidget {
               children: [
                 Text(
                   item.displayName,
-                  style: const TextStyle(fontWeight: FontWeight.w700),
+                  maxLines: 2,
+                  overflow: TextOverflow.ellipsis,
+                  style: Theme.of(
+                    context,
+                  ).textTheme.bodyMedium?.copyWith(fontWeight: FontWeight.w700),
                 ),
                 const SizedBox(height: 4),
-                Text('Feedback cargados: ${item.total ?? 0}'),
+                Text(
+                  'Feedback cargados: ${item.total ?? 0}',
+                  style: Theme.of(context).textTheme.bodySmall,
+                ),
               ],
             ),
           ),
@@ -1920,7 +2261,7 @@ class _FeedbackListTile extends StatelessWidget {
 
   @override
   Widget build(BuildContext context) {
-    final status = item.estadoActual ?? item.estado ?? 'pendiente';
+    final status = _effectiveStatus(item);
     final statusColor = _statusColor(status);
     final subtitle = <String>[
       if (item.cliente != null) item.cliente!.displayName,
@@ -1929,36 +2270,75 @@ class _FeedbackListTile extends StatelessWidget {
     ].join(' - ');
 
     return Card(
-      child: ListTile(
+      child: InkWell(
         onTap: onTap,
-        leading: CircleAvatar(
-          backgroundColor: statusColor.withValues(alpha: 0.12),
-          foregroundColor: statusColor,
-          child: Icon(
-            item.isResolved
-                ? Icons.check_circle_outline
-                : Icons.campaign_outlined,
+        borderRadius: BorderRadius.circular(16),
+        child: Padding(
+          padding: const EdgeInsets.all(12),
+          child: Row(
+            crossAxisAlignment: CrossAxisAlignment.start,
+            children: [
+              CircleAvatar(
+                backgroundColor: statusColor.withValues(alpha: 0.12),
+                foregroundColor: statusColor,
+                child: Icon(
+                  item.isResolved
+                      ? Icons.check_circle_outline
+                      : Icons.campaign_outlined,
+                ),
+              ),
+              const SizedBox(width: 12),
+              Expanded(
+                child: Column(
+                  crossAxisAlignment: CrossAxisAlignment.start,
+                  children: [
+                    Text(
+                      item.cliente?.displayName ??
+                          'Feedback #${item.id ?? '-'}',
+                      maxLines: 2,
+                      overflow: TextOverflow.ellipsis,
+                      style: Theme.of(context).textTheme.bodyLarge?.copyWith(
+                        fontWeight: FontWeight.w700,
+                      ),
+                    ),
+                    const SizedBox(height: 4),
+                    Text(
+                      subtitle.isEmpty ? 'Sin descripcion' : subtitle,
+                      maxLines: 2,
+                      overflow: TextOverflow.ellipsis,
+                      style: Theme.of(context).textTheme.bodySmall?.copyWith(
+                        color: Theme.of(context).colorScheme.onSurfaceVariant,
+                      ),
+                    ),
+                    const SizedBox(height: 8),
+                    Wrap(
+                      spacing: 8,
+                      runSpacing: 6,
+                      crossAxisAlignment: WrapCrossAlignment.center,
+                      children: [
+                        _StatusChip(
+                          label: _statusLabel(status),
+                          color: statusColor,
+                        ),
+                        Text(
+                          DateFormatter.formatApiDateForDisplayShort(
+                            item.fechaLimite ?? item.fechaVencimiento,
+                          ),
+                          style: Theme.of(context).textTheme.bodySmall,
+                        ),
+                      ],
+                    ),
+                  ],
+                ),
+              ),
+              const SizedBox(width: 8),
+              Icon(
+                Icons.chevron_right,
+                color: Theme.of(context).colorScheme.onSurfaceVariant,
+              ),
+            ],
           ),
         ),
-        title: Text(item.cliente?.displayName ?? 'Feedback #${item.id ?? '-'}'),
-        subtitle: Text(
-          subtitle.isEmpty ? 'Sin descripcion' : subtitle,
-          maxLines: 2,
-          overflow: TextOverflow.ellipsis,
-        ),
-        trailing: Column(
-          mainAxisAlignment: MainAxisAlignment.center,
-          crossAxisAlignment: CrossAxisAlignment.end,
-          children: [
-            _StatusChip(label: _statusLabel(status), color: statusColor),
-            const SizedBox(height: 6),
-            Text(
-              DateFormatter.formatApiDateForDisplayShort(item.fechaVencimiento),
-              style: Theme.of(context).textTheme.bodySmall,
-            ),
-          ],
-        ),
-        isThreeLine: true,
       ),
     );
   }
@@ -1978,25 +2358,66 @@ class _ClientResultTile extends StatelessWidget {
   @override
   Widget build(BuildContext context) {
     final cs = Theme.of(context).colorScheme;
+    final subtitle = [
+      if ((cliente.codigo ?? '').trim().isNotEmpty) cliente.codigo!.trim(),
+      if ((cliente.razonSocial ?? '').trim().isNotEmpty &&
+          cliente.razonSocial!.trim() != cliente.displayName)
+        cliente.razonSocial!.trim(),
+      if ((cliente.tipo ?? '').trim().isNotEmpty) cliente.tipo!.trim(),
+      if ((cliente.localidad ?? '').trim().isNotEmpty)
+        cliente.localidad!.trim(),
+    ].join(' - ');
     return Card(
       color: selected ? cs.primaryContainer : null,
-      child: ListTile(
+      child: InkWell(
         onTap: onTap,
-        leading: Icon(
-          Icons.storefront_outlined,
-          color: selected ? cs.onPrimaryContainer : cs.primary,
+        borderRadius: BorderRadius.circular(16),
+        child: Padding(
+          padding: const EdgeInsets.all(12),
+          child: Row(
+            crossAxisAlignment: CrossAxisAlignment.start,
+            children: [
+              Icon(
+                Icons.storefront_outlined,
+                color: selected ? cs.onPrimaryContainer : cs.primary,
+              ),
+              const SizedBox(width: 10),
+              Expanded(
+                child: Column(
+                  crossAxisAlignment: CrossAxisAlignment.start,
+                  children: [
+                    Text(
+                      cliente.displayName,
+                      maxLines: 2,
+                      overflow: TextOverflow.ellipsis,
+                      style: Theme.of(context).textTheme.bodyMedium?.copyWith(
+                        color: selected ? cs.onPrimaryContainer : null,
+                        fontWeight: FontWeight.w700,
+                      ),
+                    ),
+                    if (subtitle.isNotEmpty) ...[
+                      const SizedBox(height: 3),
+                      Text(
+                        subtitle,
+                        maxLines: 2,
+                        overflow: TextOverflow.ellipsis,
+                        style: Theme.of(context).textTheme.bodySmall?.copyWith(
+                          color: selected
+                              ? cs.onPrimaryContainer
+                              : cs.onSurfaceVariant,
+                        ),
+                      ),
+                    ],
+                  ],
+                ),
+              ),
+              if (selected) ...[
+                const SizedBox(width: 8),
+                Icon(Icons.check_circle, color: cs.onPrimaryContainer),
+              ],
+            ],
+          ),
         ),
-        title: Text(cliente.displayName),
-        subtitle: Text(
-          [
-            if ((cliente.codigo ?? '').trim().isNotEmpty)
-              cliente.codigo!.trim(),
-            if ((cliente.tipo ?? '').trim().isNotEmpty) cliente.tipo!.trim(),
-            if ((cliente.localidad ?? '').trim().isNotEmpty)
-              cliente.localidad!.trim(),
-          ].join(' - '),
-        ),
-        trailing: selected ? const Icon(Icons.check_circle) : null,
       ),
     );
   }
@@ -2022,7 +2443,14 @@ class _SelectedClientCard extends StatelessWidget {
           const SizedBox(width: 10),
           Expanded(
             child: Text(
-              cliente.displayName,
+              [
+                cliente.displayName,
+                if ((cliente.razonSocial ?? '').trim().isNotEmpty &&
+                    cliente.razonSocial!.trim() != cliente.displayName)
+                  cliente.razonSocial!.trim(),
+              ].join(' - '),
+              maxLines: 3,
+              overflow: TextOverflow.ellipsis,
               style: TextStyle(
                 color: cs.onSecondaryContainer,
                 fontWeight: FontWeight.w700,
@@ -2053,7 +2481,11 @@ class _ResponsiveTabList extends StatelessWidget {
             : constraints.maxWidth >= 900
             ? 900.0
             : double.infinity;
-        final hPad = constraints.maxWidth < 600 ? 16.0 : 24.0;
+        final hPad = constraints.maxWidth < 380
+            ? 10.0
+            : constraints.maxWidth < 600
+            ? 14.0
+            : 24.0;
         return Center(
           child: ConstrainedBox(
             constraints: BoxConstraints(maxWidth: maxWidth),
@@ -2122,10 +2554,14 @@ class _SectionCard extends StatelessWidget {
               children: [
                 Icon(icon),
                 const SizedBox(width: 8),
-                Text(
-                  title,
-                  style: Theme.of(context).textTheme.titleMedium?.copyWith(
-                    fontWeight: FontWeight.w700,
+                Expanded(
+                  child: Text(
+                    title,
+                    maxLines: 2,
+                    overflow: TextOverflow.ellipsis,
+                    style: Theme.of(context).textTheme.titleSmall?.copyWith(
+                      fontWeight: FontWeight.w700,
+                    ),
                   ),
                 ),
               ],
@@ -2148,27 +2584,41 @@ class _DetailRow extends StatelessWidget {
   @override
   Widget build(BuildContext context) {
     final cs = Theme.of(context).colorScheme;
-    return Padding(
-      padding: const EdgeInsets.only(bottom: 10),
-      child: Row(
-        crossAxisAlignment: CrossAxisAlignment.start,
-        children: [
-          SizedBox(
-            width: 118,
-            child: Text(
-              label,
-              style: TextStyle(color: cs.onSurfaceVariant, fontSize: 13),
+    return LayoutBuilder(
+      builder: (context, constraints) {
+        final stack = constraints.maxWidth < 360;
+        final labelStyle = Theme.of(context).textTheme.bodySmall?.copyWith(
+          color: cs.onSurfaceVariant,
+          fontWeight: FontWeight.w600,
+        );
+        final valueStyle = Theme.of(
+          context,
+        ).textTheme.bodyMedium?.copyWith(fontWeight: FontWeight.w600);
+        if (stack) {
+          return Padding(
+            padding: const EdgeInsets.only(bottom: 10),
+            child: Column(
+              crossAxisAlignment: CrossAxisAlignment.start,
+              children: [
+                Text(label, style: labelStyle),
+                const SizedBox(height: 2),
+                Text(value, style: valueStyle),
+              ],
             ),
+          );
+        }
+        return Padding(
+          padding: const EdgeInsets.only(bottom: 10),
+          child: Row(
+            crossAxisAlignment: CrossAxisAlignment.start,
+            children: [
+              SizedBox(width: 104, child: Text(label, style: labelStyle)),
+              const SizedBox(width: 8),
+              Expanded(child: Text(value, style: valueStyle)),
+            ],
           ),
-          const SizedBox(width: 8),
-          Expanded(
-            child: Text(
-              value,
-              style: const TextStyle(fontWeight: FontWeight.w600),
-            ),
-          ),
-        ],
-      ),
+        );
+      },
     );
   }
 }
@@ -2319,9 +2769,11 @@ class _MiniStatChip extends StatelessWidget {
       ),
       child: Text(
         '$label: ${value ?? 0}',
+        maxLines: 1,
+        overflow: TextOverflow.ellipsis,
         style: TextStyle(
           color: cs.primary,
-          fontSize: 13,
+          fontSize: 12,
           fontWeight: FontWeight.w700,
         ),
       ),
@@ -2345,6 +2797,8 @@ class _StatusChip extends StatelessWidget {
       ),
       child: Text(
         label,
+        maxLines: 1,
+        overflow: TextOverflow.ellipsis,
         style: TextStyle(
           color: color,
           fontSize: 12,
@@ -2409,7 +2863,9 @@ Color _statusColor(String status) {
   final normalized = status.trim().toLowerCase();
   return switch (normalized) {
     'resuelto' => Colors.green,
-    'en_proceso' => Colors.blue,
+    'resuelto_en_termino' => Colors.green,
+    'resuelto_fuera_termino' => Colors.red,
+    'pendiente_vencido' => Colors.red,
     'vencido' => Colors.red,
     _ => Colors.orange,
   };
@@ -2419,8 +2875,19 @@ String _statusLabel(String status) {
   final normalized = status.trim().toLowerCase();
   return switch (normalized) {
     'resuelto' => 'Resuelto',
-    'en_proceso' => 'En proceso',
+    'resuelto_en_termino' => 'Resuelto en termino',
+    'resuelto_fuera_termino' => 'Resuelto fuera de termino',
+    'pendiente_en_termino' => 'Pendiente en termino',
+    'pendiente_vencido' => 'Pendiente vencido',
     'vencido' => 'Vencido',
     _ => 'Pendiente',
   };
+}
+
+String _effectiveStatus(FeedbackItem item) {
+  final temporal = item.condicionTemporal?.trim();
+  if (temporal != null && temporal.isNotEmpty) {
+    return temporal;
+  }
+  return item.estadoActual ?? item.estado ?? 'pendiente';
 }

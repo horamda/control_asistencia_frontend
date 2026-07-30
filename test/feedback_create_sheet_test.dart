@@ -30,7 +30,7 @@ void main() {
     );
 
     await tester.enterText(searchField, 'olim');
-    await tester.pumpAndSettle();
+    await tester.pump();
 
     expect(find.text('OLIMPIADAS UNIVERSITARIAS'), findsAtLeastNWidgets(1));
     expect(find.text('ALFA LOGISTICA'), findsNothing);
@@ -65,6 +65,41 @@ void main() {
     await tester.pumpAndSettle();
 
     expect(find.textContaining('CLIENTE DELTA'), findsWidgets);
+  });
+
+  testWidgets('finds RIAJOS with remote search outside the initial cache', (
+    tester,
+  ) async {
+    final apiClient = _FakeFeedbackApiClient();
+
+    await tester.pumpWidget(
+      MaterialApp(
+        theme: ThemeData(useMaterial3: true),
+        home: Scaffold(
+          body: FeedbackCreateSheet(apiClient: apiClient, token: 'token'),
+        ),
+      ),
+    );
+
+    await tester.pump();
+    await tester.pumpAndSettle();
+
+    final searchField = find.byWidgetPredicate(
+      (widget) =>
+          widget is TextField &&
+          widget.decoration?.labelText == 'Buscar cliente',
+    );
+
+    await tester.enterText(searchField, 'riajos');
+    await tester.pump();
+
+    expect(find.textContaining('Buscando clientes'), findsOneWidget);
+
+    await tester.pump(const Duration(milliseconds: 400));
+    await tester.pumpAndSettle();
+
+    expect(find.textContaining('HORIZONTE'), findsWidgets);
+    expect(find.textContaining('RIAJOS SRL'), findsWidgets);
   });
 
   testWidgets('searches clients by number while typing', (tester) async {
@@ -175,6 +210,22 @@ class _FakeFeedbackApiClient extends MobileApiClient {
             nombreFantasia: 'CLIENTE DELTA',
             razonSocial: 'CLIENTE DELTA SA',
             codigo: 'DEL-002',
+            tipo: 'Cliente',
+          ),
+        ],
+        page: 1,
+        perPage: 20,
+        total: 1,
+      );
+    }
+    if (query == 'riajos') {
+      return const FeedbackClientesResponse(
+        items: [
+          FeedbackCliente(
+            id: 70,
+            nombreFantasia: 'HORIZONTE',
+            razonSocial: 'RIAJOS SRL',
+            codigo: '70',
             tipo: 'Cliente',
           ),
         ],
