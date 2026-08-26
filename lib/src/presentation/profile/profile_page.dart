@@ -8,6 +8,7 @@ import '../../core/image/profile_photo_cache.dart';
 import '../../core/network/mobile_api_client.dart';
 import '../../core/permissions/device_permission_bootstrap.dart';
 import '../widgets/centered_snackbar.dart';
+import '../widgets/croppable_image.dart';
 import '../widgets/employee_photo_widget.dart';
 
 class ProfilePage extends StatefulWidget {
@@ -20,6 +21,7 @@ class ProfilePage extends StatefulWidget {
 
   final MobileApiClient apiClient;
   final String token;
+
   /// DNI del empleado para construir la URL de foto como fallback cuando
   /// [EmployeeProfile.dni] es null (puede ocurrir en ciertos perfiles).
   final String? employeeDni;
@@ -137,9 +139,20 @@ class _ProfilePageState extends State<ProfilePage> {
         requestFullMetadata: false,
       );
       if (picked == null || !mounted) return;
-      final size = await picked.length();
+      final cropped = await cropPickedImage(
+        context,
+        picked,
+        title: 'Recortar foto',
+        mode: ImageCropMode.square,
+        maxWidth: 800,
+        maxHeight: 800,
+        compressQuality: 72,
+      );
+      if (!mounted) return;
+      final selected = cropped ?? picked;
+      final size = await selected.length();
       setState(() {
-        _selectedPhoto = picked;
+        _selectedPhoto = selected;
         _selectedPhotoBytes = size;
       });
     } catch (_) {
@@ -274,7 +287,8 @@ class _ProfilePageState extends State<ProfilePage> {
       action: SnackBarAction(
         label: 'Ajustes',
         textColor: Colors.white,
-        onPressed: () => unawaited(_devicePermissionBootstrap.openAppSettings()),
+        onPressed: () =>
+            unawaited(_devicePermissionBootstrap.openAppSettings()),
       ),
     );
   }
@@ -292,7 +306,10 @@ class _ProfilePageState extends State<ProfilePage> {
       );
     }
     // Ultimo fallback: usar foto absoluta si la hay
-    return ProfilePhotoCache.withVersion(profile.foto, version: profile.imagenVersion);
+    return ProfilePhotoCache.withVersion(
+      profile.foto,
+      version: profile.imagenVersion,
+    );
   }
 
   String _fmtBytes(int? value) {
@@ -325,7 +342,9 @@ class _ProfilePageState extends State<ProfilePage> {
               onRefresh: _loadProfile,
               child: LayoutBuilder(
                 builder: (context, constraints) {
-                  final maxWidth = constraints.maxWidth >= 900 ? 640.0 : double.infinity;
+                  final maxWidth = constraints.maxWidth >= 900
+                      ? 640.0
+                      : double.infinity;
                   return Center(
                     child: ConstrainedBox(
                       constraints: BoxConstraints(maxWidth: maxWidth),
@@ -352,7 +371,8 @@ class _ProfilePageState extends State<ProfilePage> {
                             token: widget.token,
                             busyPhoto: busyPhoto,
                             onPickCamera: () => _pickPhoto(ImageSource.camera),
-                            onPickGallery: () => _pickPhoto(ImageSource.gallery),
+                            onPickGallery: () =>
+                                _pickPhoto(ImageSource.gallery),
                           ),
                           const SizedBox(height: 16),
 
@@ -404,13 +424,15 @@ class _ProfilePageState extends State<ProfilePage> {
                                   photoPath: _selectedPhoto!.path,
                                   sizeLabel: _fmtBytes(_selectedPhotoBytes),
                                   uploading: _uploadingPhoto,
-                                  onUpload: busyPhoto ? null : _uploadSelectedPhoto,
+                                  onUpload: busyPhoto
+                                      ? null
+                                      : _uploadSelectedPhoto,
                                   onDiscard: busyPhoto
                                       ? null
                                       : () => setState(() {
-                                            _selectedPhoto = null;
-                                            _selectedPhotoBytes = null;
-                                          }),
+                                          _selectedPhoto = null;
+                                          _selectedPhotoBytes = null;
+                                        }),
                                 ),
                               ],
                             ),
@@ -434,9 +456,7 @@ class _ProfilePageState extends State<ProfilePage> {
                                 ),
                                 style: OutlinedButton.styleFrom(
                                   side: BorderSide(
-                                    color: Theme.of(
-                                      context,
-                                    ).colorScheme.error,
+                                    color: Theme.of(context).colorScheme.error,
                                   ),
                                   minimumSize: const Size(double.infinity, 48),
                                 ),
@@ -527,7 +547,9 @@ class _ProfilePageState extends State<ProfilePage> {
                                 decoration: InputDecoration(
                                   labelText: 'Nueva contraseña',
                                   border: const OutlineInputBorder(),
-                                  prefixIcon: const Icon(Icons.lock_open_outlined),
+                                  prefixIcon: const Icon(
+                                    Icons.lock_open_outlined,
+                                  ),
                                   helperText: 'Mínimo 8 caracteres',
                                   isDense: true,
                                   suffixIcon: IconButton(
@@ -544,7 +566,9 @@ class _ProfilePageState extends State<ProfilePage> {
                               ),
                               const SizedBox(height: 14),
                               FilledButton.tonal(
-                                onPressed: _savingPassword ? null : _savePassword,
+                                onPressed: _savingPassword
+                                    ? null
+                                    : _savePassword,
                                 style: FilledButton.styleFrom(
                                   minimumSize: const Size(double.infinity, 48),
                                 ),
@@ -610,10 +634,7 @@ class _ProfileHero extends StatelessWidget {
             height: 56,
             decoration: BoxDecoration(
               gradient: LinearGradient(
-                colors: [
-                  cs.primary,
-                  cs.primary.withValues(alpha: 0.7),
-                ],
+                colors: [cs.primary, cs.primary.withValues(alpha: 0.7)],
               ),
             ),
           ),
@@ -630,10 +651,7 @@ class _ProfileHero extends StatelessWidget {
                       Container(
                         decoration: BoxDecoration(
                           shape: BoxShape.circle,
-                          border: Border.all(
-                            color: cs.surface,
-                            width: 3,
-                          ),
+                          border: Border.all(color: cs.surface, width: 3),
                         ),
                         child: EmployeePhotoWidget(
                           photoUrl: remoteFotoUrl,
@@ -679,10 +697,7 @@ class _ProfileHero extends StatelessWidget {
                             decoration: BoxDecoration(
                               color: cs.primaryContainer,
                               shape: BoxShape.circle,
-                              border: Border.all(
-                                color: cs.surface,
-                                width: 2,
-                              ),
+                              border: Border.all(color: cs.surface, width: 2),
                             ),
                             child: Icon(
                               Icons.edit_outlined,
@@ -703,8 +718,8 @@ class _ProfileHero extends StatelessWidget {
                       Text(
                         nombre,
                         style: Theme.of(context).textTheme.titleLarge?.copyWith(
-                              fontWeight: FontWeight.w700,
-                            ),
+                          fontWeight: FontWeight.w700,
+                        ),
                         textAlign: TextAlign.center,
                       ),
                       const SizedBox(height: 6),
@@ -788,9 +803,9 @@ class _SectionCard extends StatelessWidget {
                 Text(
                   title,
                   style: Theme.of(context).textTheme.labelLarge?.copyWith(
-                        color: cs.primary,
-                        fontWeight: FontWeight.w700,
-                      ),
+                    color: cs.primary,
+                    fontWeight: FontWeight.w700,
+                  ),
                 ),
               ],
             ),
@@ -833,15 +848,15 @@ class _InfoTile extends StatelessWidget {
               children: [
                 Text(
                   label,
-                  style: Theme.of(context).textTheme.labelSmall?.copyWith(
-                        color: cs.onSurfaceVariant,
-                      ),
+                  style: Theme.of(
+                    context,
+                  ).textTheme.labelSmall?.copyWith(color: cs.onSurfaceVariant),
                 ),
                 Text(
                   value,
-                  style: Theme.of(context).textTheme.bodyMedium?.copyWith(
-                        fontWeight: FontWeight.w500,
-                      ),
+                  style: Theme.of(
+                    context,
+                  ).textTheme.bodyMedium?.copyWith(fontWeight: FontWeight.w500),
                 ),
               ],
             ),
@@ -893,9 +908,9 @@ class _PhotoPreviewRow extends StatelessWidget {
                 children: [
                   Text(
                     sizeLabel,
-                    style: Theme.of(context).textTheme.bodySmall?.copyWith(
-                          color: cs.onSurfaceVariant,
-                        ),
+                    style: Theme.of(
+                      context,
+                    ).textTheme.bodySmall?.copyWith(color: cs.onSurfaceVariant),
                   ),
                   const SizedBox(height: 8),
                   Row(

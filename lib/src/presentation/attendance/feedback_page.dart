@@ -7,6 +7,7 @@ import 'package:image_picker/image_picker.dart';
 import '../../core/network/feedback_api_models.dart';
 import '../../core/network/mobile_api_client.dart';
 import '../../core/utils/date_formatter.dart';
+import '../widgets/croppable_image.dart';
 
 const Color _facebookBlue = Color(0xFF1877F2);
 const Color _facebookBlueDark = Color(0xFF145DBF);
@@ -677,35 +678,8 @@ class _FeedbackDetailSheetState extends State<FeedbackDetailSheet> {
     final controller = TextEditingController();
     final descripcion = await showDialog<String>(
       context: context,
-      builder: (dialogContext) {
-        return AlertDialog(
-          title: const Text('Resolver feedback'),
-          content: TextField(
-            controller: controller,
-            maxLines: 4,
-            maxLength: 400,
-            decoration: const InputDecoration(
-              labelText: 'Descripción de la gestión',
-              hintText: 'Contanos cómo se resolvió...',
-              border: OutlineInputBorder(),
-              alignLabelWithHint: true,
-            ),
-          ),
-          actions: [
-            TextButton(
-              onPressed: () => Navigator.of(dialogContext).pop(),
-              child: const Text('Cancelar'),
-            ),
-            FilledButton(
-              onPressed: () {
-                final value = controller.text.trim();
-                Navigator.of(dialogContext).pop(value.isEmpty ? null : value);
-              },
-              child: const Text('Resolver'),
-            ),
-          ],
-        );
-      },
+      builder: (dialogContext) =>
+          _ResolveFeedbackDialog(controller: controller),
     );
     controller.dispose();
     final clean = descripcion?.trim();
@@ -1025,6 +999,132 @@ class _FeedbackDetailSheetState extends State<FeedbackDetailSheet> {
       'vencido' => 'Vencido',
       _ => 'Pendiente',
     };
+  }
+}
+
+class _ResolveFeedbackDialog extends StatelessWidget {
+  const _ResolveFeedbackDialog({required this.controller});
+
+  final TextEditingController controller;
+
+  @override
+  Widget build(BuildContext context) {
+    final inheritedTextScale = MediaQuery.textScalerOf(context).scale(1);
+    final textScale = inheritedTextScale.clamp(1.0, 1.18).toDouble();
+
+    return MediaQuery(
+      data: MediaQuery.of(
+        context,
+      ).copyWith(textScaler: TextScaler.linear(textScale)),
+      child: Dialog(
+        insetPadding: const EdgeInsets.symmetric(horizontal: 20, vertical: 24),
+        shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(20)),
+        child: LayoutBuilder(
+          builder: (context, _) {
+            final width = MediaQuery.sizeOf(context).width;
+            final stackActions = width < 360;
+
+            return ConstrainedBox(
+              constraints: const BoxConstraints(maxWidth: 420),
+              child: Padding(
+                padding: const EdgeInsets.fromLTRB(20, 20, 20, 16),
+                child: SingleChildScrollView(
+                  child: Column(
+                    mainAxisSize: MainAxisSize.min,
+                    crossAxisAlignment: CrossAxisAlignment.start,
+                    children: [
+                      Text(
+                        'Resolver feedback',
+                        style: Theme.of(context).textTheme.titleLarge?.copyWith(
+                          fontSize: 22,
+                          fontWeight: FontWeight.w800,
+                          height: 1.15,
+                        ),
+                      ),
+                      const SizedBox(height: 16),
+                      TextField(
+                        controller: controller,
+                        minLines: 4,
+                        maxLines: 5,
+                        maxLength: 400,
+                        textInputAction: TextInputAction.newline,
+                        style: Theme.of(context).textTheme.bodyLarge?.copyWith(
+                          fontSize: 16,
+                          height: 1.35,
+                        ),
+                        decoration: const InputDecoration(
+                          labelText: 'Descripcion de la gestion',
+                          hintText: 'Contanos como se resolvio...',
+                          alignLabelWithHint: true,
+                        ),
+                      ),
+                      const SizedBox(height: 12),
+                      _ResolveFeedbackActions(
+                        stacked: stackActions,
+                        onCancel: () => Navigator.of(context).pop(),
+                        onResolve: () {
+                          final value = controller.text.trim();
+                          Navigator.of(
+                            context,
+                          ).pop(value.isEmpty ? null : value);
+                        },
+                      ),
+                    ],
+                  ),
+                ),
+              ),
+            );
+          },
+        ),
+      ),
+    );
+  }
+}
+
+class _ResolveFeedbackActions extends StatelessWidget {
+  const _ResolveFeedbackActions({
+    required this.stacked,
+    required this.onCancel,
+    required this.onResolve,
+  });
+
+  final bool stacked;
+  final VoidCallback onCancel;
+  final VoidCallback onResolve;
+
+  @override
+  Widget build(BuildContext context) {
+    final cancelButton = TextButton(
+      onPressed: onCancel,
+      child: const Text('Cancelar'),
+    );
+    final resolveButton = FilledButton(
+      onPressed: onResolve,
+      child: const Text('Resolver'),
+    );
+
+    if (stacked) {
+      return Column(
+        crossAxisAlignment: CrossAxisAlignment.stretch,
+        children: [
+          SizedBox(height: 48, child: resolveButton),
+          const SizedBox(height: 8),
+          SizedBox(height: 44, child: cancelButton),
+        ],
+      );
+    }
+
+    return Row(
+      mainAxisAlignment: MainAxisAlignment.end,
+      children: [
+        cancelButton,
+        const SizedBox(width: 10),
+        SizedBox(
+          height: 44,
+          child: Padding(padding: EdgeInsets.zero, child: resolveButton),
+        ),
+      ],
+    );
   }
 }
 
@@ -1415,8 +1515,18 @@ class _FeedbackCreateSheetState extends State<FeedbackCreateSheet> {
         maxWidth: 1600,
       );
       if (!mounted || image == null) return;
+      final cropped = await cropPickedImage(
+        context,
+        image,
+        title: 'Recortar evidencia',
+        maxWidth: 1600,
+        maxHeight: 1600,
+        compressQuality: 82,
+      );
+      if (!mounted) return;
+      final selected = cropped ?? image;
       setState(() {
-        _evidencia = image;
+        _evidencia = selected;
         _error = null;
       });
     } catch (_) {

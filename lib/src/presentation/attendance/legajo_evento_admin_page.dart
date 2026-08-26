@@ -4,6 +4,7 @@ import 'package:flutter/material.dart';
 import 'package:image_picker/image_picker.dart';
 
 import '../../core/network/mobile_api_client.dart';
+import '../widgets/croppable_image.dart';
 
 class LegajoEventoAdminPage extends StatefulWidget {
   const LegajoEventoAdminPage({
@@ -206,12 +207,17 @@ class _LegajoEventoAdminPageState extends State<LegajoEventoAdminPage> {
       _error = null;
     });
     try {
-      final picked = switch (source) {
-        _LegajoAttachmentSource.camera => await _pickLegajoCameraAttachment(),
-        _LegajoAttachmentSource.gallery =>
-          await _pickLegajoGalleryAttachments(),
-        _LegajoAttachmentSource.file => await _pickLegajoFileAttachments(),
-      };
+      if (!context.mounted) return;
+      final List<_DraftLegajoAdjunto> picked;
+      if (source == _LegajoAttachmentSource.camera) {
+        // ignore: use_build_context_synchronously
+        picked = await _pickLegajoCameraAttachment(context);
+      } else if (source == _LegajoAttachmentSource.gallery) {
+        // ignore: use_build_context_synchronously
+        picked = await _pickLegajoGalleryAttachments(context);
+      } else {
+        picked = await _pickLegajoFileAttachments();
+      }
       if (!mounted || picked.isEmpty) return;
       setState(() => _adjuntos.addAll(picked));
     } catch (_) {
@@ -552,7 +558,9 @@ Future<_LegajoAttachmentSource?> _showLegajoAttachmentSourceSheet(
   );
 }
 
-Future<List<_DraftLegajoAdjunto>> _pickLegajoCameraAttachment() async {
+Future<List<_DraftLegajoAdjunto>> _pickLegajoCameraAttachment(
+  BuildContext context,
+) async {
   final photo = await ImagePicker().pickImage(
     source: ImageSource.camera,
     imageQuality: 85,
@@ -561,10 +569,17 @@ Future<List<_DraftLegajoAdjunto>> _pickLegajoCameraAttachment() async {
     requestFullMetadata: false,
   );
   if (photo == null) return const <_DraftLegajoAdjunto>[];
-  final bytes = await photo.readAsBytes();
+  if (!context.mounted) return const <_DraftLegajoAdjunto>[];
+  final croppedPhoto = await cropPickedImage(
+    context,
+    photo,
+    title: 'Recortar adjunto',
+  );
+  final selectedPhoto = croppedPhoto ?? photo;
+  final bytes = await selectedPhoto.readAsBytes();
   if (bytes.isEmpty) return const <_DraftLegajoAdjunto>[];
   final filename = _normalizeLegajoAttachmentFilename(
-    photo.name,
+    selectedPhoto.name,
     fallbackExtension: 'jpg',
   );
   return [
@@ -580,7 +595,9 @@ Future<List<_DraftLegajoAdjunto>> _pickLegajoCameraAttachment() async {
   ];
 }
 
-Future<List<_DraftLegajoAdjunto>> _pickLegajoGalleryAttachments() async {
+Future<List<_DraftLegajoAdjunto>> _pickLegajoGalleryAttachments(
+  BuildContext context,
+) async {
   final images = await ImagePicker().pickMultiImage(
     imageQuality: 85,
     maxWidth: 2048,
@@ -589,10 +606,17 @@ Future<List<_DraftLegajoAdjunto>> _pickLegajoGalleryAttachments() async {
   );
   final items = <_DraftLegajoAdjunto>[];
   for (final image in images) {
-    final bytes = await image.readAsBytes();
+    if (!context.mounted) break;
+    final croppedImage = await cropPickedImage(
+      context,
+      image,
+      title: 'Recortar adjunto',
+    );
+    final selectedImage = croppedImage ?? image;
+    final bytes = await selectedImage.readAsBytes();
     if (bytes.isEmpty) continue;
     final filename = _normalizeLegajoAttachmentFilename(
-      image.name,
+      selectedImage.name,
       fallbackExtension: 'jpg',
     );
     items.add(

@@ -8,6 +8,9 @@ import 'package:url_launcher/url_launcher.dart';
 
 import '../../core/network/mobile_api_client.dart';
 import '../../core/utils/date_formatter.dart';
+import '../widgets/croppable_image.dart';
+
+const int _maxJustificacionFutureDays = 30;
 
 class JustificacionesPage extends StatefulWidget {
   const JustificacionesPage({
@@ -182,10 +185,9 @@ class _JustificacionesPageState extends State<JustificacionesPage> {
     final detailItem = await _loadJustificacionDetail(item);
     if (!mounted) return;
     unawaited(
-      widget.apiClient.marcarJustificacionVista(
-        token: widget.token,
-        id: detailItem.id,
-      ).catchError((_) {}),
+      widget.apiClient
+          .marcarJustificacionVista(token: widget.token, id: detailItem.id)
+          .catchError((_) {}),
     );
 
     unawaited(
@@ -362,7 +364,10 @@ class _JustificacionesPageState extends State<JustificacionesPage> {
     final now = DateTime.now();
     final initial = _filtroDesde != null && _filtroHasta != null
         ? DateTimeRange(start: _filtroDesde!, end: _filtroHasta!)
-        : DateTimeRange(start: now.subtract(const Duration(days: 30)), end: now);
+        : DateTimeRange(
+            start: now.subtract(const Duration(days: 30)),
+            end: now,
+          );
     final picked = await showDateRangePicker(
       context: context,
       initialDateRange: initial,
@@ -1256,6 +1261,9 @@ class _CreateJustificacionSheetState extends State<_CreateJustificacionSheet> {
     }
 
     final today = DateTime.now();
+    final maxSelectableDate = today.add(
+      const Duration(days: _maxJustificacionFutureDays),
+    );
     final initialRange =
         _selectedFechaDesde != null && _selectedFechaHasta != null
         ? DateTimeRange(start: _selectedFechaDesde!, end: _selectedFechaHasta!)
@@ -1264,7 +1272,7 @@ class _CreateJustificacionSheetState extends State<_CreateJustificacionSheet> {
       context: context,
       initialDateRange: initialRange,
       firstDate: DateTime(2020),
-      lastDate: today,
+      lastDate: maxSelectableDate,
       helpText: 'Seleccionar periodo de justificacion',
     );
     if (picked == null || !mounted) {
@@ -1374,11 +1382,19 @@ class _CreateJustificacionSheetState extends State<_CreateJustificacionSheet> {
       _error = null;
     });
     try {
-      final picked = switch (source) {
-        _AttachmentSourceChoice.camera => await _pickCameraAttachments(),
-        _AttachmentSourceChoice.gallery => await _pickGalleryAttachments(),
-        _AttachmentSourceChoice.file => await _pickFileAttachments(),
-      };
+      if (!context.mounted) {
+        return;
+      }
+      final List<_DraftJustificacionAdjunto> picked;
+      if (source == _AttachmentSourceChoice.camera) {
+        // ignore: use_build_context_synchronously
+        picked = await _pickCameraAttachments(context);
+      } else if (source == _AttachmentSourceChoice.gallery) {
+        // ignore: use_build_context_synchronously
+        picked = await _pickGalleryAttachments(context);
+      } else {
+        picked = await _pickFileAttachments();
+      }
       if (!mounted || picked.isEmpty) {
         return;
       }
@@ -1737,6 +1753,9 @@ class _EditJustificacionSheetState extends State<_EditJustificacionSheet> {
     }
 
     final today = DateTime.now();
+    final maxSelectableDate = today.add(
+      const Duration(days: _maxJustificacionFutureDays),
+    );
     final initialRange =
         _selectedFechaDesde != null && _selectedFechaHasta != null
         ? DateTimeRange(start: _selectedFechaDesde!, end: _selectedFechaHasta!)
@@ -1749,7 +1768,7 @@ class _EditJustificacionSheetState extends State<_EditJustificacionSheet> {
         context: context,
         initialDateRange: initialRange,
         firstDate: DateTime(2020),
-        lastDate: today,
+        lastDate: maxSelectableDate,
         helpText: 'Seleccionar periodo de justificacion',
       );
       if (picked == null || !mounted) {
@@ -1789,11 +1808,19 @@ class _EditJustificacionSheetState extends State<_EditJustificacionSheet> {
       _error = null;
     });
     try {
-      final picked = switch (source) {
-        _AttachmentSourceChoice.camera => await _pickCameraAttachments(),
-        _AttachmentSourceChoice.gallery => await _pickGalleryAttachments(),
-        _AttachmentSourceChoice.file => await _pickFileAttachments(),
-      };
+      if (!context.mounted) {
+        return;
+      }
+      final List<_DraftJustificacionAdjunto> picked;
+      if (source == _AttachmentSourceChoice.camera) {
+        // ignore: use_build_context_synchronously
+        picked = await _pickCameraAttachments(context);
+      } else if (source == _AttachmentSourceChoice.gallery) {
+        // ignore: use_build_context_synchronously
+        picked = await _pickGalleryAttachments(context);
+      } else {
+        picked = await _pickFileAttachments();
+      }
       if (!mounted || picked.isEmpty) {
         return;
       }
@@ -2342,7 +2369,9 @@ IconData _attachmentIconForDraft(String name) {
   return Icons.attach_file;
 }
 
-Future<List<_DraftJustificacionAdjunto>> _pickCameraAttachments() async {
+Future<List<_DraftJustificacionAdjunto>> _pickCameraAttachments(
+  BuildContext context,
+) async {
   final picker = ImagePicker();
   final photo = await picker.pickImage(
     source: ImageSource.camera,
@@ -2354,9 +2383,18 @@ Future<List<_DraftJustificacionAdjunto>> _pickCameraAttachments() async {
   if (photo == null) {
     return const <_DraftJustificacionAdjunto>[];
   }
-  final bytes = await photo.readAsBytes();
+  if (!context.mounted) {
+    return const <_DraftJustificacionAdjunto>[];
+  }
+  final croppedPhoto = await cropPickedImage(
+    context,
+    photo,
+    title: 'Recortar adjunto',
+  );
+  final selectedPhoto = croppedPhoto ?? photo;
+  final bytes = await selectedPhoto.readAsBytes();
   final filename = _normalizeAttachmentFilename(
-    photo.name,
+    selectedPhoto.name,
     fallbackExtension: 'jpg',
   );
   return <_DraftJustificacionAdjunto>[
@@ -2372,7 +2410,9 @@ Future<List<_DraftJustificacionAdjunto>> _pickCameraAttachments() async {
   ];
 }
 
-Future<List<_DraftJustificacionAdjunto>> _pickGalleryAttachments() async {
+Future<List<_DraftJustificacionAdjunto>> _pickGalleryAttachments(
+  BuildContext context,
+) async {
   final images = await ImagePicker().pickMultiImage(
     imageQuality: 85,
     maxWidth: 2048,
@@ -2381,10 +2421,17 @@ Future<List<_DraftJustificacionAdjunto>> _pickGalleryAttachments() async {
   );
   final items = <_DraftJustificacionAdjunto>[];
   for (final image in images) {
-    final bytes = await image.readAsBytes();
+    if (!context.mounted) break;
+    final croppedImage = await cropPickedImage(
+      context,
+      image,
+      title: 'Recortar adjunto',
+    );
+    final selectedImage = croppedImage ?? image;
+    final bytes = await selectedImage.readAsBytes();
     if (bytes.isEmpty) continue;
     final filename = _normalizeAttachmentFilename(
-      image.name,
+      selectedImage.name,
       fallbackExtension: 'jpg',
     );
     items.add(
