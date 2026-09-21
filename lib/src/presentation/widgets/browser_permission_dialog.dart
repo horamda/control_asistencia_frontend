@@ -77,65 +77,168 @@ class _PermissionDialogState extends State<_PermissionDialog> {
   }
 
   @override
-  Widget build(BuildContext context) => PopScope(
-    canPop: true,
-    child: AlertDialog(
-      scrollable: true,
-      title: const Text('Permisos del navegador'),
-      content: Column(
-        crossAxisAlignment: CrossAxisAlignment.start,
-        mainAxisSize: MainAxisSize.min,
-        children: [
-          Text(
-            [
-              if (widget.camera)
-                'Cámara: para escanear el QR o tomar una foto.',
-              if (widget.location)
-                'Ubicación: para verificar dónde estás al fichar.',
-            ].join('\n'),
-          ),
-          const SizedBox(height: 12),
-          const Text(
-            'Activá cada permiso con su botón y elegí Permitir cuando el navegador lo solicite.',
-          ),
-          const SizedBox(height: 12),
-          const Text(
-            'Si lo bloqueaste anteriormente:',
-            style: TextStyle(fontWeight: FontWeight.bold),
-          ),
-          const Text(
-            'iPhone / Safari: menú de la página → Configuración del sitio web → Cámara y Ubicación.\n\nAndroid / Chrome: información del sitio junto a la dirección → Permisos.\n\nActivá también la localización del teléfono. Abrí el enlace directamente en Safari o Chrome usando HTTPS.',
-          ),
-          if (_error != null) ...[
-            const SizedBox(height: 12),
-            Text(
-              _error!,
-              style: TextStyle(color: Theme.of(context).colorScheme.error),
+  Widget build(BuildContext context) {
+    final theme = Theme.of(context);
+    final colors = theme.colorScheme;
+    final label = _error != null
+        ? 'Reintentar'
+        : widget.camera && !_cameraDone
+        ? 'Activar cámara'
+        : 'Activar ubicación';
+    return Dialog(
+      insetPadding: const EdgeInsets.symmetric(horizontal: 16, vertical: 12),
+      clipBehavior: Clip.antiAlias,
+      shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(24)),
+      child: ConstrainedBox(
+        constraints: const BoxConstraints(maxWidth: 480),
+        child: Column(
+          mainAxisSize: MainAxisSize.min,
+          children: [
+            Flexible(
+              child: SingleChildScrollView(
+                padding: const EdgeInsets.fromLTRB(20, 20, 20, 8),
+                child: Column(
+                  crossAxisAlignment: CrossAxisAlignment.stretch,
+                  children: [
+                    Text(
+                      'Permisos del navegador',
+                      style: theme.textTheme.titleLarge?.copyWith(
+                        fontWeight: FontWeight.w700,
+                      ),
+                    ),
+                    const SizedBox(height: 8),
+                    const Text(
+                      'Activá los permisos para continuar. Elegí Permitir cuando el navegador lo solicite.',
+                    ),
+                    const SizedBox(height: 16),
+                    if (widget.camera)
+                      _permissionCard(
+                        icon: Icons.camera_alt_outlined,
+                        title: 'Cámara trasera',
+                        subtitle: 'Para escanear el QR y tomar fotos.',
+                        done: _cameraDone,
+                      ),
+                    if (widget.location)
+                      _permissionCard(
+                        icon: Icons.location_on_outlined,
+                        title: 'Ubicación',
+                        subtitle: 'Para verificar dónde estás al fichar.',
+                        done: _locationDone,
+                      ),
+                    if (_error != null) ...[
+                      Semantics(
+                        liveRegion: true,
+                        child: Container(
+                          width: double.infinity,
+                          padding: const EdgeInsets.all(12),
+                          decoration: BoxDecoration(
+                            color: colors.errorContainer,
+                            borderRadius: BorderRadius.circular(12),
+                          ),
+                          child: Text(
+                            _error!,
+                            style: TextStyle(color: colors.onErrorContainer),
+                          ),
+                        ),
+                      ),
+                      const SizedBox(height: 8),
+                    ],
+                    if (_busy) ...[
+                      const LinearProgressIndicator(),
+                      const SizedBox(height: 8),
+                      const Text('Esperando respuesta del navegador…'),
+                    ],
+                    ExpansionTile(
+                      tilePadding: EdgeInsets.zero,
+                      childrenPadding: const EdgeInsets.only(bottom: 12),
+                      title: const Text('¿Necesitás ayuda?'),
+                      children: const [
+                        Text(
+                          'iPhone / Safari: menú de la página → Configuración del sitio web → Cámara y Ubicación.\n\nAndroid / Chrome: información del sitio junto a la dirección → Permisos.\n\nActivá la localización del teléfono y abrí FichaYa directamente en Safari o Chrome.',
+                        ),
+                      ],
+                    ),
+                  ],
+                ),
+              ),
+            ),
+            const Divider(height: 1),
+            Padding(
+              padding: const EdgeInsets.all(12),
+              child: LayoutBuilder(
+                builder: (context, constraints) {
+                  final primary = FilledButton(
+                    style: FilledButton.styleFrom(
+                      minimumSize: const Size(0, 48),
+                    ),
+                    onPressed: _busy ? null : _request,
+                    child: Text(
+                      _busy ? 'Esperando…' : label,
+                      textAlign: TextAlign.center,
+                    ),
+                  );
+                  final cancel = TextButton(
+                    style: TextButton.styleFrom(minimumSize: const Size(0, 48)),
+                    onPressed: () => Navigator.pop(context, false),
+                    child: const Text('Ahora no'),
+                  );
+                  if (constraints.maxWidth < 360 ||
+                      MediaQuery.textScalerOf(context).scale(14) > 20) {
+                    return Column(
+                      mainAxisSize: MainAxisSize.min,
+                      crossAxisAlignment: CrossAxisAlignment.stretch,
+                      children: [primary, const SizedBox(height: 4), cancel],
+                    );
+                  }
+                  return Row(
+                    children: [
+                      cancel,
+                      const SizedBox(width: 12),
+                      Expanded(child: primary),
+                    ],
+                  );
+                },
+              ),
             ),
           ],
-          if (_busy) ...[
-            const SizedBox(height: 12),
-            const LinearProgressIndicator(),
-            const Text('Esperando permiso o ubicación…'),
-          ],
+        ),
+      ),
+    );
+  }
+
+  Widget _permissionCard({
+    required IconData icon,
+    required String title,
+    required String subtitle,
+    required bool done,
+  }) {
+    final colors = Theme.of(context).colorScheme;
+    return Container(
+      margin: const EdgeInsets.only(bottom: 10),
+      padding: const EdgeInsets.all(12),
+      decoration: BoxDecoration(
+        color: done ? colors.secondaryContainer : colors.surfaceContainerLow,
+        borderRadius: BorderRadius.circular(12),
+      ),
+      child: Row(
+        crossAxisAlignment: CrossAxisAlignment.start,
+        children: [
+          Icon(done ? Icons.check_circle_outline : icon, color: colors.primary),
+          const SizedBox(width: 12),
+          Expanded(
+            child: Column(
+              crossAxisAlignment: CrossAxisAlignment.start,
+              children: [
+                Text(
+                  title,
+                  style: const TextStyle(fontWeight: FontWeight.w600),
+                ),
+                Text(done ? 'Activada' : subtitle),
+              ],
+            ),
+          ),
         ],
       ),
-      actions: [
-        TextButton(
-          onPressed: () => Navigator.pop(context, false),
-          child: const Text('Ahora no'),
-        ),
-        FilledButton(
-          onPressed: _busy ? null : _request,
-          child: Text(
-            _error != null
-                ? 'Reintentar'
-                : widget.camera && !_cameraDone
-                ? 'Activar cámara'
-                : 'Activar ubicación',
-          ),
-        ),
-      ],
-    ),
-  );
+    );
+  }
 }

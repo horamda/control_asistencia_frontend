@@ -10,11 +10,14 @@
     // Do not retain a previously selected front-camera device ID.
     delete video.deviceId;
     video.facingMode = {exact: 'environment'};
-    function verify(stream, selectedId) {
+    function verify(stream, selectedId, exactFacingAccepted = false) {
       const tracks = stream.getVideoTracks();
       const valid = tracks.length > 0 && tracks.every(track => {
         const settings = track.getSettings();
         if (settings.facingMode === 'user') return false;
+        // A fulfilled mandatory constraint is authoritative. Some browsers
+        // omit facingMode and camera labels from the returned track settings.
+        if (!settings.facingMode && exactFacingAccepted) return true;
         return settings.facingMode === 'environment' ||
           (selectedId && settings.deviceId === selectedId) ||
           /\b(back|rear|trasera|posterior|arrière|rückkamera)\b/i.test(track.label || '');
@@ -26,7 +29,8 @@
       return stream;
     }
     try {
-      return verify(await getUserMedia({...constraints, video}));
+      const supportsFacing = devices.getSupportedConstraints().facingMode === true;
+      return verify(await getUserMedia({...constraints, video}), undefined, supportsFacing);
     } catch (error) {
       // Never retry a permission rejection or a busy-camera error.
       if (!['OverconstrainedError', 'NotFoundError', 'NotSupportedError'].includes(error.name)) throw error;

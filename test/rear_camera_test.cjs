@@ -63,3 +63,11 @@ test('audio-only requests are unchanged', async () => {
   const devices = setup(async value => value);
   assert.equal(await devices.getUserMedia(constraints), constraints);
 });
+
+test('successful exact rear constraint does not require optional track metadata', async () => {
+  const devices = setup(async constraints => {
+    assert.equal(constraints.video.facingMode.exact, 'environment');
+    return {getVideoTracks: () => [{getSettings: () => ({})}]};
+  });
+  await devices.getUserMedia({video: true});
+});

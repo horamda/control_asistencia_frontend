@@ -55,9 +55,18 @@ void main() {
     WidgetTester tester,
     FakePermissions permissions, {
     bool camera = true,
+    double textScale = 1,
+    double keyboardHeight = 0,
   }) async {
     await tester.pumpWidget(
       MaterialApp(
+        builder: (context, child) => MediaQuery(
+          data: MediaQuery.of(context).copyWith(
+            textScaler: TextScaler.linear(textScale),
+            viewInsets: EdgeInsets.only(bottom: keyboardHeight),
+          ),
+          child: child!,
+        ),
         home: Builder(
           builder: (context) => Scaffold(
             body: TextButton(
@@ -74,6 +83,45 @@ void main() {
     );
     await tester.tap(find.text('Abrir'));
     await tester.pumpAndSettle();
+  }
+
+  for (final scenario in [
+    (size: const Size(320, 568), scale: 1.0, keyboard: 0.0),
+    (size: const Size(390, 700), scale: 2.0, keyboard: 0.0),
+    (size: const Size(740, 320), scale: 1.5, keyboard: 0.0),
+    (size: const Size(360, 640), scale: 1.0, keyboard: 260.0),
+    (size: const Size(1280, 800), scale: 1.0, keyboard: 0.0),
+  ]) {
+    testWidgets(
+      'responsive dialog ${scenario.size} scale ${scenario.scale} keyboard ${scenario.keyboard}',
+      (tester) async {
+        await tester.binding.setSurfaceSize(scenario.size);
+        addTearDown(() => tester.binding.setSurfaceSize(null));
+        await open(
+          tester,
+          FakePermissions(),
+          textScale: scenario.scale,
+          keyboardHeight: scenario.keyboard,
+        );
+        expect(tester.takeException(), isNull);
+        final primary = find.widgetWithText(FilledButton, 'Activar cámara');
+        expect(primary.hitTestable(), findsOneWidget);
+        await tester.tap(primary);
+        await tester.pumpAndSettle();
+        expect(find.text('Reintentar').hitTestable(), findsOneWidget);
+        final help = find.text('¿Necesitás ayuda?');
+        await tester.ensureVisible(help);
+        await tester.tap(help);
+        await tester.pumpAndSettle();
+        expect(tester.takeException(), isNull);
+        expect(find.text('Reintentar').hitTestable(), findsOneWidget);
+        expect(find.text('Ahora no').hitTestable(), findsOneWidget);
+        expect(
+          tester.getBottomRight(find.widgetWithText(TextButton, 'Ahora no')).dy,
+          lessThanOrEqualTo(scenario.size.height - scenario.keyboard),
+        );
+      },
+    );
   }
 
   testWidgets('requests only after tap, denied permissions can be retried', (
