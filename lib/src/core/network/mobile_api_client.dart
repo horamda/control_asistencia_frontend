@@ -2497,6 +2497,50 @@ class MobileApiClient {
     return SkapMiDesarrolloResponse.fromJson(_decodeObject(response.body));
   }
 
+  /// The backend derives the employee from the token; no employee ID is accepted.
+  Future<List<Map<String, dynamic>>> getSkapMatrices({
+    required String token,
+    int? anio,
+  }) async {
+    final data = await _getSkapMatrizData(
+      anio == null ? '/matrices' : '/matrices?anio=$anio',
+      token,
+    );
+    return (data['items'] as List? ?? const [])
+        .map((item) => Map<String, dynamic>.from(item as Map))
+        .toList();
+  }
+
+  Future<Map<String, dynamic>> getSkapMatriz({
+    required String token,
+    required int id,
+  }) => _getSkapMatrizData('/matrices/$id', token);
+
+  Future<Map<String, dynamic>> _getSkapMatrizData(
+    String path,
+    String token,
+  ) async {
+    final response = await _safeGet(
+      _skapUri(path),
+      headers: _headers(token: token),
+      actionLabel: 'consultar mis evaluaciones',
+    );
+    if (response.statusCode != 200) {
+      final error = _extractApiError(
+        response,
+        fallback: 'No se pudo consultar la evaluación.',
+      );
+      throw ApiException(
+        message: error.message,
+        statusCode: response.statusCode,
+        code: error.code,
+      );
+    }
+    return Map<String, dynamic>.from(
+      _decodeObject(response.body)['data'] as Map,
+    );
+  }
+
   Future<SkapRankingResponse> getSkapRanking({
     required String token,
     int? anio,
@@ -3804,6 +3848,8 @@ class AsistenciasPageResult {
 class MarcaItem {
   MarcaItem({
     required this.id,
+    this.corregidaManualmente = false,
+    this.esResumen = false,
     this.asistenciaId,
     this.fecha,
     this.hora,
@@ -3821,6 +3867,8 @@ class MarcaItem {
   });
 
   final int id;
+  final bool corregidaManualmente;
+  final bool esResumen;
   final int? asistenciaId;
   final String? fecha;
   final String? hora;
@@ -3839,6 +3887,8 @@ class MarcaItem {
   factory MarcaItem.fromJson(Map<String, dynamic> json) {
     return MarcaItem(
       id: _jsonInt(json['id']) ?? 0,
+      corregidaManualmente: _jsonBool(json['corregida_manualmente']) ?? false,
+      esResumen: _jsonBool(json['es_resumen']) ?? false,
       asistenciaId: _jsonInt(json['asistencia_id']),
       fecha: _jsonString(json['fecha']),
       hora: _jsonString(json['hora']),
@@ -7391,6 +7441,7 @@ class TriviaParticipacion {
     this.incorrectas,
     this.tiempoTotalSegundos,
     this.posicion,
+    this.fueraRanking = false,
     required this.esGanador,
   });
 
@@ -7400,6 +7451,7 @@ class TriviaParticipacion {
   final int? incorrectas;
   final int? tiempoTotalSegundos;
   final int? posicion;
+  final bool fueraRanking;
   final bool esGanador;
 
   factory TriviaParticipacion.fromJson(Map<String, dynamic> json) {
@@ -7410,6 +7462,7 @@ class TriviaParticipacion {
       incorrectas: _jsonInt(json['incorrectas']),
       tiempoTotalSegundos: _jsonInt(json['tiempo_total_segundos']),
       posicion: _jsonInt(json['posicion']),
+      fueraRanking: _jsonBool(json['fuera_ranking']) ?? false,
       esGanador: _jsonBool(json['es_ganador']) ?? false,
     );
   }
@@ -7556,6 +7609,7 @@ class TriviaFinalizarResponse {
     this.incorrectas,
     this.tiempoTotalSegundos,
     this.posicion,
+    this.fueraRanking = false,
     this.siguienteTriviaDisponible,
   });
 
@@ -7564,6 +7618,7 @@ class TriviaFinalizarResponse {
   final int? incorrectas;
   final int? tiempoTotalSegundos;
   final int? posicion;
+  final bool fueraRanking;
   final TriviaSiguiente? siguienteTriviaDisponible;
 
   factory TriviaFinalizarResponse.fromJson(Map<String, dynamic> json) {
@@ -7584,6 +7639,7 @@ class TriviaFinalizarResponse {
       incorrectas: _jsonInt(data['incorrectas']),
       tiempoTotalSegundos: _jsonInt(data['tiempo_total_segundos']),
       posicion: _jsonInt(data['posicion']),
+      fueraRanking: _jsonBool(data['fuera_ranking']) ?? false,
       siguienteTriviaDisponible: siguiente,
     );
   }
@@ -7761,6 +7817,7 @@ class TriviaMyHistorialItem {
     this.incorrectas,
     this.tiempoTotalSegundos,
     this.posicion,
+    this.fueraRanking = false,
     this.esGanador = false,
     this.estadoResultado,
     this.fechaInicioParticipacion,
@@ -7778,6 +7835,7 @@ class TriviaMyHistorialItem {
   final int? incorrectas;
   final int? tiempoTotalSegundos;
   final int? posicion;
+  final bool fueraRanking;
   final bool esGanador;
   final String? estadoResultado;
   final String? fechaInicioParticipacion;
@@ -7796,6 +7854,7 @@ class TriviaMyHistorialItem {
       incorrectas: _jsonInt(json['incorrectas']),
       tiempoTotalSegundos: _jsonInt(json['tiempo_total_segundos']),
       posicion: _jsonInt(json['posicion']),
+      fueraRanking: _jsonBool(json['fuera_ranking']) ?? false,
       esGanador: _jsonBool(json['es_ganador']) ?? false,
       estadoResultado: _jsonString(json['estado_resultado']),
       fechaInicioParticipacion: _jsonString(json['fecha_inicio_participacion']),

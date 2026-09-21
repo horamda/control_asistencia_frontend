@@ -216,6 +216,11 @@ class _MyHistorialTile extends StatelessWidget {
         child: Column(
           crossAxisAlignment: CrossAxisAlignment.start,
           children: [
+            if (item.fueraRanking)
+              const Padding(
+                padding: EdgeInsets.only(bottom: 8),
+                child: Text('Participación sin ranking'),
+              ),
             Row(
               children: [
                 if (esGanador) ...[

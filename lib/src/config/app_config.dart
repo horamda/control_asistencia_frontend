@@ -29,7 +29,10 @@ class AppConfig {
     'APP_FLAVOR',
     defaultValue: 'DEV',
   );
-  static const _isProd = bool.fromEnvironment('APP_PROD', defaultValue: false);
+  static const _isProd = bool.fromEnvironment(
+    'APP_PROD',
+    defaultValue: _flavor == 'PROD',
+  );
   static const _isStage = _flavor == 'STAGE';
   static const _defaultIdleTimeoutMinutes = _isProd ? 20 : (_isStage ? 25 : 30);
   static const _defaultMaxAgeHours = _isProd ? 10 : (_isStage ? 10 : 12);

@@ -4,13 +4,21 @@ server {
     root /usr/share/nginx/html;
     index index.html;
 
-    location / {
-        try_files $uri $uri/ /index.html;
+    # Flutter usa nombres estables para el codigo y los metadatos de version.
+    # Revalidarlos permite recibir una nueva publicacion sin borrar la cache.
+    location ~* \.(?:js|json|html|wasm)$ {
+        try_files $uri =404;
+        add_header Cache-Control "no-cache";
     }
 
-    location ~* \.(?:js|css|png|jpg|jpeg|gif|svg|ico|webp|wasm|json)$ {
+    location / {
+        try_files $uri $uri/ /index.html;
+        add_header Cache-Control "no-cache";
+    }
+
+    location ~* \.(?:css|png|jpg|jpeg|gif|svg|ico|webp)$ {
         try_files $uri =404;
         expires 7d;
-        add_header Cache-Control "public, max-age=604800, immutable";
+        add_header Cache-Control "public, max-age=604800";
     }
 }

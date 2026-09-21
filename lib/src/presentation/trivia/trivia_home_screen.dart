@@ -368,6 +368,8 @@ class _YaParticipoCard extends StatelessWidget {
       description: null,
       children: [
         if (p != null) ...[
+          if (p.fueraRanking)
+            const Text('Participación sin ranking'),
           _StatRow(label: 'Puntaje', value: '${p.puntosTotal ?? 0} pts'),
           if (p.posicion != null)
             _StatRow(label: 'Posición actual', value: '#${p.posicion}'),
@@ -424,6 +426,8 @@ class _FinalizadaCard extends StatelessWidget {
       description: null,
       children: [
         if (p != null) ...[
+          if (p.fueraRanking)
+            const Text('Participación sin ranking'),
           _StatRow(label: 'Tu puntaje', value: '${p.puntosTotal ?? 0} pts'),
           if (p.posicion != null) _StatRow(label: 'Tu posición', value: '#${p.posicion}'),
         ],

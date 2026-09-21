@@ -39,13 +39,15 @@ class AppVersionService {
   static const _platformInfoTimeout = Duration(seconds: 2);
 
   static Future<AppVersionCheckResult?> check() async {
+    // La web se actualiza al publicarse; no debe exigir una descarga nativa.
+    if (kIsWeb) return null;
     try {
       final info = await PackageInfo.fromPlatform().timeout(
         _platformInfoTimeout,
       );
       final currentVersion = info.version; // e.g. "1.2.3"
 
-      final platform = kIsWeb ? 'android' : (Platform.isIOS ? 'ios' : 'android');
+      final platform = Platform.isIOS ? 'ios' : 'android';
       final cfg = AppConfig.current;
       final uri = Uri.parse(
         '${cfg.apiBaseUrl}${cfg.mobileApiPrefix}/version?platform=$platform',

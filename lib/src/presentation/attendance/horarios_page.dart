@@ -1,13 +1,10 @@
 import 'package:flutter/material.dart';
 
 import '../../core/network/mobile_api_client.dart';
+import 'widgets/horario_semanal.dart';
 
 class HorariosPage extends StatefulWidget {
-  const HorariosPage({
-    super.key,
-    required this.apiClient,
-    required this.token,
-  });
+  const HorariosPage({super.key, required this.apiClient, required this.token});
 
   final MobileApiClient apiClient;
   final String token;
@@ -92,10 +89,7 @@ class _HorariosPageState extends State<HorariosPage> {
             ),
         ],
       ),
-      body: RefreshIndicator(
-        onRefresh: _load,
-        child: _buildBody(),
-      ),
+      body: RefreshIndicator(onRefresh: _load, child: _buildBody()),
     );
   }
 
@@ -128,9 +122,24 @@ class _HorariosPageState extends State<HorariosPage> {
       physics: const AlwaysScrollableScrollPhysics(),
       padding: const EdgeInsets.all(16),
       children: [
-        _buildActualSection(),
-        const SizedBox(height: 24),
-        _buildHistorialSection(),
+        Center(
+          child: ConstrainedBox(
+            constraints: const BoxConstraints(maxWidth: 1000),
+            child: Column(
+              crossAxisAlignment: CrossAxisAlignment.stretch,
+              children: [
+                _buildActualSection(),
+                const SizedBox(height: 24),
+                HorarioSemanal(
+                  apiClient: widget.apiClient,
+                  token: widget.token,
+                ),
+                const SizedBox(height: 24),
+                _buildHistorialSection(),
+              ],
+            ),
+          ),
+        ),
       ],
     );
   }
@@ -144,9 +153,9 @@ class _HorariosPageState extends State<HorariosPage> {
       children: [
         Text(
           'Horario vigente',
-          style: Theme.of(context).textTheme.titleSmall?.copyWith(
-            color: cs.onSurfaceVariant,
-          ),
+          style: Theme.of(
+            context,
+          ).textTheme.titleSmall?.copyWith(color: cs.onSurfaceVariant),
         ),
         const SizedBox(height: 8),
         Card(
@@ -157,7 +166,7 @@ class _HorariosPageState extends State<HorariosPage> {
                     children: [
                       Icon(Icons.schedule_outlined, size: 20),
                       SizedBox(width: 12),
-                      Text('Sin horario asignado actualmente'),
+                      Expanded(child: Text('Sin horario asignado actualmente')),
                     ],
                   )
                 : Column(
@@ -187,9 +196,8 @@ class _HorariosPageState extends State<HorariosPage> {
                         const SizedBox(height: 6),
                         Text(
                           'Desde: ${actual.asignacion!.fechaDesde}${actual.asignacion!.fechaHasta != null ? '  •  Hasta: ${actual.asignacion!.fechaHasta}' : ''}',
-                          style: Theme.of(context).textTheme.bodySmall?.copyWith(
-                            color: cs.onSurfaceVariant,
-                          ),
+                          style: Theme.of(context).textTheme.bodySmall
+                              ?.copyWith(color: cs.onSurfaceVariant),
                         ),
                       ],
                       if (actual.dias.isNotEmpty) ...[
@@ -208,7 +216,9 @@ class _HorariosPageState extends State<HorariosPage> {
                               materialTapTargetSize:
                                   MaterialTapTargetSize.shrinkWrap,
                               backgroundColor: cs.primaryContainer,
-                              labelStyle: TextStyle(color: cs.onPrimaryContainer),
+                              labelStyle: TextStyle(
+                                color: cs.onPrimaryContainer,
+                              ),
                             );
                           }).toList(),
                         ),
@@ -229,9 +239,9 @@ class _HorariosPageState extends State<HorariosPage> {
       children: [
         Text(
           'Historial de asignaciones',
-          style: Theme.of(context).textTheme.titleSmall?.copyWith(
-            color: cs.onSurfaceVariant,
-          ),
+          style: Theme.of(
+            context,
+          ).textTheme.titleSmall?.copyWith(color: cs.onSurfaceVariant),
         ),
         const SizedBox(height: 8),
         if (_historial.isEmpty)
@@ -242,20 +252,25 @@ class _HorariosPageState extends State<HorariosPage> {
             ),
           )
         else
-          ..._historial.map((a) => _AsignacionCard(asignacion: a)),
+          ..._historial.map(
+            (a) => _AsignacionCard(
+              asignacion: a,
+              vigente: a.id == _actual?.asignacion?.id,
+            ),
+          ),
       ],
     );
   }
 }
 
 class _AsignacionCard extends StatelessWidget {
-  const _AsignacionCard({required this.asignacion});
+  const _AsignacionCard({required this.asignacion, required this.vigente});
   final AsignacionHorario asignacion;
+  final bool vigente;
 
   @override
   Widget build(BuildContext context) {
     final cs = Theme.of(context).colorScheme;
-    final vigente = asignacion.fechaHasta == null;
 
     return Card(
       margin: const EdgeInsets.only(bottom: 8),
@@ -280,9 +295,9 @@ class _AsignacionCard extends StatelessWidget {
                   ),
                   Text(
                     '${asignacion.fechaDesde ?? '—'} → ${asignacion.fechaHasta ?? 'actualidad'}',
-                    style: Theme.of(context).textTheme.bodySmall?.copyWith(
-                      color: cs.onSurfaceVariant,
-                    ),
+                    style: Theme.of(
+                      context,
+                    ).textTheme.bodySmall?.copyWith(color: cs.onSurfaceVariant),
                   ),
                 ],
               ),

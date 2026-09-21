@@ -147,6 +147,11 @@ class _TriviaResultScreenState extends State<TriviaResultScreen> {
               child: Column(
                 crossAxisAlignment: CrossAxisAlignment.start,
                 children: [
+                  if (resultado.fueraRanking)
+                    const Padding(
+                      padding: EdgeInsets.only(bottom: 12),
+                      child: Text('Participación sin ranking'),
+                    ),
                   const Text(
                     'Tu resultado',
                     style: TextStyle(fontSize: 15, fontWeight: FontWeight.w700, color: _kPrimary),

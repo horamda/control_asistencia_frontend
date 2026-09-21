@@ -8,6 +8,7 @@ import '../../core/network/feedback_api_models.dart';
 import '../../core/network/mobile_api_client.dart';
 import '../../core/utils/date_formatter.dart';
 import '../widgets/croppable_image.dart';
+import 'widgets/feedback_summary_dashboard.dart';
 
 const Color _facebookBlue = Color(0xFF1877F2);
 const Color _facebookBlueDark = Color(0xFF145DBF);
@@ -432,37 +433,16 @@ class _FeedbackPageState extends State<FeedbackPage> {
                   'Todavía no hay información disponible para mostrar en este módulo.',
             ),
           ] else ...[
-            _FeedbackHeroCard(summary: dashboard.resumen),
-            const SizedBox(height: 12),
-            _SectionCard(
-              title: 'Mi posición',
-              icon: Icons.leaderboard_outlined,
-              child: _PersonalSummaryCard(
-                personal: dashboard.personal,
-                totals: dashboard.totales,
-                employee: dashboard.empleado,
-              ),
-            ),
-            const SizedBox(height: 12),
-            _SectionCard(
-              title: 'Resumen general',
-              icon: Icons.query_stats_outlined,
-              child: _SummaryGrid(summary: dashboard.resumen),
-            ),
-            const SizedBox(height: 12),
+            FeedbackSummaryDashboard(dashboard: dashboard),
+            const SizedBox(height: 16),
             _SectionCard(
               title: 'Top motivos',
               icon: Icons.label_important_outline,
               child: dashboard.topMotivos.isEmpty
                   ? const _EmptyInline(text: 'No hay motivos para mostrar.')
-                  : Column(
-                      children: [
-                        for (final item in dashboard.topMotivos.take(5))
-                          Padding(
-                            padding: const EdgeInsets.only(bottom: 8),
-                            child: _TopMotivoTile(item: item),
-                          ),
-                      ],
+                  : FeedbackMotivosChart(
+                      items: dashboard.topMotivos,
+                      total: dashboard.resumen.total,
                     ),
             ),
             const SizedBox(height: 12),
@@ -2052,265 +2032,6 @@ class _FeedbackEvidenceCard extends StatelessWidget {
   }
 }
 
-class _FeedbackHeroCard extends StatelessWidget {
-  const _FeedbackHeroCard({required this.summary});
-
-  final FeedbackDashboardSummary summary;
-
-  @override
-  Widget build(BuildContext context) {
-    final cs = Theme.of(context).colorScheme;
-    return Container(
-      decoration: BoxDecoration(
-        color: cs.surface,
-        borderRadius: BorderRadius.circular(20),
-        border: Border.all(color: cs.outlineVariant),
-        boxShadow: const [
-          BoxShadow(
-            color: Color(0x12000000),
-            blurRadius: 18,
-            offset: Offset(0, 8),
-          ),
-        ],
-      ),
-      padding: const EdgeInsets.all(18),
-      child: Column(
-        crossAxisAlignment: CrossAxisAlignment.start,
-        children: [
-          Row(
-            crossAxisAlignment: CrossAxisAlignment.start,
-            children: [
-              Container(
-                padding: const EdgeInsets.all(10),
-                decoration: BoxDecoration(
-                  color: cs.primary.withValues(alpha: 0.12),
-                  borderRadius: BorderRadius.circular(14),
-                ),
-                child: Icon(Icons.campaign_outlined, color: cs.primary),
-              ),
-              const SizedBox(width: 12),
-              Expanded(
-                child: Column(
-                  crossAxisAlignment: CrossAxisAlignment.start,
-                  children: [
-                    Text(
-                      'Feedback de calle',
-                      maxLines: 1,
-                      overflow: TextOverflow.ellipsis,
-                      style: Theme.of(context).textTheme.titleMedium?.copyWith(
-                        color: cs.onSurface,
-                        fontWeight: FontWeight.w800,
-                        letterSpacing: 0,
-                      ),
-                    ),
-                    const SizedBox(height: 6),
-                    Text(
-                      'Seguí el estado de tus cargas y la respuesta de tu jefe directo.',
-                      style: Theme.of(context).textTheme.bodyMedium?.copyWith(
-                        color: cs.onSurfaceVariant,
-                      ),
-                    ),
-                  ],
-                ),
-              ),
-            ],
-          ),
-          const SizedBox(height: 14),
-          Wrap(
-            spacing: 8,
-            runSpacing: 8,
-            children: [
-              _MiniStatChip(label: 'Total', value: summary.total),
-              _MiniStatChip(label: 'Pendientes', value: summary.pendientes),
-              _MiniStatChip(label: 'En proceso', value: summary.enProceso),
-              _MiniStatChip(label: 'Resueltos', value: summary.resueltos),
-            ],
-          ),
-        ],
-      ),
-    );
-  }
-}
-
-class _SummaryGrid extends StatelessWidget {
-  const _SummaryGrid({required this.summary});
-
-  final FeedbackDashboardSummary summary;
-
-  @override
-  Widget build(BuildContext context) {
-    final items = <_StatTileData>[
-      _StatTileData('Total', summary.total, Icons.all_inbox_outlined),
-      _StatTileData('Pendientes', summary.pendientes, Icons.pending_actions),
-      _StatTileData('En proceso', summary.enProceso, Icons.timelapse),
-      _StatTileData('Resueltos', summary.resueltos, Icons.check_circle_outline),
-      _StatTileData('Vencidos', summary.vencidos, Icons.warning_amber_outlined),
-      _StatTileData('En SLA', summary.resueltosEnSla, Icons.verified_outlined),
-      _StatTileData(
-        'Fuera SLA',
-        summary.resueltosFueraSla,
-        Icons.event_busy_outlined,
-      ),
-      _StatTileData('Motivos', summary.motivosDistintos, Icons.sell_outlined),
-      _StatTileData(
-        'Clientes',
-        summary.clientesDistintos,
-        Icons.storefront_outlined,
-      ),
-      _StatTileData(
-        'Con carga',
-        summary.empleadosConCarga,
-        Icons.people_outline,
-      ),
-    ];
-    return LayoutBuilder(
-      builder: (context, constraints) {
-        final cols = constraints.maxWidth >= 700
-            ? 3
-            : constraints.maxWidth < 380
-            ? 1
-            : 2;
-        final spacing = 10.0;
-        final tileWidth = (constraints.maxWidth - spacing * (cols - 1)) / cols;
-        return Wrap(
-          spacing: spacing,
-          runSpacing: spacing,
-          children: [
-            for (final item in items)
-              SizedBox(
-                width: tileWidth,
-                child: _StatTile(data: item),
-              ),
-          ],
-        );
-      },
-    );
-  }
-}
-
-class _PersonalSummaryCard extends StatelessWidget {
-  const _PersonalSummaryCard({
-    required this.personal,
-    required this.totals,
-    required this.employee,
-  });
-
-  final FeedbackPersonalStats? personal;
-  final FeedbackTotals? totals;
-  final FeedbackEmployeeSummary? employee;
-
-  @override
-  Widget build(BuildContext context) {
-    if (personal == null && totals == null && employee == null) {
-      return const _EmptyInline(text: 'No hay datos personales disponibles.');
-    }
-
-    final children = <Widget>[
-      if (employee != null)
-        _DetailRow(label: 'Empleado', value: employee!.displayName),
-      if (personal != null) ...[
-        _DetailRow(
-          label: 'Posición',
-          value: personal!.posicionRanking != null
-              ? '#${personal!.posicionRanking}'
-              : '-',
-        ),
-        _DetailRow(
-          label: 'Total cargados',
-          value: personal!.totalCargados?.toString() ?? '-',
-        ),
-        _DetailRow(
-          label: 'Promedio',
-          value: personal!.promedioPorEmpleado != null
-              ? personal!.promedioPorEmpleado!.toStringAsFixed(2)
-              : '-',
-        ),
-        _DetailRow(
-          label: 'Porcentaje',
-          value: personal!.porcentajeSobreTotal != null
-              ? '${personal!.porcentajeSobreTotal!.toStringAsFixed(1)}%'
-              : '-',
-        ),
-      ],
-      if (totals != null) ...[
-        _DetailRow(
-          label: 'Activos',
-          value: totals!.empleadosActivos?.toString() ?? '-',
-        ),
-        _DetailRow(
-          label: 'Con carga',
-          value: totals!.empleadosConCarga?.toString() ?? '-',
-        ),
-      ],
-    ];
-
-    return Column(children: children);
-  }
-}
-
-class _TopMotivoTile extends StatelessWidget {
-  const _TopMotivoTile({required this.item});
-
-  final FeedbackTopMotivo item;
-
-  @override
-  Widget build(BuildContext context) {
-    final cs = Theme.of(context).colorScheme;
-    return Container(
-      decoration: BoxDecoration(
-        color: cs.surfaceContainerLow,
-        borderRadius: BorderRadius.circular(14),
-        border: Border.all(color: cs.outlineVariant),
-      ),
-      padding: const EdgeInsets.all(14),
-      child: Row(
-        crossAxisAlignment: CrossAxisAlignment.center,
-        children: [
-          Container(
-            padding: const EdgeInsets.all(10),
-            decoration: BoxDecoration(
-              color: cs.primaryContainer,
-              borderRadius: BorderRadius.circular(12),
-            ),
-            child: Icon(
-              Icons.local_fire_department_outlined,
-              color: cs.primary,
-            ),
-          ),
-          const SizedBox(width: 12),
-          Expanded(
-            child: Column(
-              crossAxisAlignment: CrossAxisAlignment.start,
-              children: [
-                Text(
-                  item.motivoNombre ?? 'Motivo',
-                  maxLines: 2,
-                  overflow: TextOverflow.ellipsis,
-                  style: Theme.of(
-                    context,
-                  ).textTheme.bodyMedium?.copyWith(fontWeight: FontWeight.w700),
-                ),
-                const SizedBox(height: 4),
-                Text(
-                  'Resueltos: ${item.resueltos ?? 0}',
-                  style: Theme.of(context).textTheme.bodySmall,
-                ),
-              ],
-            ),
-          ),
-          const SizedBox(width: 8),
-          Text(
-            '${item.total ?? 0}',
-            style: Theme.of(
-              context,
-            ).textTheme.titleMedium?.copyWith(fontWeight: FontWeight.w800),
-          ),
-        ],
-      ),
-    );
-  }
-}
-
 class _RankingTile extends StatelessWidget {
   const _RankingTile({required this.item});
 
@@ -2601,7 +2322,7 @@ class _ResponsiveTabList extends StatelessWidget {
             constraints: BoxConstraints(maxWidth: maxWidth),
             child: ListView(
               physics: const AlwaysScrollableScrollPhysics(),
-              padding: EdgeInsets.all(hPad),
+              padding: EdgeInsets.fromLTRB(hPad, hPad, hPad, 96),
               children: children,
             ),
           ),
@@ -2809,84 +2530,6 @@ class _ListHeader extends StatelessWidget {
         ),
         if (trailing != null) trailing!,
       ],
-    );
-  }
-}
-
-class _StatTileData {
-  const _StatTileData(this.label, this.value, this.icon);
-
-  final String label;
-  final int? value;
-  final IconData icon;
-}
-
-class _StatTile extends StatelessWidget {
-  const _StatTile({required this.data});
-
-  final _StatTileData data;
-
-  @override
-  Widget build(BuildContext context) {
-    final cs = Theme.of(context).colorScheme;
-    return Container(
-      decoration: BoxDecoration(
-        color: cs.surfaceContainerLow,
-        borderRadius: BorderRadius.circular(14),
-        border: Border.all(color: cs.outlineVariant),
-      ),
-      padding: const EdgeInsets.all(14),
-      child: Row(
-        children: [
-          Icon(data.icon, color: cs.primary),
-          const SizedBox(width: 10),
-          Expanded(
-            child: Column(
-              crossAxisAlignment: CrossAxisAlignment.start,
-              children: [
-                Text(data.label, style: Theme.of(context).textTheme.bodySmall),
-                const SizedBox(height: 4),
-                Text(
-                  '${data.value ?? 0}',
-                  style: Theme.of(context).textTheme.titleMedium?.copyWith(
-                    fontWeight: FontWeight.w800,
-                  ),
-                ),
-              ],
-            ),
-          ),
-        ],
-      ),
-    );
-  }
-}
-
-class _MiniStatChip extends StatelessWidget {
-  const _MiniStatChip({required this.label, required this.value});
-
-  final String label;
-  final int? value;
-
-  @override
-  Widget build(BuildContext context) {
-    final cs = Theme.of(context).colorScheme;
-    return Container(
-      padding: const EdgeInsets.symmetric(horizontal: 12, vertical: 8),
-      decoration: BoxDecoration(
-        color: cs.primary.withValues(alpha: 0.08),
-        borderRadius: BorderRadius.circular(999),
-        border: Border.all(color: cs.primary.withValues(alpha: 0.18)),
-      ),
-      child: Text(
-        '$label: ${value ?? 0}',
-        maxLines: 1,
-        overflow: TextOverflow.ellipsis,
-        style: TextStyle(
-          color: cs.primary,
-          fontSize: 12,
-          fontWeight: FontWeight.w700,
-        ),
-      ),
     );
   }
 }

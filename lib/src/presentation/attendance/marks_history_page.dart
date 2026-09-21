@@ -621,6 +621,10 @@ class _MarcaDetailSheet extends StatelessWidget {
                   const SizedBox(height: 12),
 
                   _DetailGrid(children: [
+                    if (item.corregidaManualmente)
+                      const _DetailCell(icon: Icons.edit_outlined, label: 'Corrección', value: 'Modificada manualmente'),
+                    if (item.esResumen)
+                      const _DetailCell(icon: Icons.history, label: 'Origen', value: 'Resumen histórico'),
                     if ((item.estado ?? '').isNotEmpty)
                       _DetailCell(
                         icon: Icons.info_outline,
