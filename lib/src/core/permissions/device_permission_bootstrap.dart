@@ -9,8 +9,7 @@ import 'package:geolocator/geolocator.dart';
 import 'package:permission_handler/permission_handler.dart';
 
 class DevicePermissionBootstrap {
-  Future<bool> selectRearCamera() async =>
-      !kIsWeb || await browser.selectRearCamera();
+  Future<String?> selectNextCamera() => browser.selectNextCamera();
   static bool _webCameraGranted = false;
   static bool _webLocationGranted = false;
   String? locationAccessError;

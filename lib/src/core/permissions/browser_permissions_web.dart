@@ -4,14 +4,14 @@ import 'dart:js_interop_unsafe';
 
 String? browserCameraError;
 
-@JS('fichaYaUseRearCamera')
-external JSPromise<JSBoolean> _selectRearCamera();
+@JS('fichaYaNextCamera')
+external JSPromise<JSString> _selectNextCamera();
 
-Future<bool> selectRearCamera() async {
+Future<String?> selectNextCamera() async {
   try {
-    return (await _selectRearCamera().toDart).toDart;
+    return (await _selectNextCamera().toDart).toDart;
   } catch (_) {
-    return false;
+    return null;
   }
 }
 
@@ -39,7 +39,7 @@ Future<bool> requestBrowserCamera() async {
         .getUserMedia(
           web.MediaStreamConstraints(
             video: {
-              'facingMode': {'exact': 'environment'},
+              'facingMode': {'ideal': 'environment'},
             }.jsify()!,
             audio: false.toJS,
           ),
@@ -57,13 +57,13 @@ Future<bool> requestBrowserCamera() async {
     } catch (_) {}
     browserCameraError = switch (name) {
       'NotAllowedError' =>
-        'Safari o el sistema bloquearon la cámara. (CAM_PERMISSION_DENIED)',
+        'El navegador o el sistema bloquearon la cámara. (CAM_PERMISSION_DENIED)',
       'NotReadableError' || 'AbortError' =>
         'No se pudo iniciar la cámara. Cerrá otras pestañas o apps que la estén usando y reintentá. (CAM_BUSY)',
       'OverconstrainedError' || 'NotFoundError' =>
-        'Safari no pudo seleccionar una cámara trasera. No se abrió la frontal. (CAM_REAR_NOT_FOUND)',
+        'La cámara seleccionada no está disponible. Probá otra con Cambiar cámara. (CAM_NOT_FOUND)',
       'NotSupportedError' =>
-        'Este navegador no permite seleccionar la cámara trasera. (CAM_UNSUPPORTED)',
+        'Este navegador no permite abrir la cámara. (CAM_UNSUPPORTED)',
       _ => 'Falló el acceso a la cámara en el navegador. (CAM_BROWSER_ERROR)',
     };
     return false;

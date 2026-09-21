@@ -1,6 +1,7 @@
 import 'dart:convert';
 
 import 'package:flutter/material.dart';
+import 'package:flutter/foundation.dart';
 import 'package:mobile_scanner/mobile_scanner.dart';
 import '../../core/permissions/device_permission_bootstrap.dart';
 
@@ -118,24 +119,31 @@ class _QrScanPageState extends State<QrScanPage> {
   bool _handled = false;
   bool _detected = false;
   bool _changingCamera = false;
+  CameraFacing _direction = CameraFacing.back;
 
-  Future<void> _useRearCamera() async {
+  Future<void> _changeCamera() async {
     if (_changingCamera || _handled) return;
     setState(() => _changingCamera = true);
     try {
-      final selected = await DevicePermissionBootstrap().selectRearCamera();
-      if (!selected) {
-        throw StateError('No se pudo identificar una cámara trasera.');
+      if (kIsWeb) {
+        final selected = await DevicePermissionBootstrap().selectNextCamera();
+        if (selected == null || selected.isEmpty) {
+          throw StateError('No hay cámaras disponibles.');
+        }
+      } else {
+        _direction = _direction == CameraFacing.back
+            ? CameraFacing.front
+            : CameraFacing.back;
       }
       await _controller.stop();
       if (!mounted) return;
-      await _controller.start(cameraDirection: CameraFacing.back);
+      await _controller.start(cameraDirection: _direction);
     } catch (_) {
       if (mounted) {
         ScaffoldMessenger.of(context).showSnackBar(
           const SnackBar(
             content: Text(
-              'No se pudo abrir la cámara trasera. Cerrá el escáner y reintentá.',
+              'Esta cámara no pudo abrirse. Tocá Cambiar cámara para probar la siguiente.',
             ),
           ),
         );
@@ -152,7 +160,7 @@ class _QrScanPageState extends State<QrScanPage> {
   }
 
   void _onDetect(BarcodeCapture capture) {
-    if (_handled || !mounted) {
+    if (_handled || _changingCamera || !mounted) {
       return;
     }
 
@@ -204,10 +212,10 @@ class _QrScanPageState extends State<QrScanPage> {
               foregroundColor: Colors.white,
               minimumSize: const Size(0, 48),
             ),
-            onPressed: _changingCamera || _detected ? null : _useRearCamera,
+            onPressed: _changingCamera || _detected ? null : _changeCamera,
             icon: const Icon(Icons.cameraswitch_outlined),
             label: Text(
-              _changingCamera ? 'Cambiando cámara…' : 'Usar cámara trasera',
+              _changingCamera ? 'Cambiando cámara…' : 'Cambiar cámara',
             ),
           ),
         ),
@@ -216,7 +224,20 @@ class _QrScanPageState extends State<QrScanPage> {
         fit: StackFit.expand,
         children: [
           // ── Camara ──────────────────────────────────────────────────────
-          MobileScanner(controller: _controller, onDetect: _onDetect),
+          MobileScanner(
+            controller: _controller,
+            onDetect: _onDetect,
+            errorBuilder: (context, error, child) => Center(
+              child: Padding(
+                padding: const EdgeInsets.symmetric(horizontal: 40),
+                child: Text(
+                  'No se pudo abrir esta cámara.\nTocá Cambiar cámara para probar otra.',
+                  textAlign: TextAlign.center,
+                  style: const TextStyle(color: Colors.white),
+                ),
+              ),
+            ),
+          ),
 
           // ── Visor con overlay oscuro + brackets + línea animada ──────────
           _ScannerViewfinderOverlay(detected: _detected),

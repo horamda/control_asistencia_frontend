@@ -70,7 +70,7 @@ class _PermissionDialogState extends State<_PermissionDialog> {
           ? (cameraOk
                 ? null
                 : widget.permissions.cameraAccessError ??
-                      'No se pudo abrir la cámara trasera.')
+                      'No se pudo abrir la cámara.')
           : (widget.permissions.locationAccessError ??
                 'No se pudo obtener tu ubicación. Revisá el permiso y que la localización esté activada.');
     });
@@ -114,7 +114,7 @@ class _PermissionDialogState extends State<_PermissionDialog> {
                     if (widget.camera)
                       _permissionCard(
                         icon: Icons.camera_alt_outlined,
-                        title: 'Cámara trasera',
+                        title: 'Cámara',
                         subtitle: 'Para escanear el QR y tomar fotos.',
                         done: _cameraDone,
                       ),
