@@ -2,6 +2,7 @@ import 'dart:convert';
 
 import 'package:flutter/material.dart';
 import 'package:mobile_scanner/mobile_scanner.dart';
+import '../../core/permissions/device_permission_bootstrap.dart';
 
 const _qrTokenKeys = <String>['qr_token', 'token', 'qr'];
 final _jwtCompactPattern = RegExp(
@@ -116,6 +117,33 @@ class _QrScanPageState extends State<QrScanPage> {
 
   bool _handled = false;
   bool _detected = false;
+  bool _changingCamera = false;
+
+  Future<void> _useRearCamera() async {
+    if (_changingCamera || _handled) return;
+    setState(() => _changingCamera = true);
+    try {
+      final selected = await DevicePermissionBootstrap().selectRearCamera();
+      if (!selected) {
+        throw StateError('No se pudo identificar una cámara trasera.');
+      }
+      await _controller.stop();
+      if (!mounted) return;
+      await _controller.start(cameraDirection: CameraFacing.back);
+    } catch (_) {
+      if (mounted) {
+        ScaffoldMessenger.of(context).showSnackBar(
+          const SnackBar(
+            content: Text(
+              'No se pudo abrir la cámara trasera. Cerrá el escáner y reintentá.',
+            ),
+          ),
+        );
+      }
+    } finally {
+      if (mounted) setState(() => _changingCamera = false);
+    }
+  }
 
   @override
   void dispose() {
@@ -169,6 +197,20 @@ class _QrScanPageState extends State<QrScanPage> {
         backgroundColor: Colors.black,
         foregroundColor: Colors.white,
         elevation: 0,
+        bottom: PreferredSize(
+          preferredSize: const Size.fromHeight(52),
+          child: TextButton.icon(
+            style: TextButton.styleFrom(
+              foregroundColor: Colors.white,
+              minimumSize: const Size(0, 48),
+            ),
+            onPressed: _changingCamera || _detected ? null : _useRearCamera,
+            icon: const Icon(Icons.cameraswitch_outlined),
+            label: Text(
+              _changingCamera ? 'Cambiando cámara…' : 'Usar cámara trasera',
+            ),
+          ),
+        ),
       ),
       body: Stack(
         fit: StackFit.expand,

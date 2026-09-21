@@ -4,6 +4,17 @@ import 'dart:js_interop_unsafe';
 
 String? browserCameraError;
 
+@JS('fichaYaUseRearCamera')
+external JSPromise<JSBoolean> _selectRearCamera();
+
+Future<bool> selectRearCamera() async {
+  try {
+    return (await _selectRearCamera().toDart).toDart;
+  } catch (_) {
+    return false;
+  }
+}
+
 Future<bool?> browserPermission(String name) async {
   try {
     final status = await web.window.navigator.permissions

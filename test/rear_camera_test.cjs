@@ -6,7 +6,9 @@ const source = readFileSync(require('node:path').join(__dirname, '../web/rear_ca
 
 function setup(getUserMedia, supported = true) {
   const devices = {getUserMedia, getSupportedConstraints: () => ({facingMode: supported})};
-  vm.runInNewContext(source, {navigator: {mediaDevices: devices}, DOMException});
+  const context = {navigator: {mediaDevices: devices}, DOMException};
+  vm.runInNewContext(source, context);
+  devices.selectRear = () => context.fichaYaUseRearCamera();
   return devices;
 }
 
@@ -62,6 +64,25 @@ test('audio-only requests are unchanged', async () => {
   const constraints = {audio: true};
   const devices = setup(async value => value);
   assert.equal(await devices.getUserMedia(constraints), constraints);
+});
+
+test('manual rear button selects an identified rear device, never front', async () => {
+  const ids = [];
+  const devices = setup(async constraints => {
+    const id = constraints.video.deviceId.exact;
+    ids.push(id);
+    return {getVideoTracks: () => [{getSettings: () => ({deviceId: id})}]};
+  });
+  devices.enumerateDevices = async () => [
+    {kind: 'videoinput', deviceId: 'front', label: 'Front Camera'},
+    {kind: 'videoinput', deviceId: 'rear1', label: 'Back Camera'},
+    {kind: 'videoinput', deviceId: 'rear2', label: 'Back Wide Camera'},
+  ];
+  assert.equal(await devices.selectRear(), true);
+  await devices.getUserMedia({video: true});
+  assert.equal(await devices.selectRear(), true);
+  await devices.getUserMedia({video: true});
+  assert.deepEqual(ids, ['rear1', 'rear2']);
 });
 
 test('successful exact rear constraint does not require optional track metadata', async () => {

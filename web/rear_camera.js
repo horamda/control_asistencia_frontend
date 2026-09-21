@@ -4,6 +4,17 @@
   const devices = navigator.mediaDevices;
   if (!devices || !devices.getUserMedia) return;
   const getUserMedia = devices.getUserMedia.bind(devices);
+  let selectedRearId = null;
+  globalThis.fichaYaUseRearCamera = async () => {
+    const cameras = (await devices.enumerateDevices()).filter(device =>
+      device.kind === 'videoinput' && device.deviceId &&
+      /\b(back|rear|trasera|posterior|arrière|rückkamera)\b/i.test(device.label || '') &&
+      !/\b(front|frontal|user|avant)\b/i.test(device.label || ''));
+    if (!cameras.length) return false;
+    const index = cameras.findIndex(camera => camera.deviceId === selectedRearId);
+    selectedRearId = cameras[(index + 1) % cameras.length].deviceId;
+    return true;
+  };
   devices.getUserMedia = async (constraints) => {
     if (!constraints || !constraints.video) return getUserMedia(constraints);
     const video = typeof constraints.video === 'object' ? {...constraints.video} : {};
@@ -14,6 +25,7 @@
       const tracks = stream.getVideoTracks();
       const valid = tracks.length > 0 && tracks.every(track => {
         const settings = track.getSettings();
+        if (/\b(front|frontal|user|avant)\b/i.test(track.label || '')) return false;
         if (settings.facingMode === 'user') return false;
         // A fulfilled mandatory constraint is authoritative. Some browsers
         // omit facingMode and camera labels from the returned track settings.
@@ -29,6 +41,11 @@
       return stream;
     }
     try {
+      if (selectedRearId) {
+        const selectedVideo = {...video, deviceId: {exact: selectedRearId}};
+        delete selectedVideo.facingMode;
+        return verify(await getUserMedia({...constraints, video: selectedVideo}), selectedRearId);
+      }
       const supportsFacing = devices.getSupportedConstraints().facingMode === true;
       return verify(await getUserMedia({...constraints, video}), undefined, supportsFacing);
     } catch (error) {
