@@ -62,7 +62,8 @@ class _PermissionDialogState extends State<_PermissionDialog> {
       _error = [
         if (!cameraOk) 'No se pudo abrir la cámara.',
         if (!locationOk)
-          'No se pudo obtener tu ubicación. Revisá el permiso y que la localización esté activada; también puede demorar si hay poca señal.',
+          widget.permissions.locationAccessError ??
+              'No se pudo obtener tu ubicación. Revisá el permiso y que la localización esté activada.',
       ].join('\n');
     });
   }

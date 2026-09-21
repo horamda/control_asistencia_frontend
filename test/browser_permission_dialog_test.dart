@@ -1,4 +1,5 @@
 import 'dart:async';
+import 'package:geolocator/geolocator.dart';
 import 'package:ficharqr/src/core/permissions/device_permission_bootstrap.dart';
 import 'package:ficharqr/src/presentation/widgets/browser_permission_dialog.dart';
 import 'package:flutter/material.dart';
@@ -27,6 +28,29 @@ class FakePermissions extends DevicePermissionBootstrap {
 }
 
 void main() {
+  test(
+    'distinguishes blocked location from timeout and unavailable position',
+    () {
+      expect(
+        DevicePermissionBootstrap.describeLocationError(
+          const PermissionDeniedException('denied'),
+        ),
+        contains('GEO_PERMISSION_DENIED'),
+      );
+      expect(
+        DevicePermissionBootstrap.describeLocationError(
+          TimeoutException('timeout'),
+        ),
+        contains('GEO_TIMEOUT'),
+      );
+      expect(
+        DevicePermissionBootstrap.describeLocationError(
+          const PositionUpdateException('unavailable'),
+        ),
+        contains('GEO_UNAVAILABLE'),
+      );
+    },
+  );
   Future<void> open(
     WidgetTester tester,
     FakePermissions permissions, {

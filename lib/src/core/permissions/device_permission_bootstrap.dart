@@ -1,3 +1,4 @@
+import 'dart:async';
 import 'package:flutter/foundation.dart';
 import 'browser_permissions_stub.dart'
     if (dart.library.js_interop) 'browser_permissions_web.dart'
@@ -9,6 +10,30 @@ import 'package:permission_handler/permission_handler.dart';
 class DevicePermissionBootstrap {
   static bool _webCameraGranted = false;
   static bool _webLocationGranted = false;
+  String? locationAccessError;
+
+  static String describeLocationError(Object error) {
+    if (error is PermissionDeniedException) {
+      return 'Ubicación bloqueada por el navegador o el teléfono. En iPhone: '
+          'Configuración → Privacidad y seguridad → Localización → Sitios web de Safari. '
+          'Permití el acceso al usar la app. Luego revisá Ubicación en la configuración '
+          'de este sitio en Safari y elegí Permitir. (GEO_PERMISSION_DENIED)';
+    }
+    if (error is TimeoutException) {
+      return 'La ubicación tardó demasiado. Probá cerca de una ventana o al aire libre '
+          'y volvé a intentar. (GEO_TIMEOUT)';
+    }
+    if (error is LocationServiceDisabledException) {
+      return 'La localización del teléfono está desactivada. Activala en '
+          'Configuración → Privacidad y seguridad → Localización. (GEO_DISABLED)';
+    }
+    if (error is PositionUpdateException) {
+      return 'El navegador no pudo entregar una ubicación. Verificá la localización '
+          'del teléfono y probá nuevamente. (GEO_UNAVAILABLE)';
+    }
+    return 'Ocurrió un error de compatibilidad al consultar la ubicación. '
+        'Recargá la página en Safari o Chrome actualizado. (GEO_BROWSER_ERROR)';
+  }
 
   Future<bool> requestCameraAccess() async {
     if (!kIsWeb) return (await _ensureCameraPermission()).granted;
@@ -17,14 +42,16 @@ class DevicePermissionBootstrap {
   }
 
   Future<bool> requestLocationAccess() async {
+    locationAccessError = null;
     if (!kIsWeb) return (await _ensureLocationPermission()).granted;
     try {
       await Geolocator.getCurrentPosition(
         desiredAccuracy: LocationAccuracy.high,
         timeLimit: const Duration(seconds: 20),
-      );
+      ).timeout(const Duration(seconds: 25));
       _webLocationGranted = true;
-    } catch (_) {
+    } catch (error) {
+      locationAccessError = describeLocationError(error);
       _webLocationGranted = false;
     }
     return _webLocationGranted;
