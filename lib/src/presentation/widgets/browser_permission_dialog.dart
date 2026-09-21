@@ -67,7 +67,9 @@ class _PermissionDialogState extends State<_PermissionDialog> {
     setState(() {
       _busy = false;
       _error = askingCamera
-          ? (cameraOk ? null : 'No se pudo abrir la cámara.')
+          ? (cameraOk
+                ? null
+                : 'No se pudo abrir la cámara trasera. Revisá el permiso de cámara y que esté disponible. La cámara frontal no se usa en la web.')
           : (widget.permissions.locationAccessError ??
                 'No se pudo obtener tu ubicación. Revisá el permiso y que la localización esté activada.');
     });

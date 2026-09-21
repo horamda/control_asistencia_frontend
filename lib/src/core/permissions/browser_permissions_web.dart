@@ -24,7 +24,7 @@ Future<bool> requestBrowserCamera() async {
         .getUserMedia(
           web.MediaStreamConstraints(
             video: {
-              'facingMode': {'ideal': 'environment'},
+              'facingMode': {'exact': 'environment'},
             }.jsify()!,
             audio: false.toJS,
           ),
