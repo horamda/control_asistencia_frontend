@@ -12,6 +12,7 @@ class DevicePermissionBootstrap {
   static bool _webCameraGranted = false;
   static bool _webLocationGranted = false;
   String? locationAccessError;
+  String? get cameraAccessError => kIsWeb ? browser.browserCameraError : null;
 
   static String describeLocationError(Object error) {
     if (error is PermissionDeniedException) {

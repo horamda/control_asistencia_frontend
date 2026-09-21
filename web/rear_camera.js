@@ -6,18 +6,49 @@
   const getUserMedia = devices.getUserMedia.bind(devices);
   devices.getUserMedia = async (constraints) => {
     if (!constraints || !constraints.video) return getUserMedia(constraints);
-    if (!devices.getSupportedConstraints().facingMode) {
-      throw new DOMException('No se puede seleccionar la cámara trasera en este navegador.', 'NotSupportedError');
-    }
     const video = typeof constraints.video === 'object' ? {...constraints.video} : {};
     // Do not retain a previously selected front-camera device ID.
     delete video.deviceId;
     video.facingMode = {exact: 'environment'};
-    const stream = await getUserMedia({...constraints, video});
-    if (stream.getVideoTracks().some(track => track.getSettings().facingMode === 'user')) {
-      stream.getTracks().forEach(track => track.stop());
-      throw new DOMException('El navegador seleccionó la cámara frontal. Se requiere la trasera.', 'NotReadableError');
+    function verify(stream, selectedId) {
+      const tracks = stream.getVideoTracks();
+      const valid = tracks.length > 0 && tracks.every(track => {
+        const settings = track.getSettings();
+        if (settings.facingMode === 'user') return false;
+        return settings.facingMode === 'environment' ||
+          (selectedId && settings.deviceId === selectedId) ||
+          /\b(back|rear|trasera|posterior|arrière|rückkamera)\b/i.test(track.label || '');
+      });
+      if (!valid) {
+        stream.getTracks().forEach(track => track.stop());
+        throw new DOMException('No se pudo identificar una cámara trasera.', 'OverconstrainedError');
+      }
+      return stream;
     }
-    return stream;
+    try {
+      return verify(await getUserMedia({...constraints, video}));
+    } catch (error) {
+      // Never retry a permission rejection or a busy-camera error.
+      if (!['OverconstrainedError', 'NotFoundError', 'NotSupportedError'].includes(error.name)) throw error;
+      if (!devices.enumerateDevices) throw error;
+      const cameras = (await devices.enumerateDevices()).filter(device =>
+        device.kind === 'videoinput' && device.deviceId &&
+        /\b(back|rear|trasera|posterior|arrière|rückkamera)\b/i.test(device.label || '') &&
+        !/\b(front|frontal|user|avant)\b/i.test(device.label || ''));
+      // Some Safari versions expose the rear device but reject facingMode.
+      // Select only explicitly identified rear cameras, never a default camera.
+      let lastError = error;
+      for (const camera of cameras) {
+        try {
+          const byDevice = {...video, deviceId: {exact: camera.deviceId}};
+          delete byDevice.facingMode;
+          return verify(await getUserMedia({...constraints, video: byDevice}), camera.deviceId);
+        } catch (nextError) {
+          lastError = nextError;
+          if (!['OverconstrainedError', 'NotFoundError'].includes(nextError.name)) throw nextError;
+        }
+      }
+      throw lastError;
+    }
   };
 })();
