@@ -1,6 +1,6 @@
 # syntax=docker/dockerfile:1
 
-FROM instrumentisto/flutter:3.32 AS build
+FROM instrumentisto/flutter:3.41.6 AS build
 
 WORKDIR /app
 

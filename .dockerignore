@@ -13,3 +13,16 @@ windows/flutter/ephemeral
 *.log
 *.iml
 test/failures
+.claude
+.kilo
+.railway
+.env
+.env.*
+android/key.properties
+**/*.jks
+**/*.keystore
+**/*.p12
+**/*.pfx
+**/*.apk
+**/*.aab
+**/node_modules
