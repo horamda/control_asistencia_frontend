@@ -1,4 +1,5 @@
 import 'dart:async';
+import 'browser_location.dart';
 import 'package:flutter/foundation.dart';
 import 'browser_permissions_stub.dart'
     if (dart.library.js_interop) 'browser_permissions_web.dart'
@@ -45,10 +46,7 @@ class DevicePermissionBootstrap {
     locationAccessError = null;
     if (!kIsWeb) return (await _ensureLocationPermission()).granted;
     try {
-      await Geolocator.getCurrentPosition(
-        desiredAccuracy: LocationAccuracy.high,
-        timeLimit: const Duration(seconds: 20),
-      ).timeout(const Duration(seconds: 25));
+      await readBrowserLocation(const Duration(seconds: 20));
       _webLocationGranted = true;
     } catch (error) {
       locationAccessError = describeLocationError(error);

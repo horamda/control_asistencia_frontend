@@ -6,7 +6,12 @@ Future<bool?> browserPermission(String name) async {
     final status = await web.window.navigator.permissions
         .query({'name': name}.jsify()! as JSObject)
         .toDart;
-    return status.state == 'granted';
+    // "prompt" is not a denial. Safari may report it after a one-time grant.
+    return switch (status.state) {
+      'granted' => true,
+      'denied' => false,
+      _ => null,
+    };
   } catch (_) {
     // Older Safari versions cannot query every permission.
     return null;

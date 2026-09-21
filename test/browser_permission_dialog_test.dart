@@ -82,21 +82,24 @@ void main() {
     final permissions = FakePermissions();
     await open(tester, permissions);
     expect(permissions.cameraCalls, 0);
-    await tester.tap(find.text('Activar permisos'));
+    await tester.tap(find.text('Activar cámara'));
     await tester.pumpAndSettle();
     expect(find.text('Reintentar'), findsOneWidget);
     permissions.allow = true;
     await tester.tap(find.text('Reintentar'));
     await tester.pumpAndSettle();
+    expect(permissions.locationCalls, 0);
+    await tester.tap(find.text('Activar ubicación'));
+    await tester.pumpAndSettle();
     expect(find.text('Permisos del navegador'), findsNothing);
     expect(permissions.cameraCalls, 2);
-    expect(permissions.locationCalls, 2);
+    expect(permissions.locationCalls, 1);
   });
 
   testWidgets('GPS action does not request camera', (tester) async {
     final permissions = FakePermissions()..allow = true;
     await open(tester, permissions, camera: false);
-    await tester.tap(find.text('Activar permisos'));
+    await tester.tap(find.text('Activar ubicación'));
     await tester.pumpAndSettle();
     expect(permissions.cameraCalls, 0);
     expect(permissions.locationCalls, 1);
@@ -105,7 +108,7 @@ void main() {
   testWidgets('can close while browser prompt is pending', (tester) async {
     final permissions = FakePermissions()..pendingCamera = Completer<bool>();
     await open(tester, permissions);
-    await tester.tap(find.text('Activar permisos'));
+    await tester.tap(find.text('Activar cámara'));
     await tester.pump();
     await tester.tap(find.text('Ahora no'));
     await tester.pumpAndSettle();

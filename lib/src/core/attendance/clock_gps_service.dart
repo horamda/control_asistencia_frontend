@@ -1,4 +1,5 @@
 import 'package:flutter/foundation.dart';
+import '../permissions/browser_location.dart';
 import 'package:geolocator/geolocator.dart';
 
 import 'qr_clock_submission_service.dart';
@@ -95,10 +96,12 @@ class ClockGpsService {
   }
 
   static Future<ClockGpsPoint?> _defaultCurrentGps(Duration timeLimit) async {
-    final position = await Geolocator.getCurrentPosition(
-      desiredAccuracy: LocationAccuracy.high,
-      timeLimit: timeLimit,
-    );
+    final position = kIsWeb
+        ? await readBrowserLocation(timeLimit)
+        : await Geolocator.getCurrentPosition(
+            desiredAccuracy: LocationAccuracy.high,
+            timeLimit: timeLimit,
+          );
     return ClockGpsPoint(
       lat: position.latitude,
       lon: position.longitude,

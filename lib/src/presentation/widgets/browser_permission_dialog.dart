@@ -41,30 +41,35 @@ class _PermissionDialog extends StatefulWidget {
 class _PermissionDialogState extends State<_PermissionDialog> {
   bool _busy = false;
   String? _error;
+  bool _cameraDone = false;
+  bool _locationDone = false;
 
   Future<void> _request() async {
     setState(() {
       _busy = true;
       _error = null;
     });
-    final cameraOk =
-        !widget.camera || await widget.permissions.requestCameraAccess();
+    // Each device request starts from its own tap, without awaiting the other
+    // permission first (important for browser user activation on Safari).
+    final askingCamera = widget.camera && !_cameraDone;
+    if (askingCamera) {
+      _cameraDone = await widget.permissions.requestCameraAccess();
+    } else if (widget.location) {
+      _locationDone = await widget.permissions.requestLocationAccess();
+    }
     if (!mounted) return;
-    final locationOk =
-        !widget.location || await widget.permissions.requestLocationAccess();
-    if (!mounted) return;
+    final cameraOk = !widget.camera || _cameraDone;
+    final locationOk = !widget.location || _locationDone;
     if (cameraOk && locationOk) {
       Navigator.of(context).pop(true);
       return;
     }
     setState(() {
       _busy = false;
-      _error = [
-        if (!cameraOk) 'No se pudo abrir la cámara.',
-        if (!locationOk)
-          widget.permissions.locationAccessError ??
-              'No se pudo obtener tu ubicación. Revisá el permiso y que la localización esté activada.',
-      ].join('\n');
+      _error = askingCamera
+          ? (cameraOk ? null : 'No se pudo abrir la cámara.')
+          : (widget.permissions.locationAccessError ??
+                'No se pudo obtener tu ubicación. Revisá el permiso y que la localización esté activada.');
     });
   }
 
@@ -88,7 +93,7 @@ class _PermissionDialogState extends State<_PermissionDialog> {
           ),
           const SizedBox(height: 12),
           const Text(
-            'Tocá Activar permisos y elegí Permitir cuando el navegador lo solicite.',
+            'Activá cada permiso con su botón y elegí Permitir cuando el navegador lo solicite.',
           ),
           const SizedBox(height: 12),
           const Text(
@@ -119,7 +124,13 @@ class _PermissionDialogState extends State<_PermissionDialog> {
         ),
         FilledButton(
           onPressed: _busy ? null : _request,
-          child: Text(_error == null ? 'Activar permisos' : 'Reintentar'),
+          child: Text(
+            _error != null
+                ? 'Reintentar'
+                : widget.camera && !_cameraDone
+                ? 'Activar cámara'
+                : 'Activar ubicación',
+          ),
         ),
       ],
     ),

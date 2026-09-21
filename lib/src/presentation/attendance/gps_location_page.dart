@@ -286,7 +286,7 @@ class _GpsHeroCard extends StatelessWidget {
                 crossAxisAlignment: CrossAxisAlignment.start,
                 children: [
                   Text(
-                    hasLocation ? 'GPS real disponible' : 'Buscando GPS real',
+                    hasLocation ? 'Ubicación disponible' : 'Ubicación pendiente',
                     style: Theme.of(context).textTheme.titleMedium?.copyWith(
                       fontWeight: FontWeight.w700,
                     ),
@@ -307,7 +307,7 @@ class _GpsHeroCard extends StatelessWidget {
                         label: serviceEnabled == null
                             ? 'GPS: verificando'
                             : serviceEnabled
-                            ? 'GPS: activo'
+                            ? (kIsWeb ? 'Ubicación web' : 'GPS: activo')
                             : 'GPS: apagado',
                         color: _statusColor(context, enabled: serviceEnabled),
                       ),
