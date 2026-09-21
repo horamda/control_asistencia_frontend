@@ -1,3 +1,5 @@
+import 'package:flutter/foundation.dart';
+import '../widgets/browser_permission_dialog.dart';
 import 'dart:async';
 
 import 'package:flutter/material.dart';
@@ -89,7 +91,7 @@ class _GpsLocationPageState extends State<GpsLocationPage>
         location = await _gpsService.capture(
           forceRefresh: true,
           gpsTtl: Duration.zero,
-          timeLimit: widget.timeLimit,
+          timeLimit: kIsWeb ? const Duration(seconds: 20) : widget.timeLimit,
         );
         if (location == null) {
           error = 'No se pudo obtener la ubicacion actual.';
@@ -118,12 +120,38 @@ class _GpsLocationPageState extends State<GpsLocationPage>
     }
   }
 
+  Future<void> _refreshLocation() async {
+    if (kIsWeb) {
+      final allowed = await ensureBrowserPermissions(
+        context,
+        _permissionBootstrap,
+        camera: false,
+      );
+      if (!mounted || !allowed) return;
+    }
+    await _loadLocation();
+  }
+
   Future<void> _openLocationSettings() async {
-    await _permissionBootstrap.openLocationSettings();
+    if (kIsWeb) {
+      await ensureBrowserPermissions(
+        context,
+        _permissionBootstrap,
+        camera: false,
+        showHelp: true,
+      );
+      if (mounted) await _loadLocation();
+    } else {
+      await _permissionBootstrap.openLocationSettings();
+    }
   }
 
   Future<void> _openAppSettings() async {
-    await _permissionBootstrap.openAppSettings();
+    if (kIsWeb) {
+      await _openLocationSettings();
+    } else {
+      await _permissionBootstrap.openAppSettings();
+    }
   }
 
   @override
@@ -168,13 +196,13 @@ class _GpsLocationPageState extends State<GpsLocationPage>
           else
             IconButton(
               tooltip: 'Actualizar GPS real',
-              onPressed: () => unawaited(_loadLocation()),
+              onPressed: () => unawaited(_refreshLocation()),
               icon: const Icon(Icons.refresh),
             ),
         ],
       ),
       body: RefreshIndicator(
-        onRefresh: _loadLocation,
+        onRefresh: _refreshLocation,
         child: ListView(
           physics: const AlwaysScrollableScrollPhysics(),
           padding: const EdgeInsets.all(16),
@@ -187,7 +215,7 @@ class _GpsLocationPageState extends State<GpsLocationPage>
               const SizedBox(height: 12),
               _ErrorCard(
                 message: _error!,
-                onRefresh: _refreshing ? null : _loadLocation,
+                onRefresh: _refreshing ? null : _refreshLocation,
                 onOpenLocationSettings: _openLocationSettings,
                 onOpenAppSettings: _openAppSettings,
               ),
@@ -198,7 +226,7 @@ class _GpsLocationPageState extends State<GpsLocationPage>
             _DetailsCard(
               location: location,
               availability: availability,
-              onRefresh: _refreshing ? null : _loadLocation,
+              onRefresh: _refreshing ? null : _refreshLocation,
               onOpenLocationSettings: _openLocationSettings,
               onOpenAppSettings: _openAppSettings,
             ),
@@ -375,7 +403,7 @@ class _DetailsCard extends StatelessWidget {
     final serviceText = availability == null
         ? 'Verificando'
         : availability!.locationServiceEnabled
-        ? 'Activo'
+        ? (kIsWeb ? 'Disponible en el navegador' : 'Activo')
         : 'Apagado';
     final permissionText = availability == null
         ? 'Verificando'
@@ -417,12 +445,16 @@ class _DetailsCard extends StatelessWidget {
                 OutlinedButton.icon(
                   onPressed: () => unawaited(onOpenLocationSettings()),
                   icon: const Icon(Icons.settings_outlined),
-                  label: const Text('Ajustes de ubicacion'),
+                  label: const Text(
+                    kIsWeb ? 'Activar ubicacion' : 'Ajustes de ubicacion',
+                  ),
                 ),
                 OutlinedButton.icon(
                   onPressed: () => unawaited(onOpenAppSettings()),
                   icon: const Icon(Icons.app_settings_alt_outlined),
-                  label: const Text('Ajustes de la app'),
+                  label: const Text(
+                    kIsWeb ? 'Permisos del navegador' : 'Ajustes de la app',
+                  ),
                 ),
               ],
             ),

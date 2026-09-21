@@ -1,3 +1,5 @@
+import 'package:flutter/foundation.dart';
+import '../widgets/browser_permission_dialog.dart';
 import 'dart:async';
 
 import 'package:connectivity_plus/connectivity_plus.dart';
@@ -853,7 +855,7 @@ class _AttendanceHomePageState extends State<AttendanceHomePage>
       if (bytes.isEmpty) {
         return null;
       }
-      return _clockPhotoCache.saveFromBytes(
+      return await _clockPhotoCache.saveFromBytes(
         employeeId: widget.empleado.id,
         bytes: bytes,
         sourceName: photo.path,
@@ -866,6 +868,14 @@ class _AttendanceHomePageState extends State<AttendanceHomePage>
   Future<void> _captureAndShowGps() async {
     if (_submitting || _loadingConfig || _locatingGps) {
       return;
+    }
+    if (kIsWeb) {
+      final allowed = await ensureBrowserPermissions(
+        context,
+        _devicePermissionBootstrap,
+        camera: false,
+      );
+      if (!mounted || !allowed) return;
     }
     setState(() {
       _locatingGps = true;
@@ -928,10 +938,17 @@ class _AttendanceHomePageState extends State<AttendanceHomePage>
     if (!mounted) {
       return;
     }
+    if (kIsWeb) {
+      final allowed = await ensureBrowserPermissions(
+        context,
+        _devicePermissionBootstrap,
+      );
+      if (!mounted || !allowed) return;
+    }
     final effectiveConfig = _config;
     final preflight = await _qrClockPreflightService.validate(
       config: effectiveConfig,
-      current: _clockReadiness,
+      current: kIsWeb ? const ClockReadinessSnapshot() : _clockReadiness,
     );
     if (!mounted) {
       return;
@@ -1387,7 +1404,17 @@ class _AttendanceHomePageState extends State<AttendanceHomePage>
           label: 'Ajustes',
           textColor: Colors.white,
           onPressed: () {
-            unawaited(_devicePermissionBootstrap.openAppSettings());
+            if (kIsWeb) {
+              unawaited(
+                ensureBrowserPermissions(
+                  context,
+                  _devicePermissionBootstrap,
+                  showHelp: true,
+                ),
+              );
+            } else {
+              unawaited(_devicePermissionBootstrap.openAppSettings());
+            }
           },
         );
       case ClockNoticeAction.openLocationSettings:
@@ -1395,7 +1422,18 @@ class _AttendanceHomePageState extends State<AttendanceHomePage>
           label: 'GPS',
           textColor: Colors.white,
           onPressed: () {
-            unawaited(_devicePermissionBootstrap.openLocationSettings());
+            if (kIsWeb) {
+              unawaited(
+                ensureBrowserPermissions(
+                  context,
+                  _devicePermissionBootstrap,
+                  camera: false,
+                  showHelp: true,
+                ),
+              );
+            } else {
+              unawaited(_devicePermissionBootstrap.openLocationSettings());
+            }
           },
         );
       case ClockNoticeAction.openSecurityEvents:

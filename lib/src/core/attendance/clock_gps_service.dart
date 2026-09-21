@@ -1,12 +1,12 @@
+import 'package:flutter/foundation.dart';
 import 'package:geolocator/geolocator.dart';
 
 import 'qr_clock_submission_service.dart';
 
 typedef ClockGpsBoolProvider = Future<bool> Function();
 typedef ClockLastKnownGpsProvider = Future<ClockGpsPoint?> Function();
-typedef ClockCurrentGpsProvider = Future<ClockGpsPoint?> Function(
-  Duration timeLimit,
-);
+typedef ClockCurrentGpsProvider =
+    Future<ClockGpsPoint?> Function(Duration timeLimit);
 
 class ClockGpsService {
   ClockGpsService({
@@ -81,6 +81,7 @@ class ClockGpsService {
   }
 
   static Future<ClockGpsPoint?> _defaultLastKnownGps() async {
+    if (kIsWeb) return null;
     final position = await Geolocator.getLastKnownPosition();
     if (position == null) {
       return null;

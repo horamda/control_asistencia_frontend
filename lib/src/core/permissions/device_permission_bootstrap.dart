@@ -1,8 +1,35 @@
+import 'package:flutter/foundation.dart';
+import 'browser_permissions_stub.dart'
+    if (dart.library.js_interop) 'browser_permissions_web.dart'
+    as browser;
 import 'package:flutter_secure_storage/flutter_secure_storage.dart';
 import 'package:geolocator/geolocator.dart';
 import 'package:permission_handler/permission_handler.dart';
 
 class DevicePermissionBootstrap {
+  static bool _webCameraGranted = false;
+  static bool _webLocationGranted = false;
+
+  Future<bool> requestCameraAccess() async {
+    if (!kIsWeb) return (await _ensureCameraPermission()).granted;
+    _webCameraGranted = await browser.requestBrowserCamera();
+    return _webCameraGranted;
+  }
+
+  Future<bool> requestLocationAccess() async {
+    if (!kIsWeb) return (await _ensureLocationPermission()).granted;
+    try {
+      await Geolocator.getCurrentPosition(
+        desiredAccuracy: LocationAccuracy.high,
+        timeLimit: const Duration(seconds: 20),
+      );
+      _webLocationGranted = true;
+    } catch (_) {
+      _webLocationGranted = false;
+    }
+    return _webLocationGranted;
+  }
+
   DevicePermissionBootstrap({FlutterSecureStorage? secureStorage})
     : _secureStorage =
           secureStorage ??
@@ -29,6 +56,9 @@ class DevicePermissionBootstrap {
   }
 
   Future<bool> isCameraGranted() async {
+    if (kIsWeb) {
+      return await browser.browserPermission('camera') ?? _webCameraGranted;
+    }
     try {
       final status = await Permission.camera.status;
       final granted = status.isGranted || status.isLimited;
@@ -40,9 +70,14 @@ class DevicePermissionBootstrap {
   }
 
   Future<bool> isLocationGranted() async {
+    if (kIsWeb) {
+      return await browser.browserPermission('geolocation') ??
+          _webLocationGranted;
+    }
     try {
       final permission = await Geolocator.checkPermission();
-      final granted = permission == LocationPermission.whileInUse ||
+      final granted =
+          permission == LocationPermission.whileInUse ||
           permission == LocationPermission.always;
       await _writeBool(_locationPermissionGrantedKey, granted);
       return granted;
@@ -52,10 +87,12 @@ class DevicePermissionBootstrap {
   }
 
   Future<bool> openAppSettings() {
+    if (kIsWeb) return Future.value(false);
     return Geolocator.openAppSettings();
   }
 
   Future<bool> openLocationSettings() {
+    if (kIsWeb) return Future.value(false);
     return Geolocator.openLocationSettings();
   }
 
@@ -105,7 +142,8 @@ class DevicePermissionBootstrap {
         newlyConfigured: false,
       );
     }
-    final promptedOnce = await _readBool(_locationPermissionPromptedKey) == true;
+    final promptedOnce =
+        await _readBool(_locationPermissionPromptedKey) == true;
     if (promptedOnce) {
       return const _PermissionEnsureResult(
         granted: false,
@@ -118,7 +156,8 @@ class DevicePermissionBootstrap {
       if (permission == LocationPermission.denied) {
         permission = await Geolocator.requestPermission();
       }
-      final granted = permission == LocationPermission.whileInUse ||
+      final granted =
+          permission == LocationPermission.whileInUse ||
           permission == LocationPermission.always;
       if (granted) {
         await _writeBool(_locationPermissionGrantedKey, true);

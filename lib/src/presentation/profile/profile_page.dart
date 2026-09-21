@@ -1,3 +1,5 @@
+import 'package:flutter/foundation.dart';
+import '../widgets/browser_permission_dialog.dart';
 import 'dart:async';
 import 'dart:io';
 
@@ -124,9 +126,16 @@ class _ProfilePageState extends State<ProfilePage> {
 
   Future<void> _pickPhoto(ImageSource source) async {
     if (source == ImageSource.camera) {
-      final ok = await _devicePermissionBootstrap.isCameraGranted();
+      final ok = kIsWeb
+          ? await ensureBrowserPermissions(
+              context,
+              _devicePermissionBootstrap,
+              location: false,
+            )
+          : await _devicePermissionBootstrap.isCameraGranted();
+      if (!mounted) return;
       if (!ok) {
-        _showCameraSettings();
+        if (!kIsWeb) _showCameraSettings();
         return;
       }
     }
@@ -894,12 +903,19 @@ class _PhotoPreviewRow extends StatelessWidget {
           children: [
             ClipRRect(
               borderRadius: BorderRadius.circular(8),
-              child: Image.file(
-                File(photoPath),
-                width: 64,
-                height: 64,
-                fit: BoxFit.cover,
-              ),
+              child: kIsWeb
+                  ? Image.network(
+                      photoPath,
+                      width: 64,
+                      height: 64,
+                      fit: BoxFit.cover,
+                    )
+                  : Image.file(
+                      File(photoPath),
+                      width: 64,
+                      height: 64,
+                      fit: BoxFit.cover,
+                    ),
             ),
             const SizedBox(width: 12),
             Expanded(

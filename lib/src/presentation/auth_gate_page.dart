@@ -1,3 +1,4 @@
+import 'package:flutter/foundation.dart';
 import 'dart:async';
 
 import 'package:flutter/material.dart';
@@ -123,6 +124,11 @@ class _AuthGatePageState extends State<AuthGatePage> {
   }
 
   Future<void> _bootstrapDevicePermissions({required String sessionKey}) async {
+    if (kIsWeb) {
+      _bootstrappingDevicePermissions = false;
+      _devicePermissionBootstrapDoneForSession = true;
+      return;
+    }
     try {
       final result = await _devicePermissionBootstrap
           .ensureRequestedAfterLogin();
