@@ -46,3 +46,34 @@ app.*.map.json
 /android/key.properties
 /android/*.jks
 /android/*.keystore
+
+# Local tooling, agent worktrees and telemetry
+/.claude/
+/.kilo/
+/.tmp_appdata/
+/.railway/
+
+# Generated builds and distributable packages
+**/build/
+.gradle/
+coverage/
+test/failures/
+*.apk
+*.aab
+*.ipa
+node_modules/
+
+# Local environment and signing credentials (keep templates)
+.env
+.env.*
+!.env.example
+!.env.sample
+!.env.template
+*.jks
+*.keystore
+*.p12
+*.pfx
+
+# Local OS files
+Thumbs.db
+Desktop.ini
