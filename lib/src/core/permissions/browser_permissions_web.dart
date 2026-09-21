@@ -22,7 +22,12 @@ Future<bool> requestBrowserCamera() async {
   try {
     final stream = await web.window.navigator.mediaDevices
         .getUserMedia(
-          web.MediaStreamConstraints(video: true.toJS, audio: false.toJS),
+          web.MediaStreamConstraints(
+            video: {
+              'facingMode': {'ideal': 'environment'},
+            }.jsify()!,
+            audio: false.toJS,
+          ),
         )
         .toDart;
     // Release the camera before the QR scanner opens its own stream.

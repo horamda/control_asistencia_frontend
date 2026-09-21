@@ -843,6 +843,7 @@ class _AttendanceHomePageState extends State<AttendanceHomePage>
     try {
       final photo = await _imagePicker.pickImage(
         source: ImageSource.camera,
+        preferredCameraDevice: CameraDevice.rear,
         maxWidth: 640,
         maxHeight: 640,
         imageQuality: 60,

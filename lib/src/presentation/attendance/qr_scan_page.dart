@@ -109,6 +109,7 @@ class QrScanPage extends StatefulWidget {
 
 class _QrScanPageState extends State<QrScanPage> {
   final MobileScannerController _controller = MobileScannerController(
+    facing: CameraFacing.back,
     detectionSpeed: DetectionSpeed.noDuplicates,
     formats: const [BarcodeFormat.qrCode],
   );
