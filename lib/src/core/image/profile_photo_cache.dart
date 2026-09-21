@@ -5,6 +5,29 @@ import 'employee_photo_cache_manager.dart';
 class ProfilePhotoCache {
   ProfilePhotoCache._();
 
+  /// Only route this backend's employee images through the web image proxy.
+  static String webImageUrl(
+    String rawUrl, {
+    required Uri backend,
+    required Uri page,
+  }) {
+    final uri = Uri.tryParse(rawUrl);
+    if (uri == null ||
+        !uri.hasAuthority ||
+        !backend.hasAuthority ||
+        uri.origin != backend.origin ||
+        !uri.path.startsWith('/empleados/imagen/')) {
+      return rawUrl;
+    }
+    return Uri(
+      scheme: page.scheme,
+      host: page.host,
+      port: page.hasPort ? page.port : null,
+      path: uri.path,
+      query: uri.hasQuery ? uri.query : null,
+    ).toString();
+  }
+
   /// Agrega el query param `?v={version}` a [rawUrl] para invalidar el cache
   /// cuando la imagen cambia.
   ///
@@ -81,9 +104,9 @@ class ProfilePhotoCache {
           .then<void>((_) {})
           .onError<Object>((_, __) {}),
       // Cache en memoria de Flutter (ImageCache).
-      CachedNetworkImage.evictFromCache(resolved)
-          .then<void>((_) {})
-          .onError<Object>((_, __) {}),
+      CachedNetworkImage.evictFromCache(
+        resolved,
+      ).then<void>((_) {}).onError<Object>((_, __) {}),
     ]);
   }
 }

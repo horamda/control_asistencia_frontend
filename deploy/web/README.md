@@ -21,6 +21,9 @@ Publicar esa carpeta con `railway up <carpeta> --path-as-root --no-gitignore
 Los identificadores deben verificarse en Railway antes de publicar.
 
 Generar el dominio del servicio web con puerto 8080. Verificar el login y las
+fotos de perfil. Configurar `API_BASE_URL=https://control-asistencia.up.railway.app`
+también como variable del servicio: Nginx la usa para el proxy de imágenes.
+Verificar las
 respuestas CORS de la API desde ese dominio. Si el backend limita origenes,
 agregar el dominio web a `CORS_ALLOWED_ORIGINS` conservando los existentes.
 

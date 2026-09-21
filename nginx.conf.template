@@ -4,6 +4,16 @@ server {
     root /usr/share/nginx/html;
     index index.html;
 
+    # Only profile images are proxied. The browser requests them from its own
+    # origin; the backend still handles image lookup and authorization.
+    location ^~ /empleados/imagen/ {
+        proxy_pass ${API_BASE_URL};
+        proxy_ssl_server_name on;
+        proxy_set_header Host $proxy_host;
+        proxy_hide_header Cache-Control;
+        add_header Cache-Control "private, no-store" always;
+    }
+
     # Flutter usa nombres estables para el codigo y los metadatos de version.
     # Revalidarlos permite recibir una nueva publicacion sin borrar la cache.
     location ~* \.(?:js|json|html|wasm)$ {

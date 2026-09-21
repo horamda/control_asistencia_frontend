@@ -2,6 +2,9 @@ import 'dart:io';
 
 import 'package:cached_network_image/cached_network_image.dart';
 import 'package:flutter/material.dart';
+import 'package:flutter/foundation.dart';
+import '../../config/app_config.dart';
+import '../../core/image/profile_photo_cache.dart';
 
 import '../../core/image/employee_photo_cache_manager.dart';
 
@@ -34,7 +37,9 @@ class EmployeePhotoWidget extends StatelessWidget {
       return CircleAvatar(
         radius: radius,
         backgroundColor: backgroundColor,
-        backgroundImage: FileImage(File(local)),
+        backgroundImage: kIsWeb
+            ? NetworkImage(local)
+            : FileImage(File(local)) as ImageProvider,
       );
     }
 
@@ -43,21 +48,44 @@ class EmployeePhotoWidget extends StatelessWidget {
         radius: radius,
         backgroundColor: backgroundColor,
         child: ClipOval(
-          child: CachedNetworkImage(
-            imageUrl: remote,
-            cacheManager: EmployeePhotoCacheManager.instance,
-            httpHeaders: _headers(),
-            width: radius * 2,
-            height: radius * 2,
-            fit: BoxFit.cover,
-            placeholder: (_, __) => SizedBox(
-              width: placeholderSize,
-              height: placeholderSize,
-              child: const CircularProgressIndicator(strokeWidth: 2),
-            ),
-            errorWidget: (_, __, ___) =>
-                Icon(Icons.person_outline, size: iconSize),
-          ),
+          child: kIsWeb
+              ? Image.network(
+                  ProfilePhotoCache.webImageUrl(
+                    remote,
+                    backend: Uri.parse(AppConfig.current.apiBaseUrl),
+                    page: Uri.base,
+                  ),
+                  headers: _headers(),
+                  width: radius * 2,
+                  height: radius * 2,
+                  fit: BoxFit.cover,
+                  loadingBuilder: (context, child, progress) => progress == null
+                      ? child
+                      : SizedBox(
+                          width: placeholderSize,
+                          height: placeholderSize,
+                          child: const CircularProgressIndicator(
+                            strokeWidth: 2,
+                          ),
+                        ),
+                  errorBuilder: (_, __, ___) =>
+                      Icon(Icons.person_outline, size: iconSize),
+                )
+              : CachedNetworkImage(
+                  imageUrl: remote,
+                  cacheManager: EmployeePhotoCacheManager.instance,
+                  httpHeaders: _headers(),
+                  width: radius * 2,
+                  height: radius * 2,
+                  fit: BoxFit.cover,
+                  placeholder: (_, __) => SizedBox(
+                    width: placeholderSize,
+                    height: placeholderSize,
+                    child: const CircularProgressIndicator(strokeWidth: 2),
+                  ),
+                  errorWidget: (_, __, ___) =>
+                      Icon(Icons.person_outline, size: iconSize),
+                ),
         ),
       );
     }

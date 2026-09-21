@@ -32,6 +32,8 @@ RUN flutter build web --release \
 
 FROM nginx:1.27-alpine
 
+ARG API_BASE_URL
+ENV API_BASE_URL=${API_BASE_URL}
 ENV PORT=8080
 
 COPY nginx.conf.template /etc/nginx/templates/default.conf.template
