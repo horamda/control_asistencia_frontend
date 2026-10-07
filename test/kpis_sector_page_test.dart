@@ -1,3 +1,4 @@
+import 'package:ficharqr/src/presentation/theme/app_theme.dart';
 import 'dart:convert';
 
 import 'package:ficharqr/src/core/network/mobile_api_client.dart';
@@ -53,6 +54,7 @@ void main() {
 
     await tester.pumpWidget(
       MaterialApp(
+        theme: buildAppTheme(),
         home: KpisSectorPage(apiClient: apiClient, token: 'abc'),
       ),
     );

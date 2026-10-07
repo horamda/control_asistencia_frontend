@@ -541,7 +541,7 @@ class _EventosTabState extends State<_EventosTab>
           checkmarkColor: cs.onPrimaryContainer,
           labelStyle: TextStyle(
             color: selected ? cs.onPrimaryContainer : null,
-            fontSize: 12,
+            fontSize: 13,
           ),
           padding: const EdgeInsets.symmetric(horizontal: 4),
           materialTapTargetSize: MaterialTapTargetSize.shrinkWrap,
@@ -757,7 +757,7 @@ class _LegajoEventoCard extends StatelessWidget {
                       child: Text(
                         severidad,
                         style: TextStyle(
-                          fontSize: 11,
+                          fontSize: 13,
                           fontWeight: FontWeight.w600,
                           color: severidadColor,
                         ),
@@ -768,7 +768,7 @@ class _LegajoEventoCard extends StatelessWidget {
                     Text(
                       'Anulado',
                       style: TextStyle(
-                        fontSize: 11,
+                        fontSize: 13,
                         color: cs.onSurfaceVariant,
                       ),
                     ),

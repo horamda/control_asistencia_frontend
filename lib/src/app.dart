@@ -2,6 +2,7 @@ import 'package:flutter/material.dart';
 
 import 'config/app_config.dart';
 import 'presentation/auth_gate_page.dart';
+import 'presentation/theme/app_theme.dart';
 import 'presentation/version/app_version_gate.dart';
 
 class EmployeeAttendanceApp extends StatelessWidget {
@@ -9,42 +10,21 @@ class EmployeeAttendanceApp extends StatelessWidget {
 
   @override
   Widget build(BuildContext context) {
-    const baseColor = Color(0xFF0E3A5B);
     return MaterialApp(
       title: 'FichaYa',
       debugShowCheckedModeBanner: false,
-      theme: ThemeData(
-        colorScheme: ColorScheme.fromSeed(
-          seedColor: baseColor,
-          brightness: Brightness.light,
-        ),
-        scaffoldBackgroundColor: const Color(0xFFF2F5F8),
-        visualDensity: VisualDensity.adaptivePlatformDensity,
-        inputDecorationTheme: const InputDecorationTheme(
-          filled: true,
-          fillColor: Colors.white,
-          border: OutlineInputBorder(),
-        ),
-        cardTheme: const CardThemeData(
-          elevation: 1,
-          margin: EdgeInsets.zero,
-          clipBehavior: Clip.antiAlias,
-        ),
-        snackBarTheme: const SnackBarThemeData(
-          behavior: SnackBarBehavior.floating,
-        ),
-        useMaterial3: true,
-      ),
+      theme: buildAppTheme(),
       home: const AppVersionGate(child: AuthGatePage()),
       builder: (context, child) {
         final cfg = AppConfig.current;
-        if (cfg.isProd) return child ?? const SizedBox.shrink();
+        final viewport = AppViewport(child: child ?? const SizedBox.shrink());
+        if (cfg.isProd) return viewport;
         return Banner(
           message: cfg.flavorLabel,
           location: BannerLocation.topStart,
           color: Colors.orange,
           textStyle: const TextStyle(fontSize: 10),
-          child: child ?? const SizedBox.shrink(),
+          child: viewport,
         );
       },
     );

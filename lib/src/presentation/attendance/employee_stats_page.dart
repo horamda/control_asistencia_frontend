@@ -485,7 +485,7 @@ class _PresetChip extends StatelessWidget {
     return ActionChip(
       label: Text(label),
       labelStyle: TextStyle(
-        fontSize: 12,
+        fontSize: 13,
         color: onTap != null ? cs.onSecondaryContainer : cs.onSurface,
       ),
       backgroundColor: onTap != null
@@ -708,7 +708,7 @@ class _StatPill extends StatelessWidget {
           Text(
             label,
             style: TextStyle(
-              fontSize: 11,
+              fontSize: 13,
               color: color.withValues(alpha: 0.85),
               height: 1,
             ),
@@ -1620,7 +1620,7 @@ class _DailyChart extends StatelessWidget {
           decoration: BoxDecoration(color: color, shape: BoxShape.circle),
         ),
         const SizedBox(width: 4),
-        Text(label, style: const TextStyle(fontSize: 11)),
+        Text(label, style: const TextStyle(fontSize: 13)),
       ],
     );
   }
@@ -1654,7 +1654,7 @@ class _DailyChart extends StatelessWidget {
                   Text(
                     '${d.registros}',
                     style: TextStyle(
-                      fontSize: 9,
+                      fontSize: 13,
                       color: Theme.of(context).colorScheme.onSurfaceVariant,
                     ),
                   )
@@ -1683,7 +1683,7 @@ class _DailyChart extends StatelessWidget {
                   ),
                 ),
                 const SizedBox(height: 4),
-                Text(label, style: const TextStyle(fontSize: 10)),
+                Text(label, style: const TextStyle(fontSize: 13)),
               ],
             ),
           );

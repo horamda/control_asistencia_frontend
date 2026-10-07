@@ -48,7 +48,7 @@ class FeedbackSummaryDashboard extends StatelessWidget {
                   color: Color(0xFFDCEBFF),
                   fontWeight: FontWeight.w700,
                   letterSpacing: 1.4,
-                  fontSize: 12,
+                  fontSize: 13,
                 ),
               ),
               const SizedBox(height: 16),
@@ -110,7 +110,7 @@ class FeedbackSummaryDashboard extends StatelessWidget {
                         'Resumen general · Tus cargas se muestran por separado.',
                         style: TextStyle(
                           color: Color(0xFFDCEBFF),
-                          fontSize: 12,
+                          fontSize: 13,
                           height: 1.5,
                         ),
                       ),
@@ -209,7 +209,7 @@ class FeedbackSummaryDashboard extends StatelessWidget {
                 'La participación y la posición miden cantidad de cargas, no calidad ni desempeño.',
                 style: TextStyle(
                   color: Color(0xFF586B7D),
-                  fontSize: 12,
+                  fontSize: 13,
                   height: 1.5,
                 ),
               ),
@@ -271,7 +271,7 @@ class FeedbackSummaryDashboard extends StatelessWidget {
                 'Los vencidos se muestran aparte de los pendientes en plazo. SLA indica el plazo previsto de resolución.',
                 style: TextStyle(
                   color: Color(0xFF586B7D),
-                  fontSize: 12,
+                  fontSize: 13,
                   height: 1.5,
                 ),
               ),
@@ -336,7 +336,7 @@ class FeedbackMotivosChart extends StatelessWidget {
     children: [
       const Text(
         'Porcentaje sobre el total de feedbacks',
-        style: TextStyle(color: Color(0xFF586B7D), fontSize: 12),
+        style: TextStyle(color: Color(0xFF586B7D), fontSize: 13),
       ),
       for (final item in items.take(5)) ...[
         const SizedBox(height: 16),
@@ -439,7 +439,7 @@ class _Metric extends StatelessWidget {
         Text(
           detail,
           style: const TextStyle(
-            fontSize: 12,
+            fontSize: 13,
             height: 1.5,
             color: Color(0xFF586B7D),
           ),
@@ -473,7 +473,7 @@ class _Number extends StatelessWidget {
       const SizedBox(height: 4),
       Text(
         label,
-        style: const TextStyle(color: Color(0xFF586B7D), fontSize: 12),
+        style: const TextStyle(color: Color(0xFF586B7D), fontSize: 13),
       ),
     ],
   );

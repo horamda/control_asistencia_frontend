@@ -210,7 +210,7 @@ class _HorariosPageState extends State<HorariosPage> {
                             return Chip(
                               label: Text(
                                 nombre.substring(0, 3),
-                                style: const TextStyle(fontSize: 12),
+                                style: const TextStyle(fontSize: 13),
                               ),
                               padding: EdgeInsets.zero,
                               materialTapTargetSize:
@@ -312,7 +312,7 @@ class _AsignacionCard extends StatelessWidget {
                 child: Text(
                   'Vigente',
                   style: TextStyle(
-                    fontSize: 11,
+                    fontSize: 13,
                     fontWeight: FontWeight.w600,
                     color: cs.onPrimaryContainer,
                   ),

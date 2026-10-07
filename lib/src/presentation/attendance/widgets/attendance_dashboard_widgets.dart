@@ -1,16 +1,27 @@
-﻿import 'dart:async';
+import 'dart:async';
 
 import 'package:flutter/material.dart';
 
 import '../../widgets/employee_photo_widget.dart';
+import '../../theme/app_theme.dart';
 
 // ── Helpers ───────────────────────────────────────────────────────────────────
 
 String _heroDate() {
   const days = ['Lun', 'Mar', 'Mié', 'Jue', 'Vie', 'Sáb', 'Dom'];
   const months = [
-    'ene', 'feb', 'mar', 'abr', 'may', 'jun',
-    'jul', 'ago', 'sep', 'oct', 'nov', 'dic',
+    'ene',
+    'feb',
+    'mar',
+    'abr',
+    'may',
+    'jun',
+    'jul',
+    'ago',
+    'sep',
+    'oct',
+    'nov',
+    'dic',
   ];
   final n = DateTime.now();
   return '${days[n.weekday - 1]} ${n.day} de ${months[n.month - 1]}';
@@ -50,7 +61,9 @@ class AttendancePendingBanner extends StatelessWidget {
               children: [
                 Icon(
                   hasErrors ? Icons.error_outline : Icons.wifi_off_outlined,
-                  color: hasErrors ? cs.onErrorContainer : cs.onTertiaryContainer,
+                  color: hasErrors
+                      ? cs.onErrorContainer
+                      : cs.onTertiaryContainer,
                 ),
                 const SizedBox(width: 8),
                 Expanded(
@@ -59,10 +72,10 @@ class AttendancePendingBanner extends StatelessWidget {
                         ? 'Acción requerida: fichadas con error'
                         : 'Pendientes de sincronización',
                     style: Theme.of(context).textTheme.titleSmall?.copyWith(
-                          color: hasErrors
-                              ? cs.onErrorContainer
-                              : cs.onTertiaryContainer,
-                        ),
+                      color: hasErrors
+                          ? cs.onErrorContainer
+                          : cs.onTertiaryContainer,
+                    ),
                   ),
                 ),
               ],
@@ -85,7 +98,9 @@ class AttendancePendingBanner extends StatelessWidget {
               Text(
                 statusMessage!,
                 style: TextStyle(
-                  color: hasErrors ? cs.onErrorContainer : cs.onTertiaryContainer,
+                  color: hasErrors
+                      ? cs.onErrorContainer
+                      : cs.onTertiaryContainer,
                 ),
               ),
             ],
@@ -147,11 +162,7 @@ class AttendanceHeroCard extends StatelessWidget {
         gradient: const LinearGradient(
           begin: Alignment.topLeft,
           end: Alignment.bottomRight,
-          colors: [
-            Color(0xFF0D3B66),
-            Color(0xFF1B5C8A),
-            Color(0xFF2A789E),
-          ],
+          colors: [Color(0xFF0D3B66), Color(0xFF1B5C8A), Color(0xFF2A789E)],
         ),
       ),
       child: Padding(
@@ -200,7 +211,7 @@ class AttendanceHeroCard extends StatelessWidget {
                         overflow: TextOverflow.ellipsis,
                         style: const TextStyle(
                           color: Colors.white54,
-                          fontSize: 12,
+                          fontSize: 13,
                         ),
                       ),
                     ],
@@ -218,7 +229,7 @@ class AttendanceHeroCard extends StatelessWidget {
               children: [
                 Text(
                   _heroDate(),
-                  style: const TextStyle(color: Colors.white60, fontSize: 12),
+                  style: const TextStyle(color: Colors.white60, fontSize: 13),
                 ),
                 const Spacer(),
               ],
@@ -353,7 +364,7 @@ class AttendanceStatusBanner extends StatelessWidget {
                     subtitle,
                     style: TextStyle(
                       color: fg.withValues(alpha: 0.8),
-                      fontSize: 12,
+                      fontSize: 13,
                     ),
                   ),
                 ],
@@ -482,32 +493,17 @@ class AttendanceStatsCarousel extends StatelessWidget {
 
   @override
   Widget build(BuildContext context) {
-    return LayoutBuilder(
-      builder: (context, constraints) {
-        // En cualquier ancho mostramos grilla 2x2 (o 4 en fila si es muy ancho)
-        final cols = constraints.maxWidth >= 600 ? 4 : 2;
-        final rows = (items.length / cols).ceil();
-        final itemW = (constraints.maxWidth - (8.0 * (cols - 1))) / cols;
-        const itemH = 86.0;
-
-        return Wrap(
-          spacing: 8,
-          runSpacing: 8,
-          children: [
-            for (var i = 0; i < items.length && i < cols * rows; i++)
-              SizedBox(
-                width: itemW,
-                height: itemH,
-                child: DashboardStatCard(
-                  title: items[i].title,
-                  value: items[i].value,
-                  icon: items[i].icon,
-                  accent: items[i].accent,
-                ),
-              ),
-          ],
-        );
-      },
+    return ResponsiveCards(
+      minWidth: 145,
+      children: [
+        for (final item in items)
+          DashboardStatCard(
+            title: item.title,
+            value: item.value,
+            icon: item.icon,
+            accent: item.accent,
+          ),
+      ],
     );
   }
 }
@@ -622,11 +618,17 @@ class AttendanceClockPanel extends StatelessWidget {
             if ((phaseText ?? '').trim().isNotEmpty) ...[
               const SizedBox(height: 10),
               Container(
-                padding: const EdgeInsets.symmetric(horizontal: 12, vertical: 10),
+                padding: const EdgeInsets.symmetric(
+                  horizontal: 12,
+                  vertical: 10,
+                ),
                 decoration: BoxDecoration(
                   color: const Color(0xFFFFF8E1),
                   borderRadius: BorderRadius.circular(12),
-                  border: Border.all(color: const Color(0xFFFFCC02), width: 1.5),
+                  border: Border.all(
+                    color: const Color(0xFFFFCC02),
+                    width: 1.5,
+                  ),
                 ),
                 child: Row(
                   children: [
@@ -683,7 +685,9 @@ class AttendanceClockPanel extends StatelessWidget {
                   children: [
                     for (var i = 0; i < secondaryActions.length; i++) ...[
                       Expanded(
-                        child: _OutlinedActionButton(action: secondaryActions[i]),
+                        child: _OutlinedActionButton(
+                          action: secondaryActions[i],
+                        ),
                       ),
                       if (i + 1 < secondaryActions.length)
                         const SizedBox(width: 8),
@@ -693,10 +697,7 @@ class AttendanceClockPanel extends StatelessWidget {
               },
             ),
             const SizedBox(height: 8),
-            Text(
-              'GPS: $gpsText',
-              style: Theme.of(context).textTheme.bodySmall,
-            ),
+            Text('GPS: $gpsText', style: Theme.of(context).textTheme.bodySmall),
             if ((lastQrText ?? '').trim().isNotEmpty)
               Text(
                 'Último QR: $lastQrText',
@@ -845,9 +846,7 @@ class AttendanceReadinessStrip extends StatelessWidget {
             Row(
               children: [
                 Icon(
-                  allReady
-                      ? Icons.check_circle_outline
-                      : Icons.bolt_outlined,
+                  allReady ? Icons.check_circle_outline : Icons.bolt_outlined,
                   size: 15,
                   color: allReady ? Colors.green.shade700 : cs.onSurfaceVariant,
                 ),
@@ -855,10 +854,10 @@ class AttendanceReadinessStrip extends StatelessWidget {
                 Text(
                   allReady ? 'Listo para fichar' : 'Preparación',
                   style: Theme.of(context).textTheme.labelLarge?.copyWith(
-                        color: allReady
-                            ? Colors.green.shade700
-                            : cs.onSurfaceVariant,
-                      ),
+                    color: allReady
+                        ? Colors.green.shade700
+                        : cs.onSurfaceVariant,
+                  ),
                 ),
                 const Spacer(),
                 if (warming)
@@ -875,10 +874,8 @@ class AttendanceReadinessStrip extends StatelessWidget {
               runSpacing: 6,
               children: badges
                   .map(
-                    (b) => AttendanceReadinessChip(
-                      text: b.text,
-                      ready: b.ready,
-                    ),
+                    (b) =>
+                        AttendanceReadinessChip(text: b.text, ready: b.ready),
                   )
                   .toList(growable: false),
             ),
@@ -914,9 +911,9 @@ class AttendanceReadinessStrip extends StatelessWidget {
                       child: Text(
                         phaseText!,
                         style: Theme.of(context).textTheme.bodySmall?.copyWith(
-                              fontWeight: FontWeight.w600,
-                              color: const Color(0xFF92400E),
-                            ),
+                          fontWeight: FontWeight.w600,
+                          color: const Color(0xFF92400E),
+                        ),
                       ),
                     ),
                   ],
@@ -969,11 +966,7 @@ class AttendanceDiagnosticsCard extends StatelessWidget {
         childrenPadding: const EdgeInsets.fromLTRB(14, 0, 14, 12),
         children: [
           if (ruleBadges.isNotEmpty)
-            Wrap(
-              spacing: 12,
-              runSpacing: 6,
-              children: ruleBadges,
-            ),
+            Wrap(spacing: 12, runSpacing: 6, children: ruleBadges),
           if (hasMetrics) ...[
             const SizedBox(height: 10),
             Text(
@@ -1111,7 +1104,7 @@ class DashboardStatusPill extends StatelessWidget {
               style: TextStyle(
                 color: foreground,
                 fontWeight: FontWeight.w600,
-                fontSize: 12,
+                fontSize: 13,
               ),
             ),
           ),
@@ -1138,7 +1131,8 @@ class DashboardStatCard extends StatelessWidget {
   @override
   Widget build(BuildContext context) {
     return Container(
-      padding: const EdgeInsets.symmetric(horizontal: 10, vertical: 10),
+      constraints: const BoxConstraints(minHeight: 112),
+      padding: const EdgeInsets.all(14),
       decoration: BoxDecoration(
         color: Theme.of(context).colorScheme.surfaceContainerLow,
         borderRadius: BorderRadius.circular(14),
@@ -1152,25 +1146,21 @@ class DashboardStatCard extends StatelessWidget {
           const SizedBox(height: 4),
           Text(
             title,
-            maxLines: 1,
-            overflow: TextOverflow.ellipsis,
+            softWrap: true,
             textAlign: TextAlign.center,
             style: Theme.of(context).textTheme.labelSmall?.copyWith(
               color: const Color(0xFF4F637A),
-              fontSize: 11,
+              fontSize: 13,
             ),
           ),
           const SizedBox(height: 4),
-          FittedBox(
-            fit: BoxFit.scaleDown,
-            child: Text(
-              value,
-              maxLines: 1,
-              textAlign: TextAlign.center,
-              style: Theme.of(
-                context,
-              ).textTheme.titleMedium?.copyWith(fontWeight: FontWeight.w700),
-            ),
+          Text(
+            value,
+            softWrap: true,
+            textAlign: TextAlign.center,
+            style: Theme.of(
+              context,
+            ).textTheme.titleMedium?.copyWith(fontWeight: FontWeight.w700),
           ),
         ],
       ),
@@ -1325,10 +1315,7 @@ class AttendanceQuickActionItem {
 }
 
 class AttendanceReadinessBadgeData {
-  const AttendanceReadinessBadgeData({
-    required this.text,
-    required this.ready,
-  });
+  const AttendanceReadinessBadgeData({required this.text, required this.ready});
 
   final String text;
   final bool ready;

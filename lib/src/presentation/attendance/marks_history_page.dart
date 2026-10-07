@@ -470,7 +470,7 @@ class _MarcaCard extends StatelessWidget {
                           child: Text(
                             _capitalize(item.estado ?? 'pendiente'),
                             style: TextStyle(
-                              fontSize: 11,
+                              fontSize: 13,
                               fontWeight: FontWeight.w700,
                               color: estadoColor,
                             ),

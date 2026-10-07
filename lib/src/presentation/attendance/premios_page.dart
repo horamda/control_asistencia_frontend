@@ -529,7 +529,7 @@ class _PremioCard extends StatelessWidget {
                       child: Text(
                         _rankLabel(premio.ranking),
                         style: TextStyle(
-                          fontSize: 12,
+                          fontSize: 13,
                           fontWeight: FontWeight.w800,
                           color: color,
                         ),

@@ -1,3 +1,4 @@
+import 'package:ficharqr/src/presentation/theme/app_theme.dart';
 import 'dart:io';
 
 import 'package:ficharqr/src/presentation/attendance/widgets/skap_matrix_dashboard.dart';
@@ -88,11 +89,10 @@ Future<void> _pump(
   addTearDown(() => tester.binding.setSurfaceSize(null));
   await tester.pumpWidget(
     MaterialApp(
-      theme: ThemeData(
-        useMaterial3: true,
-        fontFamily: _preview ? 'Preview' : null,
-        colorScheme: ColorScheme.fromSeed(seedColor: const Color(0xFF123B53)),
-        scaffoldBackgroundColor: const Color(0xFFF2F5F8),
+      theme: buildAppTheme().copyWith(
+        textTheme: buildAppTheme().textTheme.apply(
+          fontFamily: _preview ? 'Preview' : null,
+        ),
       ),
       builder: (context, child) => MediaQuery(
         data: MediaQuery.of(

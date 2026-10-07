@@ -159,7 +159,7 @@ class _ReglasEmpate extends StatelessWidget {
           Expanded(
             child: Text(
               'En caso de empate gana quien tenga menor tiempo. Si el tiempo también coincide, gana quien empezó primero.',
-              style: TextStyle(fontSize: 12, color: Colors.blue.shade800),
+              style: TextStyle(fontSize: 13, color: Colors.blue.shade800),
             ),
           ),
         ],
@@ -238,7 +238,7 @@ class _RankingTile extends StatelessWidget {
         ),
         subtitle: Text(
           item.sector ?? '',
-          style: TextStyle(fontSize: 12, color: Colors.grey.shade600),
+          style: TextStyle(fontSize: 13, color: Colors.grey.shade600),
         ),
         trailing: Column(
           mainAxisAlignment: MainAxisAlignment.center,
@@ -255,7 +255,7 @@ class _RankingTile extends StatelessWidget {
             if (item.tiempoTotalSegundos != null)
               Text(
                 _fmtTiempo(item.tiempoTotalSegundos),
-                style: TextStyle(fontSize: 11, color: Colors.grey.shade500),
+                style: TextStyle(fontSize: 13, color: Colors.grey.shade500),
               ),
           ],
         ),

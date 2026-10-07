@@ -117,7 +117,7 @@ ThemeData _buildFacebookFeedbackTheme(ThemeData base) {
       labelStyle: const TextStyle(
         color: _facebookBlueDark,
         fontFamily: 'Segoe UI',
-        fontSize: 12,
+        fontSize: 13,
         fontWeight: FontWeight.w700,
       ),
       side: const BorderSide(color: Color(0xFFB7D7FF)),
@@ -2554,7 +2554,7 @@ class _StatusChip extends StatelessWidget {
         overflow: TextOverflow.ellipsis,
         style: TextStyle(
           color: color,
-          fontSize: 12,
+          fontSize: 13,
           fontWeight: FontWeight.w700,
         ),
       ),

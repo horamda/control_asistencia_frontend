@@ -544,11 +544,12 @@ class _CalendarCard extends StatelessWidget {
                 shrinkWrap: true,
                 physics: const NeverScrollableScrollPhysics(),
                 itemCount: totalCells,
-                gridDelegate: const SliverGridDelegateWithFixedCrossAxisCount(
+                gridDelegate: SliverGridDelegateWithFixedCrossAxisCount(
                   crossAxisCount: 7,
                   crossAxisSpacing: 4,
                   mainAxisSpacing: 4,
-                  childAspectRatio: 1.05,
+                  mainAxisExtent:
+                      MediaQuery.textScalerOf(context).scale(24) + 24,
                 ),
                 itemBuilder: (context, i) {
                   final dayNum = i - leadingBlanks + 1;
@@ -569,7 +570,7 @@ class _CalendarCard extends StatelessWidget {
                     child: Text(
                       '$dayNum',
                       style: TextStyle(
-                        fontSize: 12,
+                        fontSize: 13,
                         fontWeight: FontWeight.w600,
                         color: colors.$3,
                       ),
@@ -583,7 +584,7 @@ class _CalendarCard extends StatelessWidget {
                 error!,
                 style: TextStyle(
                   color: Theme.of(context).colorScheme.error,
-                  fontSize: 12,
+                  fontSize: 13,
                 ),
               ),
             ],
@@ -734,7 +735,7 @@ class _AsistenciaCard extends StatelessWidget {
                           child: Text(
                             isOk ? 'OK' : _capitalize(item.estado ?? '-'),
                             style: TextStyle(
-                              fontSize: 11,
+                              fontSize: 13,
                               fontWeight: FontWeight.w700,
                               color: borderColor,
                             ),
@@ -885,7 +886,7 @@ class _AsistenciaDetailSheet extends StatelessWidget {
                               child: Text(
                                 isOk ? 'OK' : _capitalize(item.estado ?? '-'),
                                 style: TextStyle(
-                                  fontSize: 12,
+                                  fontSize: 13,
                                   fontWeight: FontWeight.w700,
                                   color: color,
                                 ),

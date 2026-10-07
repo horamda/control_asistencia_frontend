@@ -59,9 +59,146 @@ Future<XFile?> cropPickedImage(
       WebUiSettings(
         context: context,
         presentStyle: WebPresentStyle.dialog,
-        size: const CropperSize(width: 520, height: 520),
+        customDialogBuilder: (cropper, init, crop, rotate, scale) =>
+            ResponsiveCropDialog(
+              title: title,
+              cropper: cropper,
+              initialize: init,
+              crop: crop,
+              rotate: rotate,
+              scale: scale,
+            ),
       ),
     ],
   );
   return cropped == null ? null : XFile(cropped.path);
+}
+
+class ResponsiveCropDialog extends StatefulWidget {
+  const ResponsiveCropDialog({
+    super.key,
+    required this.title,
+    required this.cropper,
+    required this.initialize,
+    required this.crop,
+    required this.rotate,
+    required this.scale,
+  });
+
+  final String title;
+  final Widget cropper;
+  final VoidCallback initialize;
+  final Future<String?> Function() crop;
+  final ValueChanged<RotationAngle> rotate;
+  final ValueChanged<num> scale;
+
+  @override
+  State<ResponsiveCropDialog> createState() => _ResponsiveCropDialogState();
+}
+
+class _ResponsiveCropDialogState extends State<ResponsiveCropDialog> {
+  bool _processing = false;
+  double _scale = 1;
+  String? _error;
+
+  @override
+  void initState() {
+    super.initState();
+    widget.initialize();
+  }
+
+  Future<void> _crop() async {
+    if (_processing) return;
+    setState(() {
+      _processing = true;
+      _error = null;
+    });
+    try {
+      final result = await widget.crop();
+      if (!mounted) return;
+      if (result == null) throw StateError('No cropped image');
+      Navigator.of(context).pop(result);
+    } catch (_) {
+      if (mounted) {
+        setState(() {
+          _processing = false;
+          _error = 'No se pudo recortar. Intentá nuevamente.';
+        });
+      }
+    }
+  }
+
+  @override
+  Widget build(BuildContext context) => Dialog(
+    insetPadding: const EdgeInsets.all(16),
+    clipBehavior: Clip.antiAlias,
+    child: ConstrainedBox(
+      constraints: const BoxConstraints(maxWidth: 600, maxHeight: 680),
+      child: Column(
+        children: [
+          Padding(
+            padding: const EdgeInsets.all(12),
+            child: Text(
+              widget.title,
+              maxLines: 2,
+              overflow: TextOverflow.ellipsis,
+              style: Theme.of(context).textTheme.titleLarge,
+            ),
+          ),
+          Expanded(child: ClipRect(child: widget.cropper)),
+          Row(
+            children: [
+              IconButton(
+                tooltip: 'Girar a la izquierda',
+                onPressed: _processing
+                    ? null
+                    : () => widget.rotate(RotationAngle.counterClockwise90),
+                icon: const Icon(Icons.rotate_left),
+              ),
+              Expanded(
+                child: Slider(
+                  value: _scale,
+                  min: 1,
+                  max: 3,
+                  onChanged: _processing
+                      ? null
+                      : (value) {
+                          setState(() => _scale = value);
+                          widget.scale(value);
+                        },
+                ),
+              ),
+              IconButton(
+                tooltip: 'Girar a la derecha',
+                onPressed: _processing
+                    ? null
+                    : () => widget.rotate(RotationAngle.clockwise90),
+                icon: const Icon(Icons.rotate_right),
+              ),
+            ],
+          ),
+          if (_error != null) Text(_error!, textAlign: TextAlign.center),
+          Padding(
+            padding: const EdgeInsets.all(8),
+            child: Wrap(
+              spacing: 12,
+              alignment: WrapAlignment.end,
+              children: [
+                TextButton(
+                  onPressed: _processing
+                      ? null
+                      : () => Navigator.of(context).pop(),
+                  child: const Text('Cancelar'),
+                ),
+                FilledButton(
+                  onPressed: _processing ? null : _crop,
+                  child: Text(_processing ? 'Procesando…' : 'Usar'),
+                ),
+              ],
+            ),
+          ),
+        ],
+      ),
+    ),
+  );
 }

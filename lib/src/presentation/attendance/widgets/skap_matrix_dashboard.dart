@@ -494,7 +494,7 @@ class _Badge extends StatelessWidget {
       text,
       style: TextStyle(
         color: foreground,
-        fontSize: 12,
+        fontSize: 13,
         fontWeight: FontWeight.w700,
       ),
     ),
@@ -727,7 +727,7 @@ class _Competency extends StatelessWidget {
                           Text(
                             '$step',
                             style: TextStyle(
-                              fontSize: 11,
+                              fontSize: 13,
                               color: target == step ? _navy : Colors.blueGrey,
                               fontWeight: target == step
                                   ? FontWeight.bold
@@ -766,7 +766,7 @@ class _Competency extends StatelessWidget {
                       : na
                       ? 'Esta competencia no entra en el cálculo.'
                       : 'Todavía no hay un puntaje registrado.',
-                  style: TextStyle(color: color, fontSize: 12),
+                  style: TextStyle(color: color, fontSize: 13),
                 ),
               ),
             ],
@@ -775,7 +775,7 @@ class _Competency extends StatelessWidget {
             const SizedBox(height: 8),
             Text(
               'Criticidad: ${row['criticidad'] ?? 'Sin definir'}',
-              style: const TextStyle(fontSize: 12, color: Colors.blueGrey),
+              style: const TextStyle(fontSize: 13, color: Colors.blueGrey),
             ),
           ],
         ],

@@ -151,7 +151,7 @@ class _ResumenCard extends StatelessWidget {
             ),
           ),
           const Text('puntos acumulados',
-              style: TextStyle(color: Colors.white60, fontSize: 12)),
+              style: TextStyle(color: Colors.white60, fontSize: 13)),
           const SizedBox(height: 16),
           Row(
             mainAxisAlignment: MainAxisAlignment.spaceAround,
@@ -188,7 +188,7 @@ class _ResumenStat extends StatelessWidget {
             fontWeight: FontWeight.w800,
           ),
         ),
-        Text(label, style: const TextStyle(color: Colors.white54, fontSize: 11)),
+        Text(label, style: const TextStyle(color: Colors.white54, fontSize: 13)),
       ],
     );
   }
@@ -287,7 +287,7 @@ class _MyHistorialTile extends StatelessWidget {
               const SizedBox(height: 8),
               Text(
                 'Participaste el ${_fmtFechaCorta(item.fechaFinalizacion)}',
-                style: TextStyle(fontSize: 11, color: Colors.grey.shade500),
+                style: TextStyle(fontSize: 13, color: Colors.grey.shade500),
               ),
             ],
           ],
@@ -318,7 +318,7 @@ class _MiniStat extends StatelessWidget {
               value,
               style: TextStyle(fontWeight: FontWeight.w800, fontSize: 14, color: color),
             ),
-            Text(label, style: TextStyle(fontSize: 10, color: color.withValues(alpha: 0.7))),
+            Text(label, style: TextStyle(fontSize: 13, color: color.withValues(alpha: 0.7))),
           ],
         ),
       ),

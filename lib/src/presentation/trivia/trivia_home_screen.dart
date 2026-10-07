@@ -38,11 +38,84 @@ class _TriviaHomeScreenState extends State<TriviaHomeScreen> {
   List<TriviaNotificacion> _notificaciones = [];
   bool _loading = true;
   String? _error;
+  Timer? _notificationTimer;
+  bool _fetchingNotifications = false;
+  bool _markingNotifications = false;
+  int _notificationRevision = 0;
+  String? _notificationError;
 
   @override
   void initState() {
     super.initState();
     unawaited(_load());
+    _notificationTimer = Timer.periodic(const Duration(seconds: 30), (_) {
+      if (WidgetsBinding.instance.lifecycleState == AppLifecycleState.resumed &&
+          ModalRoute.of(context)?.isCurrent == true) {
+        unawaited(_refreshNotifications());
+      }
+    });
+  }
+
+  @override
+  void dispose() {
+    _notificationTimer?.cancel();
+    super.dispose();
+  }
+
+  Future<void> _refreshNotifications() async {
+    if (_fetchingNotifications || _markingNotifications) return;
+    _fetchingNotifications = true;
+    final revision = _notificationRevision;
+    try {
+      final items = await widget.apiClient.getTriviaNotificaciones(
+        token: widget.token,
+      );
+      if (!mounted || revision != _notificationRevision) return;
+      setState(() {
+        _notificaciones = items;
+        _notificationError = null;
+      });
+    } catch (_) {
+      if (mounted && revision == _notificationRevision) {
+        setState(
+          () => _notificationError =
+              'No se pudieron actualizar las notificaciones.',
+        );
+      }
+    } finally {
+      _fetchingNotifications = false;
+    }
+  }
+
+  Future<void> _markNotificationsRead([int? id]) async {
+    if (_markingNotifications) return;
+    _notificationRevision++;
+    setState(() => _markingNotifications = true);
+    try {
+      if (id == null) {
+        await widget.apiClient.marcarTodasNotificacionesTriviaLeidas(
+          token: widget.token,
+        );
+      } else {
+        await widget.apiClient.marcarNotificacionTriviaLeida(
+          token: widget.token,
+          notifId: id,
+        );
+      }
+      if (!mounted) return;
+      setState(() {
+        _notificaciones.removeWhere((item) => id == null || item.id == id);
+        _notificationError = null;
+      });
+    } catch (e) {
+      _showError(
+        e is ApiException
+            ? e.message
+            : 'No se pudo marcar como leída. Intentá nuevamente.',
+      );
+    } finally {
+      if (mounted) setState(() => _markingNotifications = false);
+    }
   }
 
   Future<void> _load() async {
@@ -52,14 +125,13 @@ class _TriviaHomeScreenState extends State<TriviaHomeScreen> {
       _error = null;
     });
     try {
-      final results = await Future.wait([
-        widget.apiClient.getTriviaEstado(token: widget.token),
-        widget.apiClient.getTriviaNotificaciones(token: widget.token),
-      ]);
+      unawaited(_refreshNotifications());
+      final estado = await widget.apiClient.getTriviaEstado(
+        token: widget.token,
+      );
       if (!mounted) return;
       setState(() {
-        _estado = results[0] as TriviaEstadoResponse;
-        _notificaciones = results[1] as List<TriviaNotificacion>;
+        _estado = estado;
         _loading = false;
       });
     } on ApiException catch (e) {
@@ -127,44 +199,52 @@ class _TriviaHomeScreenState extends State<TriviaHomeScreen> {
   }
 
   void _openRanking(int triviaId) {
-    Navigator.of(context).push(MaterialPageRoute(
-      builder: (_) => TriviaRankingScreen(
-        apiClient: widget.apiClient,
-        token: widget.token,
-        triviaId: triviaId,
-        empleadoDni: widget.empleadoDni,
+    Navigator.of(context).push(
+      MaterialPageRoute(
+        builder: (_) => TriviaRankingScreen(
+          apiClient: widget.apiClient,
+          token: widget.token,
+          triviaId: triviaId,
+          empleadoDni: widget.empleadoDni,
+        ),
       ),
-    ));
+    );
   }
 
   void _openHistorial() {
-    Navigator.of(context).push(MaterialPageRoute(
-      builder: (_) => TriviaHistoryScreen(
-        apiClient: widget.apiClient,
-        token: widget.token,
-        empleadoDni: widget.empleadoDni,
+    Navigator.of(context).push(
+      MaterialPageRoute(
+        builder: (_) => TriviaHistoryScreen(
+          apiClient: widget.apiClient,
+          token: widget.token,
+          empleadoDni: widget.empleadoDni,
+        ),
       ),
-    ));
+    );
   }
 
   void _openMiHistorial() {
-    Navigator.of(context).push(MaterialPageRoute(
-      builder: (_) => TriviaMyHistoryScreen(
-        apiClient: widget.apiClient,
-        token: widget.token,
+    Navigator.of(context).push(
+      MaterialPageRoute(
+        builder: (_) => TriviaMyHistoryScreen(
+          apiClient: widget.apiClient,
+          token: widget.token,
+        ),
       ),
-    ));
+    );
   }
 
   void _openRankingAnual() {
-    Navigator.of(context).push(MaterialPageRoute(
-      builder: (_) => TriviaAnnualRankingScreen(
-        apiClient: widget.apiClient,
-        token: widget.token,
-        anio: DateTime.now().year,
-        empleadoDni: widget.empleadoDni,
+    Navigator.of(context).push(
+      MaterialPageRoute(
+        builder: (_) => TriviaAnnualRankingScreen(
+          apiClient: widget.apiClient,
+          token: widget.token,
+          anio: DateTime.now().year,
+          empleadoDni: widget.empleadoDni,
+        ),
       ),
-    ));
+    );
   }
 
   @override
@@ -186,26 +266,40 @@ class _TriviaHomeScreenState extends State<TriviaHomeScreen> {
       body: _loading
           ? const Center(child: CircularProgressIndicator())
           : _error != null
-              ? _ErrorView(message: _error!, onRetry: _load)
-              : RefreshIndicator(
-                  onRefresh: _load,
-                  child: ListView(
-                    padding: const EdgeInsets.all(16),
-                    children: [
-                      if (_notificaciones.isNotEmpty) ...[
-                        _NotificacionBanner(notificaciones: _notificaciones),
-                        const SizedBox(height: 12),
-                      ],
-                      _buildBody(),
-                      const SizedBox(height: 24),
-                      _SeccionAccesos(
-                        onHistorial: _openHistorial,
-                        onMiHistorial: _openMiHistorial,
-                        onRankingAnual: _openRankingAnual,
+          ? _ErrorView(message: _error!, onRetry: _load)
+          : RefreshIndicator(
+              onRefresh: _load,
+              child: ListView(
+                padding: const EdgeInsets.all(16),
+                children: [
+                  if (_notificaciones.isNotEmpty) ...[
+                    _NotificacionBanner(
+                      notificaciones: _notificaciones,
+                      busy: _markingNotifications,
+                      onRead: (id) => unawaited(_markNotificationsRead(id)),
+                      onReadAll: () => unawaited(_markNotificationsRead()),
+                    ),
+                    const SizedBox(height: 12),
+                  ],
+                  if (_notificationError != null)
+                    ListTile(
+                      title: Text(_notificationError!),
+                      trailing: IconButton(
+                        tooltip: 'Reintentar notificaciones',
+                        icon: const Icon(Icons.refresh),
+                        onPressed: _refreshNotifications,
                       ),
-                    ],
+                    ),
+                  _buildBody(),
+                  const SizedBox(height: 24),
+                  _SeccionAccesos(
+                    onHistorial: _openHistorial,
+                    onMiHistorial: _openMiHistorial,
+                    onRankingAnual: _openRankingAnual,
                   ),
-                ),
+                ],
+              ),
+            ),
     );
   }
 
@@ -236,10 +330,7 @@ class _TriviaHomeScreenState extends State<TriviaHomeScreen> {
           onMiHistorial: _openMiHistorial,
         );
       }
-      return _ActivaCard(
-        trivia: trivia,
-        onJugar: _iniciarJuego,
-      );
+      return _ActivaCard(trivia: trivia, onJugar: _iniciarJuego);
     }
 
     if (estadoTrivia == 'finalizada') {
@@ -558,7 +649,7 @@ class _TriviaCard extends StatelessWidget {
                         child: Text(
                           badge,
                           style: TextStyle(
-                            fontSize: 11,
+                            fontSize: 13,
                             fontWeight: FontWeight.w700,
                             color: badgeColor,
                           ),
@@ -698,7 +789,7 @@ class _AccesoChip extends StatelessWidget {
               const SizedBox(height: 6),
               Text(
                 label,
-                style: const TextStyle(fontSize: 11, fontWeight: FontWeight.w600, color: _kPrimary),
+                style: const TextStyle(fontSize: 13, fontWeight: FontWeight.w600, color: _kPrimary),
                 textAlign: TextAlign.center,
               ),
             ],
@@ -710,12 +801,19 @@ class _AccesoChip extends StatelessWidget {
 }
 
 class _NotificacionBanner extends StatelessWidget {
-  const _NotificacionBanner({required this.notificaciones});
+  const _NotificacionBanner({
+    required this.notificaciones,
+    required this.busy,
+    required this.onRead,
+    required this.onReadAll,
+  });
   final List<TriviaNotificacion> notificaciones;
+  final bool busy;
+  final ValueChanged<int> onRead;
+  final VoidCallback onReadAll;
 
   @override
   Widget build(BuildContext context) {
-    final notif = notificaciones.first;
     return Container(
       padding: const EdgeInsets.all(14),
       decoration: BoxDecoration(
@@ -723,16 +821,27 @@ class _NotificacionBanner extends StatelessWidget {
         borderRadius: BorderRadius.circular(12),
         border: Border.all(color: const Color(0xFFFFD700)),
       ),
-      child: Row(
+      child: Column(
         children: [
-          const Icon(Icons.notifications_active, color: Color(0xFFC47500)),
-          const SizedBox(width: 10),
-          Expanded(
-            child: Text(
-              notif.mensaje ?? 'Todavía no participaste. La trivia finaliza pronto.',
-              style: const TextStyle(fontSize: 13, color: Color(0xFF7A4800)),
+          for (final notif in notificaciones)
+            ListTile(
+              contentPadding: EdgeInsets.zero,
+              leading: const Icon(
+                Icons.notifications_active,
+                color: Color(0xFFC47500),
+              ),
+              title: Text(notif.mensaje ?? 'Tenés una notificación de trivia.'),
+              trailing: IconButton(
+                tooltip: 'Marcar como leída',
+                onPressed: busy ? null : () => onRead(notif.id),
+                icon: const Icon(Icons.done),
+              ),
             ),
-          ),
+          if (notificaciones.length > 1)
+            TextButton(
+              onPressed: busy ? null : onReadAll,
+              child: const Text('Marcar todas como leídas'),
+            ),
         ],
       ),
     );

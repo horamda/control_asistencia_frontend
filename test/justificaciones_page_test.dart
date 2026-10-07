@@ -1,3 +1,4 @@
+import 'package:ficharqr/src/presentation/theme/app_theme.dart';
 import 'dart:convert';
 
 import 'package:flutter/material.dart';
@@ -20,6 +21,7 @@ void main() {
 
       await tester.pumpWidget(
         MaterialApp(
+          theme: buildAppTheme(),
           home: JustificacionesPage(apiClient: apiClient, token: 'abc'),
         ),
       );
@@ -110,7 +112,9 @@ class _JustificacionesTestClient extends http.BaseClient {
       }
 
       if (_countStatesServed.contains(estado)) {
-        throw StateError('Conteo para estado $estado solicitado mas de una vez.');
+        throw StateError(
+          'Conteo para estado $estado solicitado mas de una vez.',
+        );
       }
       _countStatesServed.add(estado);
       final total = switch (estado) {

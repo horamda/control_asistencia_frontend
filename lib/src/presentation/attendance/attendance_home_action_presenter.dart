@@ -13,6 +13,7 @@ class AttendanceHomeActionPresenter {
     required bool locatingGps,
     required bool isBusy,
     bool canCreateLegajoEventos = false,
+    bool canValidateCarga = false,
   }) {
     final syncEnabled = !(pendingQueue.syncing || submitting);
     final gpsEnabled = !(isBusy || locatingGps);
@@ -189,6 +190,19 @@ class AttendanceHomeActionPresenter {
           icon: Icons.inventory_2_outlined,
           enabled: historyEnabled,
         ),
+        if (canValidateCarga)
+          AttendanceHomeActionSpec(
+            intent: AttendanceHomeActionIntent.openCargas,
+            label: 'Validación de carga',
+            icon: Icons.local_shipping_outlined,
+            enabled: historyEnabled,
+          ),
+        AttendanceHomeActionSpec(
+          intent: AttendanceHomeActionIntent.openSeguridad,
+          label: 'Seguridad e Higiene',
+          icon: Icons.health_and_safety_outlined,
+          enabled: historyEnabled,
+        ),
         AttendanceHomeActionSpec(
           intent: AttendanceHomeActionIntent.openKpisSector,
           label: 'KPIs',
@@ -269,6 +283,8 @@ class AttendanceHomeActionSpec {
 }
 
 enum AttendanceHomeActionIntent {
+  openCargas,
+  openSeguridad,
   openPendingQueue,
   syncPending,
   captureGps,

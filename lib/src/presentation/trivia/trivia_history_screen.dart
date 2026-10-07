@@ -157,7 +157,7 @@ class _HistorialTile extends StatelessWidget {
                         crossAxisAlignment: CrossAxisAlignment.start,
                         children: [
                           const Text('Ganador',
-                              style: TextStyle(fontSize: 11, color: Color(0xFF7A4800))),
+                              style: TextStyle(fontSize: 13, color: Color(0xFF7A4800))),
                           Text(
                             ganador,
                             style: const TextStyle(
@@ -167,7 +167,7 @@ class _HistorialTile extends StatelessWidget {
                           ),
                           if (item.ganadorPuntos != null)
                             Text('${item.ganadorPuntos} pts',
-                                style: const TextStyle(fontSize: 12, color: Color(0xFF7A4800))),
+                                style: const TextStyle(fontSize: 13, color: Color(0xFF7A4800))),
                         ],
                       ),
                     ),
@@ -207,7 +207,7 @@ class _InfoChip extends StatelessWidget {
           const SizedBox(width: 6),
           Expanded(
             child: Text(text,
-                style: TextStyle(fontSize: 12, color: Colors.grey.shade700)),
+                style: TextStyle(fontSize: 13, color: Colors.grey.shade700)),
           ),
         ],
       ),

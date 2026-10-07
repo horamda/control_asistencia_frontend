@@ -3,16 +3,16 @@ import 'package:url_launcher/url_launcher.dart';
 
 import '../../core/version/app_version_service.dart';
 
-/// Llama al chequeo de versión al montarse. Si detecta que la versión está
-/// desactualizada muestra el diálogo apropiado y llama a [onChecked] cuando
-/// el usuario puede continuar (o inmediatamente si no hay problema).
+/// Comprueba la versión antes de montar el contenido de la aplicación.
 class AppVersionGate extends StatefulWidget {
   const AppVersionGate({
     super.key,
     required this.child,
+    this.checkVersion = AppVersionService.check,
   });
 
   final Widget child;
+  final Future<AppVersionCheckResult?> Function() checkVersion;
 
   @override
   State<AppVersionGate> createState() => _AppVersionGateState();
@@ -20,6 +20,7 @@ class AppVersionGate extends StatefulWidget {
 
 class _AppVersionGateState extends State<AppVersionGate> {
   bool _checked = false;
+  AppVersionCheckResult? _requiredUpdate;
 
   @override
   void initState() {
@@ -28,64 +29,68 @@ class _AppVersionGateState extends State<AppVersionGate> {
   }
 
   Future<void> _check() async {
-    final result = await AppVersionService.check().timeout(
-      const Duration(seconds: 10),
-      onTimeout: () => null,
-    );
+    final result = await widget
+        .checkVersion()
+        .then<AppVersionCheckResult?>((value) => value)
+        .timeout(const Duration(seconds: 10), onTimeout: () => null);
     if (!mounted) return;
 
-    setState(() => _checked = true);
+    setState(() {
+      _checked = true;
+      _requiredUpdate = result?.requiresUpdate == true ? result : null;
+    });
 
     if (result == null) return; // fallo silencioso, dejar pasar
 
-    if (result.requiresUpdate) {
-      await _showForceUpdateDialog(result);
-    } else if (result.recommendsUpdate) {
+    if (result.recommendsUpdate) {
       await _showRecommendUpdateDialog(result);
     }
   }
 
-  Future<void> _showForceUpdateDialog(AppVersionCheckResult result) async {
-    if (!mounted) return;
-    await showDialog<void>(
-      context: context,
-      barrierDismissible: false,
-      builder: (ctx) => PopScope(
-        canPop: false,
-        child: AlertDialog(
-          icon: const Icon(Icons.system_update_alt, size: 48),
-          title: const Text('Actualización requerida'),
-          content: Column(
-            mainAxisSize: MainAxisSize.min,
-            crossAxisAlignment: CrossAxisAlignment.start,
-            children: [
-              Text(
-                result.mensaje ??
-                    'Tu versión de FichaYa (${result.currentVersion}) ya no es compatible. '
-                    'Actualizá la app para continuar.',
+  Widget _buildRequiredUpdate(AppVersionCheckResult result) {
+    final downloadUrl = result.urlDescarga?.trim();
+    final hasDownload = downloadUrl != null && downloadUrl.isNotEmpty;
+    return PopScope(
+      canPop: false,
+      child: Scaffold(
+        body: Center(
+          child: SingleChildScrollView(
+            padding: const EdgeInsets.all(24),
+            child: ConstrainedBox(
+              constraints: const BoxConstraints(maxWidth: 480),
+              child: Column(
+                mainAxisSize: MainAxisSize.min,
+                children: [
+                  const Icon(Icons.system_update_alt, size: 48),
+                  const SizedBox(height: 16),
+                  Text(
+                    'Actualización requerida',
+                    style: Theme.of(context).textTheme.headlineSmall,
+                  ),
+                  const SizedBox(height: 16),
+                  Text(
+                    result.mensaje ??
+                        'Tu versión de FichaYa (${result.currentVersion}) ya no es compatible. '
+                            'Actualizá la app para continuar.',
+                  ),
+                  const SizedBox(height: 8),
+                  Text('Versión mínima requerida: ${result.versionMinima}'),
+                  const SizedBox(height: 16),
+                  if (hasDownload)
+                    FilledButton.icon(
+                      onPressed: () => _openUrl(downloadUrl),
+                      icon: const Icon(Icons.download),
+                      label: const Text('Actualizar ahora'),
+                    )
+                  else
+                    const Text(
+                      'Contactá al administrador para obtener la versión actualizada.',
+                      textAlign: TextAlign.center,
+                    ),
+                ],
               ),
-              const SizedBox(height: 8),
-              Text(
-                'Versión mínima requerida: ${result.versionMinima}',
-                style: Theme.of(ctx).textTheme.bodySmall?.copyWith(
-                  color: Theme.of(ctx).colorScheme.onSurfaceVariant,
-                ),
-              ),
-            ],
+            ),
           ),
-          actions: [
-            if (result.urlDescarga != null)
-              FilledButton.icon(
-                onPressed: () => _openUrl(result.urlDescarga!),
-                icon: const Icon(Icons.download),
-                label: const Text('Actualizar ahora'),
-              )
-            else
-              FilledButton(
-                onPressed: () => Navigator.of(ctx).pop(),
-                child: const Text('Entendido'),
-              ),
-          ],
         ),
       ),
     );
@@ -102,7 +107,7 @@ class _AppVersionGateState extends State<AppVersionGate> {
         content: Text(
           result.mensaje ??
               'Hay una nueva versión de FichaYa disponible (${result.versionRecomendada}). '
-              'Te recomendamos actualizar para disfrutar las últimas mejoras.',
+                  'Te recomendamos actualizar para disfrutar las últimas mejoras.',
         ),
         actions: [
           TextButton(
@@ -135,10 +140,10 @@ class _AppVersionGateState extends State<AppVersionGate> {
   Widget build(BuildContext context) {
     // Mientras verifica, mostramos un splash mínimo para evitar flicker
     if (!_checked) {
-      return const Scaffold(
-        body: Center(child: CircularProgressIndicator()),
-      );
+      return const Scaffold(body: Center(child: CircularProgressIndicator()));
     }
+    final requiredUpdate = _requiredUpdate;
+    if (requiredUpdate != null) return _buildRequiredUpdate(requiredUpdate);
     return widget.child;
   }
 }

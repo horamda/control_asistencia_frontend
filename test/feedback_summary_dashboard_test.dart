@@ -1,3 +1,4 @@
+import 'package:ficharqr/src/presentation/theme/app_theme.dart';
 import 'dart:io';
 
 import 'package:ficharqr/src/core/network/feedback_api_models.dart';
@@ -49,10 +50,10 @@ Future<void> _pump(
   addTearDown(() => tester.binding.setSurfaceSize(null));
   await tester.pumpWidget(
     MaterialApp(
-      theme: ThemeData(
-        useMaterial3: true,
-        fontFamily: _preview ? 'Preview' : null,
-        scaffoldBackgroundColor: const Color(0xFFF0F2F5),
+      theme: buildAppTheme().copyWith(
+        textTheme: buildAppTheme().textTheme.apply(
+          fontFamily: _preview ? 'Preview' : null,
+        ),
       ),
       builder: (context, child) => MediaQuery(
         data: MediaQuery.of(

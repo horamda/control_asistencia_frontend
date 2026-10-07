@@ -494,7 +494,7 @@ class _StatePill extends StatelessWidget {
           Text(
             label,
             style: TextStyle(
-              fontSize: 12,
+              fontSize: 13,
               fontWeight: FontWeight.w500,
               color: color,
             ),
@@ -676,7 +676,7 @@ class _JustificacionCard extends StatelessWidget {
                           child: Text(
                             _capitalize(item.estado ?? 'pendiente'),
                             style: TextStyle(
-                              fontSize: 11,
+                              fontSize: 13,
                               fontWeight: FontWeight.w700,
                               color: color,
                             ),
@@ -734,7 +734,7 @@ class _JustificacionCard extends StatelessWidget {
                             item.hasAdjuntos
                                 ? '${item.effectiveAdjuntosCount} adjunto${item.effectiveAdjuntosCount == 1 ? '' : 's'}'
                                 : 'Adjunto',
-                            style: TextStyle(fontSize: 12, color: cs.primary),
+                            style: TextStyle(fontSize: 13, color: cs.primary),
                           ),
                         ],
                       ),
@@ -957,7 +957,7 @@ class _DetailSheetState extends State<_DetailSheet> {
                               child: Text(
                                 _capitalize(item.estado ?? 'pendiente'),
                                 style: TextStyle(
-                                  fontSize: 12,
+                                  fontSize: 13,
                                   fontWeight: FontWeight.w700,
                                   color: color,
                                 ),
@@ -1028,7 +1028,13 @@ class _DetailSheetState extends State<_DetailSheet> {
                           icon: _attachmentIconForServerAttachment(adjunto),
                           onTap: () {
                             unawaited(
-                              _openAttachment(context, adjunto.downloadUrl),
+                              _downloadJustificacionAttachment(
+                                context,
+                                widget.apiClient,
+                                widget.token,
+                                item.id,
+                                adjunto,
+                              ),
                             );
                           },
                           onRemove:
@@ -1970,10 +1976,12 @@ class _EditJustificacionSheetState extends State<_EditJustificacionSheet> {
                           icon: _attachmentIconForServerAttachment(adjunto),
                           onTap: () {
                             unawaited(
-                              _openJustificacionAttachment(
+                              _downloadJustificacionAttachment(
                                 context,
                                 widget.apiClient,
-                                adjunto.downloadUrl,
+                                widget.token,
+                                widget.item.id,
+                                adjunto,
                               ),
                             );
                           },
@@ -2494,6 +2502,47 @@ Future<List<_DraftJustificacionAdjunto>> _pickFileAttachments() async {
     }
   }
   return items;
+}
+
+Future<void> _downloadJustificacionAttachment(
+  BuildContext context,
+  MobileApiClient apiClient,
+  String token,
+  int justificacionId,
+  JustificacionAdjuntoItem adjunto,
+) async {
+  final messenger = ScaffoldMessenger.of(context);
+  messenger.showSnackBar(const SnackBar(content: Text('Descargando adjunto…')));
+  try {
+    final bytes = await apiClient.downloadJustificacionAdjunto(
+      token: token,
+      id: justificacionId,
+      adjuntoId: adjunto.id,
+    );
+    if (!context.mounted) return;
+    // El servidor entrega los adjuntos normalizados como PDF.
+    final baseName = adjunto.displayName
+        .replaceAll(RegExp(r'[\\/:*?"<>|\x00-\x1f]'), '_')
+        .replaceFirst(RegExp(r'\.[^.]+$'), '');
+    await FilePicker.saveFile(
+      dialogTitle: 'Guardar adjunto',
+      fileName: '${baseName.isEmpty ? 'adjunto' : baseName}.pdf',
+      bytes: bytes,
+      type: FileType.custom,
+      allowedExtensions: ['pdf'],
+    );
+    if (messenger.mounted) messenger.hideCurrentSnackBar();
+  } catch (e) {
+    if (!context.mounted) return;
+    messenger.hideCurrentSnackBar();
+    messenger.showSnackBar(
+      SnackBar(
+        content: Text(
+          e is ApiException ? e.message : 'No se pudo guardar el adjunto.',
+        ),
+      ),
+    );
+  }
 }
 
 Future<void> _openJustificacionAttachment(

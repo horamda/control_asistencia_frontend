@@ -78,7 +78,7 @@ class _SkapEvaluationsListState extends State<SkapEvaluationsList> {
                                     'MI DESARROLLO · SKAP',
                                     style: TextStyle(
                                       color: Color(0xFFD7EAF0),
-                                      fontSize: 12,
+                                      fontSize: 13,
                                       fontWeight: FontWeight.w700,
                                       letterSpacing: 1.4,
                                     ),
@@ -237,7 +237,7 @@ class _SkapEvaluationsListState extends State<SkapEvaluationsList> {
                               'Tus resultados son personales. Solo vos y los responsables autorizados pueden consultarlos.',
                               style: TextStyle(
                                 color: Color(0xFF58717C),
-                                fontSize: 12,
+                                fontSize: 13,
                                 height: 1.5,
                               ),
                             ),
@@ -397,7 +397,7 @@ class _EvaluationCard extends StatelessWidget {
                       const Text(
                         'Objetivo: 100 % del estándar de tu rol.',
                         style: TextStyle(
-                          fontSize: 12,
+                          fontSize: 13,
                           color: Color(0xFF58717C),
                           height: 1.4,
                         ),
@@ -513,7 +513,7 @@ class _Pill extends StatelessWidget {
       text,
       style: TextStyle(
         color: foreground,
-        fontSize: 12,
+        fontSize: 13,
         fontWeight: FontWeight.w600,
       ),
     ),

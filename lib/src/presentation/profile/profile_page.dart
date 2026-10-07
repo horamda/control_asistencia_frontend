@@ -760,7 +760,7 @@ class _ProfileHero extends StatelessWidget {
                               Text(
                                 _capitalize(p!.estado!),
                                 style: TextStyle(
-                                  fontSize: 12,
+                                  fontSize: 13,
                                   fontWeight: FontWeight.w700,
                                   color: estadoColor,
                                 ),

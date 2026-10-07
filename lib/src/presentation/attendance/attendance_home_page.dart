@@ -121,6 +121,9 @@ class _AttendanceHomePageState extends State<AttendanceHomePage>
   int? _alertsCount;
   bool _alertsLoading = false;
   bool _canCreateLegajoEventos = false;
+  bool _canValidateCarga = false;
+  bool _loadingCargaPermission = false;
+  String? _cargaPermissionMessage;
 
   // ─── Trivia ────────────────────────────────────────────────────────────────
   TriviaEstadoResponse? _triviaEstado;
@@ -190,6 +193,7 @@ class _AttendanceHomePageState extends State<AttendanceHomePage>
     unawaited(_loadTriviaEstado());
     unawaited(_loadAlertsOverview());
     unawaited(_loadLegajoEventosAdminPermisos());
+    unawaited(_loadCargaPermission());
     _loadPendingQueueState();
     Future<void>.microtask(() => _warmUpClockReadiness(forceGps: true));
     Future<void>.microtask(
@@ -274,6 +278,7 @@ class _AttendanceHomePageState extends State<AttendanceHomePage>
       _startTimers();
       unawaited(_warmUpClockReadiness(forceGps: true, refreshConfig: true));
       unawaited(_loadAlertsOverview());
+      unawaited(_loadCargaPermission());
     } else if (state == AppLifecycleState.paused) {
       _stopTimers();
     }
@@ -446,6 +451,46 @@ class _AttendanceHomePageState extends State<AttendanceHomePage>
     if (mounted) {
       unawaited(_loadAlertsOverview());
     }
+  }
+
+  Future<void> _loadCargaPermission() async {
+    if (_isOfflineToken || _loadingCargaPermission || !mounted) return;
+    setState(() => _loadingCargaPermission = true);
+    try {
+      final config = await widget.apiClient.getCargas(
+        token: widget.token,
+        path: '/config',
+      );
+      if (mounted) {
+        setState(() {
+          _canValidateCarga =
+              config['habilitado'] == true || config['tiene_historial'] == true;
+          _cargaPermissionMessage = _canValidateCarga
+              ? null
+              : 'Validación de carga: tu puesto no está habilitado y no tenés historial. Consultá al administrador.';
+        });
+      }
+    } catch (e) {
+      if (mounted) {
+        setState(() {
+          _cargaPermissionMessage = e is ApiException && e.statusCode == 404
+              ? 'Validación de carga: el servidor no tiene disponible este módulo.'
+              : 'No se pudo consultar el acceso a Validación de carga. Reintentá la consulta.';
+        });
+      }
+    } finally {
+      if (mounted) setState(() => _loadingCargaPermission = false);
+    }
+  }
+
+  Future<void> _openCargas() async {
+    if (_submitting || !_canValidateCarga) return;
+    await _homeCoordinator.openCargas(
+      context,
+      apiClient: widget.apiClient,
+      token: widget.token,
+    );
+    if (mounted) await _loadCargaPermission();
   }
 
   Future<void> _openSkap() async {
@@ -1230,6 +1275,7 @@ class _AttendanceHomePageState extends State<AttendanceHomePage>
       _loadTurnoHoy(),
       _loadTriviaEstado(),
       _loadLegajoEventosAdminPermisos(),
+      _loadCargaPermission(),
       _syncPendingClocks(isBackground: true),
       _warmUpClockReadiness(forceGps: true, refreshConfig: true),
     ]);
@@ -1345,6 +1391,22 @@ class _AttendanceHomePageState extends State<AttendanceHomePage>
       case AttendanceHomeActionIntent.openFeedback:
         return () {
           unawaited(_openFeedback());
+        };
+      case AttendanceHomeActionIntent.openCargas:
+        return () {
+          unawaited(_openCargas());
+        };
+      case AttendanceHomeActionIntent.openSeguridad:
+        return () {
+          if (!_submitting) {
+            unawaited(
+              _homeCoordinator.openSeguridad(
+                context,
+                apiClient: widget.apiClient,
+                token: widget.token,
+              ),
+            );
+          }
         };
       case AttendanceHomeActionIntent.openSkap:
         return () {
@@ -1724,6 +1786,7 @@ class _AttendanceHomePageState extends State<AttendanceHomePage>
       locatingGps: _locatingGps,
       isBusy: _isBusy,
       canCreateLegajoEventos: _canCreateLegajoEventos,
+      canValidateCarga: _canValidateCarga,
     );
     final cs = Theme.of(context).colorScheme;
     final alertsCount = _alertsCount ?? 0;
@@ -1731,7 +1794,7 @@ class _AttendanceHomePageState extends State<AttendanceHomePage>
     final alertsBadgeLabel = hasAlerts
         ? Text(
             alertsCount > 99 ? '99+' : '$alertsCount',
-            style: const TextStyle(fontSize: 10),
+            style: const TextStyle(fontSize: 13),
           )
         : null;
     return Scaffold(
@@ -1895,7 +1958,7 @@ class _AttendanceHomePageState extends State<AttendanceHomePage>
       ),
       floatingActionButtonLocation: FloatingActionButtonLocation.centerDocked,
       bottomNavigationBar: BottomAppBar(
-        height: 64,
+        height: 48 + MediaQuery.textScalerOf(context).scale(26),
         padding: EdgeInsets.zero,
         notchMargin: 8,
         shape: const CircularNotchedRectangle(),
@@ -1907,7 +1970,7 @@ class _AttendanceHomePageState extends State<AttendanceHomePage>
                 isLabelVisible: pendingQueue.hasPending,
                 label: Text(
                   '${pendingQueue.total}',
-                  style: const TextStyle(fontSize: 10),
+                  style: const TextStyle(fontSize: 13),
                 ),
                 child: const Icon(Icons.home_outlined),
               ),
@@ -2113,6 +2176,23 @@ class _AttendanceHomePageState extends State<AttendanceHomePage>
                           .map(_quickActionItem)
                           .toList(growable: false),
                     ),
+                    if (_loadingCargaPermission)
+                      const Padding(
+                        padding: EdgeInsets.all(12),
+                        child: Text(
+                          'Consultando acceso a Validación de carga…',
+                        ),
+                      )
+                    else if (_cargaPermissionMessage != null)
+                      ListTile(
+                        leading: const Icon(Icons.local_shipping_outlined),
+                        title: Text(_cargaPermissionMessage!),
+                        trailing: IconButton(
+                          tooltip: 'Volver a consultar acceso a cargas',
+                          onPressed: _submitting ? null : _loadCargaPermission,
+                          icon: const Icon(Icons.refresh),
+                        ),
+                      ),
                   ],
                 ),
               ),
@@ -2181,7 +2261,7 @@ class _TurnoHoyBanner extends StatelessWidget {
               child: Text(
                 '±${turno.tolerancia} min',
                 style: TextStyle(
-                  fontSize: 11,
+                  fontSize: 13,
                   fontWeight: FontWeight.w600,
                   color: cs.onSecondaryContainer,
                 ),
@@ -2364,7 +2444,7 @@ class _TriviaDashboardCard extends StatelessWidget {
                         '🎯  TRIVIA ACTIVA',
                         style: TextStyle(
                           color: Colors.white,
-                          fontSize: 11,
+                          fontSize: 13,
                           fontWeight: FontWeight.w800,
                           letterSpacing: 0.6,
                         ),
@@ -2391,7 +2471,7 @@ class _TriviaDashboardCard extends StatelessWidget {
             const SizedBox(height: 4),
             const Text(
               '¡Respondé y competí por el primer lugar!',
-              style: TextStyle(color: Colors.white70, fontSize: 12),
+              style: TextStyle(color: Colors.white70, fontSize: 13),
             ),
             const SizedBox(height: 18),
             SizedBox(
@@ -2526,7 +2606,7 @@ class _TriviaDashboardCard extends StatelessWidget {
                     child: Text(
                       titulo,
                       style: TextStyle(
-                        fontSize: 11,
+                        fontSize: 13,
                         fontWeight: FontWeight.w700,
                         color: badgeColor,
                       ),
@@ -2559,7 +2639,7 @@ class _TriviaDashboardCard extends StatelessWidget {
                     borderRadius: BorderRadius.circular(10),
                   ),
                   textStyle: const TextStyle(
-                    fontSize: 12,
+                    fontSize: 13,
                     fontWeight: FontWeight.w600,
                   ),
                 ),
@@ -2663,7 +2743,7 @@ class _NavBarItem extends StatelessWidget {
               Text(
                 label,
                 style: TextStyle(
-                  fontSize: 11,
+                  fontSize: 13,
                   color: color,
                   fontWeight: selected ? FontWeight.w700 : FontWeight.normal,
                 ),

@@ -27,6 +27,8 @@ import 'premios_page.dart';
 import 'horarios_page.dart';
 import 'qr_scan_page.dart';
 import 'feedback_page.dart';
+import 'cargas_page.dart';
+import 'seguridad_page.dart';
 import 'security_events_page.dart';
 import 'skap_page.dart';
 import 'widgets/pending_queue_sheet.dart';
@@ -97,6 +99,30 @@ class AttendanceHomeCoordinator {
     return Navigator.of(context).push(
       MaterialPageRoute(
         builder: (_) => FeedbackPage(apiClient: apiClient, token: token),
+      ),
+    );
+  }
+
+  Future<void> openCargas(
+    BuildContext context, {
+    required MobileApiClient apiClient,
+    required String token,
+  }) {
+    return Navigator.of(context).push(
+      MaterialPageRoute(
+        builder: (_) => CargasPage(apiClient: apiClient, token: token),
+      ),
+    );
+  }
+
+  Future<void> openSeguridad(
+    BuildContext context, {
+    required MobileApiClient apiClient,
+    required String token,
+  }) {
+    return Navigator.of(context).push(
+      MaterialPageRoute(
+        builder: (_) => SeguridadPage(apiClient: apiClient, token: token),
       ),
     );
   }

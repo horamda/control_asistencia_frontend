@@ -1,3 +1,4 @@
+import 'package:ficharqr/src/presentation/theme/app_theme.dart';
 import 'package:ficharqr/src/presentation/attendance/widgets/attendance_dashboard_widgets.dart';
 import 'package:flutter/material.dart';
 import 'package:flutter_test/flutter_test.dart';
@@ -173,5 +174,8 @@ void main() {
 }
 
 Widget _wrap(Widget child) {
-  return MaterialApp(home: Scaffold(body: child));
+  return MaterialApp(
+    theme: buildAppTheme(),
+    home: Scaffold(body: child),
+  );
 }

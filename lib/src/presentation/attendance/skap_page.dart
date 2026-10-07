@@ -1117,7 +1117,7 @@ class _MiniStatChip extends StatelessWidget {
             label,
             style: TextStyle(
               color: Colors.white.withValues(alpha: 0.8),
-              fontSize: 11,
+              fontSize: 13,
             ),
           ),
           const SizedBox(height: 2),
@@ -1561,7 +1561,7 @@ class _StatusChip extends StatelessWidget {
         label,
         style: TextStyle(
           color: cs.onSecondaryContainer,
-          fontSize: 12,
+          fontSize: 13,
           fontWeight: FontWeight.w600,
         ),
       ),

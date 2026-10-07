@@ -237,7 +237,7 @@ class _TriviaResultScreenState extends State<TriviaResultScreen> {
                           const Text(
                             'Siguiente trivia disponible',
                             style: TextStyle(
-                              fontSize: 11,
+                              fontSize: 13,
                               fontWeight: FontWeight.w700,
                               color: _kAccent,
                             ),
@@ -358,7 +358,7 @@ class _StatTile extends StatelessWidget {
               style: TextStyle(fontSize: 18, fontWeight: FontWeight.w800, color: color),
             ),
             const SizedBox(height: 2),
-            Text(label, style: TextStyle(fontSize: 11, color: Colors.grey.shade600)),
+            Text(label, style: TextStyle(fontSize: 13, color: Colors.grey.shade600)),
           ],
         ),
       ),

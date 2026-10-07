@@ -8,6 +8,18 @@ Frontend Flutter separado para empleados (fichar entrada/salida, ver perfil y as
 - Backend objetivo: `../backend`.
 - Contrato congelado: `../backend/docs/mobile_v1_openapi.yaml`.
 
+## Validación de carga (contrato 1.30.1)
+
+Contrato compartido para Flutter nativo, Flutter web y otros frontends web de empleados:
+[guía de integración](../backend/docs/validacion_carga_frontend.md) y
+[OpenAPI](../backend/docs/mobile_v1_openapi.yaml).
+
+- Consultar `/api/v1/mobile/cargas/config` para mostrar el módulo y sus horarios.
+- Cliente existente: `lib/src/core/network/mobile_api_client.dart` (`getCargas`, `createCarga`, `getCargaFoto`).
+- Pantalla de referencia: `lib/src/presentation/attendance/cargas_page.dart`.
+- Mantener UUID y fotos al reintentar; fotos por multipart con campos `fotos` repetidos, usando bytes también en web.
+- La guía incluye las respuestas reales, tipos `0/1` frente a booleanos, permisos, paginación y errores. No requiere cambios de versión de la aplicación: 1.30.1 es la versión documental del contrato.
+
 ## Run local
 
 Desde `frontend_flutter`:

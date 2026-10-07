@@ -564,7 +564,7 @@ class _KpisSectorPageState extends State<KpisSectorPage>
                             child: Text(
                               d,
                               style: const TextStyle(
-                                fontSize: 12,
+                                fontSize: 13,
                                 fontWeight: FontWeight.w600,
                                 color: Color(0xFF9E9E9E),
                               ),
@@ -1003,7 +1003,7 @@ class _MesChip extends StatelessWidget {
             Text(
               label,
               style: TextStyle(
-                fontSize: 12,
+                fontSize: 13,
                 fontWeight: selected ? FontWeight.w700 : FontWeight.w500,
                 color: fg,
                 height: 1,
@@ -1544,7 +1544,7 @@ class _KpiDetailPanel extends StatelessWidget {
                     Text(
                       'del objetivo',
                       style: TextStyle(
-                        fontSize: 10,
+                        fontSize: 13,
                         color: _fg.withValues(alpha: 0.7),
                       ),
                     ),
@@ -2023,7 +2023,7 @@ class _MonthRow extends StatelessWidget {
                 overflow: TextOverflow.ellipsis,
                 style: TextStyle(
                   fontWeight: FontWeight.w700,
-                  fontSize: 12,
+                  fontSize: 13,
                   color: hasData
                       ? rowFg
                       : cs.onSurfaceVariant.withValues(alpha: 0.4),
@@ -2140,56 +2140,76 @@ class _MonthlyBarsChart extends StatelessWidget {
   @override
   Widget build(BuildContext context) {
     final ordered = points.reversed.toList(growable: false);
-    return SizedBox(
-      height: 70,
-      child: Row(
-        crossAxisAlignment: CrossAxisAlignment.end,
-        children: [
-          for (final e in ordered)
-            Expanded(
-              child: Tooltip(
-                message:
-                    '${_monthLabel(e.mes)}: ${_fmtNullable(e.item.resultadoMes)}$unidad',
-                child: Padding(
-                  padding: const EdgeInsets.symmetric(horizontal: 3),
-                  child: Column(
-                    mainAxisAlignment: MainAxisAlignment.end,
-                    children: [
-                      Expanded(
-                        child: Align(
-                          alignment: Alignment.bottomCenter,
-                          child: FractionallySizedBox(
-                            heightFactor: _barH(e.item),
-                            child: Container(
-                              width: 12,
-                              decoration: BoxDecoration(
-                                color: _barColor(e.item),
-                                borderRadius: BorderRadius.circular(4),
+    return LayoutBuilder(
+      builder: (context, box) {
+        final scale = MediaQuery.textScalerOf(context).scale(14) / 14;
+        final width = math.max(
+          76 * scale,
+          box.maxWidth / math.max(ordered.length, 1),
+        );
+        return Column(
+          crossAxisAlignment: CrossAxisAlignment.start,
+          children: [
+            const Text('Cumplimiento mensual (escala hasta 100%)'),
+            const SizedBox(height: 8),
+            SingleChildScrollView(
+              scrollDirection: Axis.horizontal,
+              child: Row(
+                crossAxisAlignment: CrossAxisAlignment.end,
+                children: [
+                  for (final e in ordered)
+                    SizedBox(
+                      width: width,
+                      child: Tooltip(
+                        triggerMode: TooltipTriggerMode.tap,
+                        message:
+                            '${_monthLabel(e.mes)}: ${_fmtNullable(e.item.resultadoMes)}$unidad',
+                        child: Column(
+                          children: [
+                            Text(
+                              e.item.resultadoMes == null ||
+                                      e.item.registros == 0
+                                  ? 'Sin datos'
+                                  : '${e.item.progresoPct.toStringAsFixed(0)}%',
+                              textAlign: TextAlign.center,
+                              style: Theme.of(context).textTheme.labelMedium,
+                            ),
+                            const SizedBox(height: 6),
+                            SizedBox(
+                              height: 100,
+                              child: Align(
+                                alignment: Alignment.bottomCenter,
+                                child: Container(
+                                  width: 24,
+                                  height: 100 * _barH(e.item),
+                                  decoration: BoxDecoration(
+                                    color: _barColor(e.item),
+                                    borderRadius: BorderRadius.circular(6),
+                                  ),
+                                ),
                               ),
                             ),
-                          ),
+                            const SizedBox(height: 8),
+                            Text(
+                              _shortMonthLabel(e.mes),
+                              style: Theme.of(context).textTheme.labelMedium,
+                            ),
+                          ],
                         ),
                       ),
-                      const SizedBox(height: 4),
-                      Text(
-                        _shortMonthLabel(e.mes),
-                        maxLines: 1,
-                        overflow: TextOverflow.clip,
-                        style: Theme.of(context).textTheme.labelSmall,
-                      ),
-                    ],
-                  ),
-                ),
+                    ),
+                ],
               ),
             ),
-        ],
-      ),
+          ],
+        );
+      },
     );
   }
 
   double _barH(KpiSectorMesItem item) {
-    if (item.resultadoMes == null || item.registros == 0) return 0.08;
-    return (item.progresoPct / 100).clamp(0.08, 1.0).toDouble();
+    if (item.resultadoMes == null || item.registros == 0) return 0;
+    return (item.progresoPct / 100).clamp(0.0, 1.0).toDouble();
   }
 
   Color _barColor(KpiSectorMesItem item) {
@@ -2224,15 +2244,45 @@ class _MiniLineChart extends StatelessWidget {
         )
         .join('\n');
 
-    return Tooltip(
-      message: tooltip,
-      child: SizedBox(
-        height: 48,
-        width: double.infinity,
-        child: CustomPaint(
-          painter: _TrendLinePainter(values: values, color: color),
+    final valid = values.whereType<double>().toList();
+    return Column(
+      crossAxisAlignment: CrossAxisAlignment.stretch,
+      children: [
+        if (valid.isNotEmpty)
+          Wrap(
+            alignment: WrapAlignment.spaceBetween,
+            spacing: 12,
+            children: [
+              Text('Min: ${_fmt(valid.reduce(math.min))}$unidad'),
+              Text('Max: ${_fmt(valid.reduce(math.max))}$unidad'),
+            ],
+          ),
+        const SizedBox(height: 8),
+        Tooltip(
+          message: tooltip,
+          triggerMode: TooltipTriggerMode.tap,
+          child: Semantics(
+            label: tooltip,
+            child: SizedBox(
+              height: 100,
+              width: double.infinity,
+              child: CustomPaint(
+                painter: _TrendLinePainter(values: values, color: color),
+              ),
+            ),
+          ),
         ),
-      ),
+        ExpansionTile(
+          title: const Text('Ver valores por mes'),
+          children: [
+            for (final e in ordered)
+              ListTile(
+                title: Text(_monthLabel(e.mes)),
+                subtitle: Text('${_fmtNullable(e.item.resultadoMes)}$unidad'),
+              ),
+          ],
+        ),
+      ],
     );
   }
 }
@@ -2252,16 +2302,27 @@ class _TrendLinePainter extends CustomPainter {
     final maxValue = validValues.reduce(math.max);
     final range = maxValue - minValue;
     final pts = <Offset>[];
+    final path = Path();
+    var connected = false;
 
     for (var i = 0; i < values.length; i++) {
       final v = values[i];
-      if (v == null) continue;
+      if (v == null) {
+        connected = false;
+        continue;
+      }
       final x = values.length == 1
           ? size.width / 2
           : size.width * i / (values.length - 1);
       final normalized = range == 0 ? 0.5 : (v - minValue) / range;
       final y = size.height - (normalized * (size.height - 8)) - 4;
       pts.add(Offset(x, y));
+      if (connected) {
+        path.lineTo(x, y);
+      } else {
+        path.moveTo(x, y);
+      }
+      connected = true;
     }
 
     final gridPaint = Paint()
@@ -2274,10 +2335,6 @@ class _TrendLinePainter extends CustomPainter {
     );
 
     if (pts.length > 1) {
-      final path = Path()..moveTo(pts.first.dx, pts.first.dy);
-      for (final p in pts.skip(1)) {
-        path.lineTo(p.dx, p.dy);
-      }
       final linePaint = Paint()
         ..color = color
         ..strokeWidth = 2
@@ -2402,7 +2459,7 @@ class _SemaforoChip extends StatelessWidget {
             _statusLabel(semaforo),
             style: TextStyle(
               color: fg,
-              fontSize: 11,
+              fontSize: 13,
               fontWeight: FontWeight.w700,
             ),
           ),
@@ -2480,32 +2537,39 @@ class _StatsRow extends StatelessWidget {
     final cs = Theme.of(context).colorScheme;
     if (cells.isEmpty) return const SizedBox.shrink();
 
-    return IntrinsicHeight(
-      child: Row(
-        children: [
-          for (int i = 0; i < cells.length; i++) ...[
-            if (i > 0)
-              Container(
-                width: 1,
-                color: cs.outlineVariant.withValues(alpha: 0.5),
-              ),
-            Expanded(
-              child: Center(
-                child: Padding(
-                  padding: const EdgeInsets.symmetric(horizontal: 4),
-                  child: _StatCell(
-                    label: cells[i].label,
-                    value: cells[i].value,
-                    color: cells[i].color,
-                    large: cells[i].large,
-                    align: TextAlign.center,
+    return LayoutBuilder(
+      builder: (context, constraints) {
+        final scale = MediaQuery.textScalerOf(context).scale(16) / 16;
+        final columns = (constraints.maxWidth / (130 * scale)).floor().clamp(
+          1,
+          cells.length,
+        );
+        return Wrap(
+          spacing: 8,
+          runSpacing: 16,
+          children: [
+            for (final cell in cells)
+              SizedBox(
+                width: (constraints.maxWidth - 8 * (columns - 1)) / columns,
+                child: DecoratedBox(
+                  decoration: BoxDecoration(
+                    border: Border(left: BorderSide(color: cs.outlineVariant)),
+                  ),
+                  child: Padding(
+                    padding: const EdgeInsets.symmetric(horizontal: 8),
+                    child: _StatCell(
+                      label: cell.label,
+                      value: cell.value,
+                      color: cell.color,
+                      large: cell.large,
+                      align: TextAlign.center,
+                    ),
                   ),
                 ),
               ),
-            ),
           ],
-        ],
-      ),
+        );
+      },
     );
   }
 }
@@ -2689,7 +2753,7 @@ class _KpiMonthDetailPanel extends StatelessWidget {
                     Text(
                       'del objetivo',
                       style: TextStyle(
-                        fontSize: 10,
+                        fontSize: 13,
                         color: _fg.withValues(alpha: 0.7),
                       ),
                     ),
@@ -3345,7 +3409,7 @@ class _DailySparklineSection extends StatelessWidget {
                 '${_fmt(lastVal)}$unidad',
                 style: TextStyle(
                   fontWeight: FontWeight.w700,
-                  fontSize: 12,
+                  fontSize: 13,
                   color: fg,
                 ),
               ),

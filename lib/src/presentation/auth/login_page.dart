@@ -257,7 +257,7 @@ class _LoginPageState extends State<LoginPage> {
           const SizedBox(width: 4),
           Text(
             AppConfig.current.flavorLabel,
-            style: const TextStyle(color: Colors.white60, fontSize: 11),
+            style: const TextStyle(color: Colors.white60, fontSize: 13),
           ),
         ],
       ),
@@ -825,7 +825,7 @@ class _OfflineNotice extends StatelessWidget {
               offlineAvailable
                   ? 'Sin conexión. Podés ingresar con tus credenciales guardadas.'
                   : 'Sin conexión a internet. Conectate para ingresar.',
-              style: TextStyle(color: onColor, fontSize: 12),
+              style: TextStyle(color: onColor, fontSize: 13),
             ),
           ),
         ],

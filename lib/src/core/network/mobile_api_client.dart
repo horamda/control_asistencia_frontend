@@ -18,6 +18,138 @@ class MobileApiClient {
   }) : _httpClient = httpClient ?? http.Client();
 
   final String baseUrl;
+
+  Future<Map<String, dynamic>> getSeguridad({
+    required String token,
+    String path = '/config',
+  }) async {
+    return _cargaResponse(
+      await _safeGet(
+        _uri('/seguridad$path'),
+        headers: _headers(token: token),
+        actionLabel: 'consultar Seguridad e Higiene',
+      ),
+    );
+  }
+
+  Future<Map<String, dynamic>> createSeguridad({
+    required String token,
+    required Map<String, String> fields,
+    required List<Uint8List> fotos,
+  }) async {
+    final response = await _sendMultipartWithAuthRecovery(
+      token: token,
+      actionLabel: 'enviar reporte de seguridad',
+      requestBuilder: (effectiveToken) async {
+        final request = http.MultipartRequest(
+          'POST',
+          _uri('/seguridad/eventos'),
+        );
+        request.headers['Authorization'] = 'Bearer $effectiveToken';
+        request.fields.addAll(fields);
+        for (var i = 0; i < fotos.length; i++) {
+          request.files.add(
+            http.MultipartFile.fromBytes(
+              'fotos',
+              fotos[i],
+              filename: 'foto_$i.jpg',
+            ),
+          );
+        }
+        return request;
+      },
+    );
+    return _cargaResponse(response);
+  }
+
+  Future<Uint8List> getSeguridadFoto({
+    required String token,
+    required int id,
+  }) async {
+    final response = await _safeGet(
+      _uri('/seguridad/fotos/$id'),
+      headers: _headers(token: token),
+      actionLabel: 'consultar foto de seguridad',
+    );
+    if (response.statusCode != 200) {
+      throw ApiException(
+        message: 'No se pudo cargar la foto.',
+        statusCode: response.statusCode,
+      );
+    }
+    return response.bodyBytes;
+  }
+
+  Future<Map<String, dynamic>> getCargas({
+    required String token,
+    String path = '',
+  }) async {
+    final response = await _safeGet(
+      _uri('/cargas$path'),
+      headers: _headers(token: token),
+      actionLabel: 'consultar validaciones de carga',
+    );
+    return _cargaResponse(response);
+  }
+
+  Map<String, dynamic> _cargaResponse(http.Response response) {
+    if (response.statusCode < 200 || response.statusCode >= 300) {
+      throw ApiException(
+        message: _extractApiError(
+          response,
+          fallback: 'No se pudo completar la operación de carga.',
+        ).message,
+        statusCode: response.statusCode,
+      );
+    }
+    return _decodeObject(response.body);
+  }
+
+  Future<Map<String, dynamic>> createCarga({
+    required String token,
+    required Map<String, String> fields,
+    required List<Uint8List> fotos,
+  }) async {
+    final response = await _sendMultipartWithAuthRecovery(
+      token: token,
+      actionLabel: 'registrar la carga',
+      requestBuilder: (effectiveToken) async {
+        final request = http.MultipartRequest('POST', _uri('/cargas'));
+        request.headers['Authorization'] = 'Bearer $effectiveToken';
+        request.fields.addAll(fields);
+        for (var i = 0; i < fotos.length; i++) {
+          request.files.add(
+            http.MultipartFile.fromBytes(
+              'fotos',
+              fotos[i],
+              filename: 'foto_$i.jpg',
+            ),
+          );
+        }
+        return request;
+      },
+    );
+    return _cargaResponse(response);
+  }
+
+  Future<Uint8List> getCargaFoto({
+    required String token,
+    required int id,
+  }) async {
+    final response = await _safeGet(
+      _uri('/cargas/fotos/$id'),
+      headers: _headers(token: token),
+      actionLabel: 'consultar foto de carga',
+    );
+    if (response.statusCode != 200) {
+      throw ApiException(
+        message: 'No se pudo cargar la foto.',
+        statusCode: response.statusCode,
+      );
+    }
+    return response.bodyBytes;
+  }
+
   final String mobileApiPrefix;
   http.Client _httpClient;
   String? Function()? _tokenProvider;
@@ -1431,6 +1563,30 @@ class MobileApiClient {
         if (raw is Map)
           JustificacionAdjuntoItem.fromJson(Map<String, dynamic>.from(raw)),
     ];
+  }
+
+  Future<Uint8List> downloadJustificacionAdjunto({
+    required String token,
+    required int id,
+    required int adjuntoId,
+  }) async {
+    final response = await _safeGet(
+      _uri('/me/justificaciones/$id/adjuntos/$adjuntoId'),
+      headers: _headers(token: token),
+      actionLabel: 'descargar adjunto de justificación',
+    );
+    if (response.statusCode != 200) {
+      final error = _extractApiError(
+        response,
+        fallback: 'No se pudo descargar el adjunto.',
+      );
+      throw ApiException(
+        message: error.message,
+        statusCode: response.statusCode,
+        code: error.code,
+      );
+    }
+    return response.bodyBytes;
   }
 
   Future<void> deleteJustificacionAdjunto({
@@ -2950,51 +3106,68 @@ class MobileApiClient {
   Future<List<TriviaNotificacion>> getTriviaNotificaciones({
     required String token,
   }) async {
-    try {
-      final response = await _safeGet(
-        _triviaUri('/notificaciones'),
-        headers: _headers(token: token),
-        actionLabel: 'consultar notificaciones de trivia',
+    final response = await _safeGet(
+      _triviaUri('/notificaciones'),
+      headers: _headers(token: token),
+      actionLabel: 'consultar notificaciones de trivia',
+    );
+    if (response.statusCode != 200) {
+      throw ApiException(
+        message: _extractApiError(
+          response,
+          fallback: 'No se pudieron cargar las notificaciones.',
+        ).message,
+        statusCode: response.statusCode,
       );
-      if (response.statusCode != 200) return [];
-      final json = _decodeObject(response.body);
-      final rawData = json['data'];
-      final items = <TriviaNotificacion>[];
-      if (rawData is List) {
-        for (final item in rawData) {
-          if (item is Map) {
-            items.add(
-              TriviaNotificacion.fromJson(Map<String, dynamic>.from(item)),
-            );
-          }
+    }
+    final json = _decodeObject(response.body);
+    final rawData = json['data'];
+    final items = <TriviaNotificacion>[];
+    if (rawData is List) {
+      for (final item in rawData) {
+        if (item is Map) {
+          items.add(
+            TriviaNotificacion.fromJson(Map<String, dynamic>.from(item)),
+          );
         }
       }
-      return items;
-    } catch (_) {
-      return [];
     }
+    return items;
   }
 
   Future<void> marcarNotificacionTriviaLeida({
     required String token,
     required int notifId,
   }) async {
-    await _safePost(
+    final response = await _safePost(
       _triviaUri('/notificaciones/$notifId/leer'),
       headers: _headers(token: token),
       body: jsonEncode(<String, dynamic>{}),
       actionLabel: 'marcar notificación leída',
     );
+    _checkTriviaNotificationResponse(response);
   }
 
   Future<void> marcarTodasNotificacionesTriviaLeidas({
     required String token,
   }) async {
-    await _safePost(
+    final response = await _safePost(
       _triviaUri('/notificaciones/leer-todas'),
       headers: _headers(token: token),
       body: jsonEncode(<String, dynamic>{}),
       actionLabel: 'marcar todas las notificaciones leídas',
+    );
+    _checkTriviaNotificationResponse(response);
+  }
+
+  void _checkTriviaNotificationResponse(http.Response response) {
+    if (response.statusCode >= 200 && response.statusCode < 300) return;
+    throw ApiException(
+      message: _extractApiError(
+        response,
+        fallback: 'No se pudo marcar la notificación como leída.',
+      ).message,
+      statusCode: response.statusCode,
     );
   }
 

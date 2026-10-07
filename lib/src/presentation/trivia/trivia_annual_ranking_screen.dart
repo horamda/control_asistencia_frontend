@@ -180,7 +180,7 @@ class _GanadorAnualCard extends StatelessWidget {
           const Text(
             'GANADOR DEL AÑO',
             style: TextStyle(
-              fontSize: 11,
+              fontSize: 13,
               fontWeight: FontWeight.w800,
               color: Color(0xFF7A4800),
               letterSpacing: 1.5,
@@ -220,7 +220,7 @@ class _GanadorAnualCard extends StatelessWidget {
             'Fuiste el mejor participante anual de la Trivia. Tu compromiso con la mejora continua es un ejemplo para todos.',
             textAlign: TextAlign.center,
             style: TextStyle(
-              fontSize: 12,
+              fontSize: 13,
               color: Colors.brown.shade600,
               fontStyle: FontStyle.italic,
               height: 1.5,
@@ -254,7 +254,7 @@ class _Chip extends StatelessWidget {
       child: Text(
         label,
         style: const TextStyle(
-          fontSize: 11,
+          fontSize: 13,
           fontWeight: FontWeight.w700,
           color: Color(0xFF7A4800),
         ),
@@ -333,7 +333,7 @@ class _AnualRankingTile extends StatelessWidget {
                   if (item.sector != null)
                     Text(
                       item.sector!,
-                      style: TextStyle(fontSize: 11, color: Colors.grey.shade600),
+                      style: TextStyle(fontSize: 13, color: Colors.grey.shade600),
                     ),
                   const SizedBox(height: 4),
                   Row(
@@ -363,7 +363,7 @@ class _AnualRankingTile extends StatelessWidget {
                 if (item.correctasTotales != null)
                   Text(
                     '${item.correctasTotales} correctas',
-                    style: TextStyle(fontSize: 11, color: Colors.grey.shade500),
+                    style: TextStyle(fontSize: 13, color: Colors.grey.shade500),
                   ),
               ],
             ),
@@ -391,7 +391,7 @@ class _Tag extends StatelessWidget {
       child: Text(
         text,
         style: TextStyle(
-          fontSize: 10,
+          fontSize: 13,
           fontWeight: FontWeight.w600,
           color: highlight ? const Color(0xFF7A4800) : Colors.grey.shade600,
         ),
