@@ -19,6 +19,378 @@ class MobileApiClient {
 
   final String baseUrl;
 
+  Future<Map<String, dynamic>> getComunicados({
+    required String token,
+    int page = 1,
+  }) async => _reunionesResponse(
+    await _safeGet(
+      _uri('/comunicados').replace(queryParameters: {'page': '$page'}),
+      headers: _headers(token: token),
+      actionLabel: 'consultar comunicados',
+    ),
+  );
+
+  Future<Map<String, dynamic>> getComunicado({
+    required String token,
+    required int id,
+  }) async => _reunionesResponse(
+    await _safeGet(
+      _uri('/comunicados/$id'),
+      headers: _headers(token: token),
+      actionLabel: 'abrir comunicado',
+    ),
+  );
+
+  Future<void> leerTodosComunicados({required String token}) async {
+    _reunionesResponse(
+      await _safePost(
+        _uri('/comunicados/leer-todos'),
+        headers: _headers(token: token),
+        body: '{}',
+        actionLabel: 'marcar comunicados como leídos',
+      ),
+    );
+  }
+
+  Future<Uint8List> getComunicadoImagen({
+    required String token,
+    required int id,
+  }) async {
+    final response = await _safeGet(
+      _uri('/comunicados/$id/imagen'),
+      headers: _headers(token: token),
+      actionLabel: 'cargar imagen del comunicado',
+    );
+    if (response.statusCode != 200) {
+      throw ApiException(
+        statusCode: response.statusCode,
+        message: 'No se pudo cargar la imagen.',
+      );
+    }
+    return response.bodyBytes;
+  }
+
+  Future<Map<String, dynamic>> getPushConfig({required String token}) async =>
+      _reunionesResponse(
+        await _safeGet(
+          _uri('/push/config'),
+          headers: _headers(token: token),
+          actionLabel: 'consultar notificaciones',
+        ),
+      );
+
+  Future<void> registerPushDevice({
+    required String token,
+    required String deviceToken,
+    required String platform,
+    required String appVersion,
+  }) async {
+    _reunionesResponse(
+      await _safePost(
+        _uri('/push/dispositivo'),
+        headers: _headers(token: token),
+        body: jsonEncode({
+          'token': deviceToken,
+          'plataforma': platform,
+          'app_version': appVersion,
+        }),
+        actionLabel: 'registrar notificaciones',
+      ),
+    );
+  }
+
+  /// Contrato 1.47.0: confirma que un push llego (`recibido`) o que lo tocaron
+  /// (`abierto`). Sin JWT: el servidor valida la firma `data.acuse` del push,
+  /// asi funciona tambien desde el manejador en segundo plano.
+  Future<void> acknowledgePush({
+    required String envioId,
+    required String signature,
+    required String event,
+  }) async {
+    final response = await _safePost(
+      _uri('/push/acuse'),
+      headers: const {'Content-Type': 'application/json'},
+      body: jsonEncode({
+        'envio_id': envioId,
+        'acuse': signature,
+        'evento': event,
+      }),
+      actionLabel: 'confirmar la notificación',
+      allowAuthRecovery: false,
+    );
+    if (response.statusCode != 200) {
+      throw ApiException(message: 'Acuse rechazado (${response.statusCode}).');
+    }
+  }
+
+  Future<void> removePushDevice({
+    required String token,
+    required String deviceToken,
+  }) async {
+    _reunionesResponse(
+      await _safeDelete(
+        _uri('/push/dispositivo'),
+        // A previous account may be signing out while the provider has changed.
+        headers: {
+          'Content-Type': 'application/json',
+          'Authorization': 'Bearer $token',
+        },
+        allowAuthRecovery: false,
+        body: jsonEncode({'token': deviceToken}),
+        actionLabel: 'quitar notificaciones',
+      ),
+    );
+  }
+
+  Future<Map<String, dynamic>> getReuniones({
+    required String token,
+    String path = '',
+    Map<String, String>? query,
+  }) async {
+    _requireReunionesSession(token);
+    final uri = _uri('/reuniones$path');
+    return _reunionesResponse(
+      await _safeGet(
+        query == null ? uri : uri.replace(queryParameters: query),
+        headers: _headers(token: token),
+        actionLabel: 'consultar reuniones',
+      ),
+    );
+  }
+
+  Future<Map<String, dynamic>> registrarReunion({
+    required String token,
+    required String qr,
+  }) async {
+    _requireReunionesSession(token);
+    return _reunionesResponse(
+      await _safePost(
+        _uri('/reuniones/registrar'),
+        headers: _headers(token: token),
+        body: jsonEncode({'qr': qr}),
+        actionLabel: 'registrar asistencia a la reunión',
+      ),
+    );
+  }
+
+  void _requireReunionesSession(String token) {
+    if (token.startsWith('offline_')) {
+      throw ApiException(
+        statusCode: 503,
+        message:
+            'Para consultar o registrar reuniones necesitás iniciar sesión con conexión. Tus fichadas offline siguen disponibles.',
+      );
+    }
+  }
+
+  Map<String, dynamic> _reunionesResponse(http.Response response) {
+    if (response.statusCode < 200 || response.statusCode >= 300) {
+      throw ApiException(
+        message: _extractApiError(
+          response,
+          fallback: 'No se pudo completar la operación de reuniones.',
+        ).message,
+        statusCode: response.statusCode,
+      );
+    }
+    return _decodeObject(response.body);
+  }
+
+  Future<Map<String, dynamic>> getEpp({
+    required String token,
+    String path = '/config',
+    Map<String, String>? query,
+  }) async {
+    final uri = _uri('/epp$path');
+    return _cargaResponse(
+      await _safeGet(
+        query == null ? uri : uri.replace(queryParameters: query),
+        headers: _headers(token: token),
+        actionLabel: 'consultar EPP',
+      ),
+    );
+  }
+
+  /// Fetch saved sizes from their authoritative endpoint, alongside the catalog.
+  Future<Map<String, dynamic>> getEppConfig({required String token}) async {
+    final results = await Future.wait([
+      getEpp(token: token),
+      getEpp(token: token, path: '/talles'),
+    ]);
+    if (results[1]['items'] is! List) {
+      throw const FormatException('Respuesta de talles inválida');
+    }
+    return {...results[0], 'talles': results[1]['items']};
+  }
+
+  Future<Map<String, dynamic>> writeEpp({
+    required String token,
+    required String path,
+    required Map<String, dynamic> data,
+    bool put = false,
+  }) async {
+    final uri = _uri('/epp$path');
+    final response = await (put
+        ? _safePut(
+            uri,
+            headers: _headers(token: token),
+            body: jsonEncode(data),
+            actionLabel: 'guardar EPP',
+          )
+        : _safePost(
+            uri,
+            headers: _headers(token: token),
+            body: jsonEncode(data),
+            actionLabel: 'guardar EPP',
+          ));
+    return _cargaResponse(response);
+  }
+
+  Future<Uint8List> getEppFile({
+    required String token,
+    required String path,
+  }) async {
+    final response = await _safeGet(
+      _uri('/epp$path'),
+      headers: _headers(token: token),
+      actionLabel: 'consultar archivo de EPP',
+    );
+    if (response.statusCode != 200) {
+      _cargaResponse(response);
+    }
+    return response.bodyBytes;
+  }
+
+  Future<Map<String, dynamic>> getReintegros({
+    required String token,
+    String path = '/config',
+    Map<String, String>? query,
+  }) async {
+    final uri = _uri('/reintegros$path');
+    try {
+      final response = await _safeGet(
+        query == null ? uri : uri.replace(queryParameters: query),
+        headers: _headers(token: token),
+        actionLabel: 'consultar reintegros',
+      );
+      if (response.statusCode == 404 &&
+          (path == '/config' || path == '/solicitudes')) {
+        throw ApiException(
+          message:
+              'Viáticos y reintegros todavía no está disponible en este servidor. Contactá a Administración para habilitar el módulo.',
+          statusCode: 404,
+        );
+      }
+      return _cargaResponse(response);
+    } on ApiException catch (error) {
+      // A failed CORS preflight hides the HTTP status from Flutter web.
+      // Probe config without credentials or custom headers; never send user data.
+      if (path == '/config' && error.statusCode == null) {
+        try {
+          final probe = await _httpClient
+              .get(uri)
+              .timeout(const Duration(seconds: 5));
+          if (probe.statusCode == 404) {
+            throw ApiException(
+              message:
+                  'Viáticos y reintegros todavía no está disponible en este servidor. Contactá a Administración para habilitar el módulo.',
+              statusCode: 404,
+            );
+          }
+        } on ApiException {
+          rethrow;
+        } catch (_) {
+          /* Preserve the original connection error. */
+        }
+      }
+      rethrow;
+    }
+  }
+
+  Future<Map<String, dynamic>> saveReintegro({
+    required String token,
+    int? id,
+    required Map<String, dynamic> data,
+    Map<String, List<Uint8List>> photos = const {},
+  }) async {
+    final uri = _uri('/reintegros/solicitudes${id == null ? '' : '/$id'}');
+    final response = photos.values.every((p) => p.isEmpty)
+        ? await (id == null
+              ? _safePost(
+                  uri,
+                  headers: _headers(token: token),
+                  body: jsonEncode(data),
+                  actionLabel: 'guardar reintegro',
+                )
+              : _safePut(
+                  uri,
+                  headers: _headers(token: token),
+                  body: jsonEncode(data),
+                  actionLabel: 'guardar reintegro',
+                ))
+        : await _sendMultipartWithAuthRecovery(
+            token: token,
+            actionLabel: 'guardar reintegro',
+            requestBuilder: (effectiveToken) async {
+              final request = http.MultipartRequest(
+                id == null ? 'POST' : 'PUT',
+                uri,
+              );
+              request.headers['Authorization'] = 'Bearer $effectiveToken';
+              for (final entry in data.entries) {
+                if (entry.value != null) {
+                  request.fields[entry.key] = entry.value is String
+                      ? entry.value as String
+                      : jsonEncode(entry.value);
+                }
+              }
+              for (final entry in photos.entries) {
+                for (var i = 0; i < entry.value.length; i++) {
+                  request.files.add(
+                    http.MultipartFile.fromBytes(
+                      entry.key,
+                      entry.value[i],
+                      filename: '${entry.key}_$i.jpg',
+                      contentType: http.MediaType('image', 'jpeg'),
+                    ),
+                  );
+                }
+              }
+              return request;
+            },
+          );
+    return _cargaResponse(response);
+  }
+
+  Future<Map<String, dynamic>> reintegroAction({
+    required String token,
+    required String path,
+    required Map<String, dynamic> data,
+  }) async => _cargaResponse(
+    await _safePost(
+      _uri('/reintegros$path'),
+      headers: _headers(token: token),
+      body: jsonEncode(data),
+      actionLabel: 'actualizar reintegro',
+    ),
+  );
+
+  Future<Uint8List> getReintegroPhoto({
+    required String token,
+    required int id,
+    bool odometer = false,
+  }) async {
+    final response = await _safeGet(
+      _uri('/reintegros/${odometer ? 'odometro' : 'fotos'}/$id'),
+      headers: _headers(token: token),
+      actionLabel: 'consultar comprobante',
+    );
+    if (response.statusCode != 200) {
+      _cargaResponse(response);
+    }
+    return response.bodyBytes;
+  }
+
   Future<Map<String, dynamic>> getSeguridad({
     required String token,
     String path = '/config',
@@ -3372,17 +3744,19 @@ class MobileApiClient {
     Uri uri, {
     required Map<String, String> headers,
     required String actionLabel,
+    Object? body,
     bool allowAuthRecovery = true,
   }) async {
     try {
       final response = await _httpClient
-          .delete(uri, headers: headers)
+          .delete(uri, headers: headers, body: body)
           .timeout(const Duration(seconds: 15));
       return await _recoverUnauthorized(
         response: response,
         headers: headers,
         allowAuthRecovery: allowAuthRecovery,
-        sender: (nextHeaders) => _httpClient.delete(uri, headers: nextHeaders),
+        sender: (nextHeaders) =>
+            _httpClient.delete(uri, headers: nextHeaders, body: body),
       );
     } on TimeoutException {
       throw ApiException(
@@ -3939,6 +4313,7 @@ class AsistenciaItem {
     this.horaSalida,
     this.metodoEntrada,
     this.metodoSalida,
+    this.egresoAutomatico = false,
     this.estado,
     this.observaciones,
     this.gpsOkEntrada,
@@ -3955,6 +4330,7 @@ class AsistenciaItem {
   final String? horaSalida;
   final String? metodoEntrada;
   final String? metodoSalida;
+  final bool egresoAutomatico;
   final String? estado;
   final String? observaciones;
   final bool? gpsOkEntrada;
@@ -3972,6 +4348,7 @@ class AsistenciaItem {
       horaSalida: _jsonString(json['hora_salida']),
       metodoEntrada: _jsonString(json['metodo_entrada']),
       metodoSalida: _jsonString(json['metodo_salida']),
+      egresoAutomatico: _jsonBool(json['egreso_automatico']) ?? false,
       estado: _jsonString(json['estado']),
       observaciones: _jsonString(json['observaciones']),
       gpsOkEntrada: _jsonBool(json['gps_ok_entrada']),
@@ -4022,6 +4399,7 @@ class MarcaItem {
   MarcaItem({
     required this.id,
     this.corregidaManualmente = false,
+    this.esAutomatica = false,
     this.esResumen = false,
     this.asistenciaId,
     this.fecha,
@@ -4041,6 +4419,9 @@ class MarcaItem {
 
   final int id;
   final bool corregidaManualmente;
+
+  /// Egreso cargado por el sistema porque el empleado olvidó fichar.
+  final bool esAutomatica;
   final bool esResumen;
   final int? asistenciaId;
   final String? fecha;
@@ -4061,6 +4442,9 @@ class MarcaItem {
     return MarcaItem(
       id: _jsonInt(json['id']) ?? 0,
       corregidaManualmente: _jsonBool(json['corregida_manualmente']) ?? false,
+      esAutomatica:
+          _jsonBool(json['es_automatica']) ??
+          (_jsonString(json['metodo']) == 'automatico'),
       esResumen: _jsonBool(json['es_resumen']) ?? false,
       asistenciaId: _jsonInt(json['asistencia_id']),
       fecha: _jsonString(json['fecha']),
@@ -5508,6 +5892,7 @@ class DashboardResponse {
     required this.vacacionesActivas,
     required this.francosProximos,
     this.horarioActual,
+    this.fichaje,
   });
 
   final DashboardPeriodo periodo;
@@ -5516,6 +5901,7 @@ class DashboardResponse {
   final List<VacacionItem> vacacionesActivas;
   final List<FrancoItem> francosProximos;
   final AsignacionHorarioConDias? horarioActual;
+  final FichajeEfectividad? fichaje;
 
   factory DashboardResponse.fromJson(Map<String, dynamic> json) {
     Map<String, dynamic> sub(String key) {
@@ -5559,6 +5945,36 @@ class DashboardResponse {
       vacacionesActivas: parseList('vacaciones_activas', VacacionItem.fromJson),
       francosProximos: parseList('francos_proximos', FrancoItem.fromJson),
       horarioActual: horarioActual,
+      fichaje: json['fichaje'] is Map
+          ? FichajeEfectividad.fromJson(
+              Map<String, dynamic>.from(json['fichaje'] as Map),
+            )
+          : null,
+    );
+  }
+}
+
+/// Efectividad de fichaje del período: jornadas en las que el empleado fichó
+/// su egreso. Las que cerró el sistema por olvido cuentan como error.
+class FichajeEfectividad {
+  FichajeEfectividad({
+    required this.jornadas,
+    required this.olvidos,
+    this.efectividadPct,
+  });
+
+  final int jornadas;
+  final int olvidos;
+  final double? efectividadPct;
+
+  factory FichajeEfectividad.fromJson(Map<String, dynamic> json) {
+    final pct = json['efectividad_pct'];
+    return FichajeEfectividad(
+      jornadas: _jsonInt(json['jornadas']) ?? 0,
+      olvidos: _jsonInt(json['olvidos']) ?? 0,
+      efectividadPct: pct is num
+          ? pct.toDouble()
+          : double.tryParse('${pct ?? ''}'),
     );
   }
 }

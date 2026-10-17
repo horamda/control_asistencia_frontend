@@ -1,3 +1,4 @@
+import 'package:ficharqr/src/presentation/theme/app_palette.dart';
 import 'package:flutter/material.dart';
 
 void showCenteredSnackBar(
@@ -21,8 +22,9 @@ void showCenteredSnackBar(
   messenger.showSnackBar(
     SnackBar(
       content: Text(text, textAlign: TextAlign.center),
-      backgroundColor:
-          backgroundColor ?? (isError ? Colors.red.shade700 : Colors.green),
+      backgroundColor: AppColors.of(context).surface(
+        backgroundColor ?? (isError ? Colors.red.shade700 : Colors.green),
+      ),
       behavior: SnackBarBehavior.floating,
       margin: EdgeInsets.fromLTRB(20, 0, 20, bottomMargin),
       shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(14)),

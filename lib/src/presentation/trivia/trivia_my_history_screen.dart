@@ -1,11 +1,12 @@
+import '../theme/app_palette.dart';
 import 'dart:async';
 
 import 'package:flutter/material.dart';
 
 import '../../core/network/mobile_api_client.dart';
 
-const _kPrimary = Color(0xFF0E3A5B);
-const _kAccent = Color(0xFF00B09C);
+const _kPrimary = AppPalette.navy;
+const _kAccent = AppPalette.blueLight;
 const _kGold = Color(0xFFF5A623);
 
 class TriviaMyHistoryScreen extends StatefulWidget {
@@ -35,17 +36,31 @@ class _TriviaMyHistoryScreenState extends State<TriviaMyHistoryScreen> {
 
   Future<void> _load() async {
     if (!mounted) return;
-    setState(() { _loading = true; _error = null; });
+    setState(() {
+      _loading = true;
+      _error = null;
+    });
     try {
-      final r = await widget.apiClient.getMiHistorialTrivia(token: widget.token);
+      final r = await widget.apiClient.getMiHistorialTrivia(
+        token: widget.token,
+      );
       if (!mounted) return;
-      setState(() { _items = r; _loading = false; });
+      setState(() {
+        _items = r;
+        _loading = false;
+      });
     } on ApiException catch (e) {
       if (!mounted) return;
-      setState(() { _error = e.message; _loading = false; });
+      setState(() {
+        _error = e.message;
+        _loading = false;
+      });
     } catch (_) {
       if (!mounted) return;
-      setState(() { _error = 'No se pudo obtener tu historial.'; _loading = false; });
+      setState(() {
+        _error = 'No se pudo obtener tu historial.';
+        _loading = false;
+      });
     }
   }
 
@@ -66,14 +81,12 @@ class _TriviaMyHistoryScreenState extends State<TriviaMyHistoryScreen> {
   @override
   Widget build(BuildContext context) {
     return Scaffold(
-      backgroundColor: const Color(0xFFF2F5F8),
+      backgroundColor: AppColors.of(context).surface(AppPalette.background),
       appBar: AppBar(
-        title: const Text('Mi Historial'),
-        backgroundColor: _kPrimary,
-        foregroundColor: Colors.white,
+        title: const Text('Mi Historial', textAlign: TextAlign.center),
         actions: [
           IconButton(
-            icon: const Icon(Icons.refresh),
+            icon: const Icon(Icons.refresh_rounded),
             onPressed: _loading ? null : _load,
           ),
         ],
@@ -81,35 +94,38 @@ class _TriviaMyHistoryScreenState extends State<TriviaMyHistoryScreen> {
       body: _loading
           ? const Center(child: CircularProgressIndicator())
           : _error != null
-              ? _ErrorView(message: _error!, onRetry: _load)
-              : RefreshIndicator(
-                  onRefresh: _load,
-                  child: ListView(
-                    padding: const EdgeInsets.all(16),
-                    children: [
-                      if (_items.isNotEmpty) ...[
-                        _ResumenCard(
-                          puntosAcumulados: _puntosAcumulados,
-                          triviasJugadas: _triviasJugadas,
-                          triviasGanadas: _triviasGanadas,
-                          mejorPosicion: _mejorPosicion,
-                        ),
-                        const SizedBox(height: 16),
-                        Text(
-                          'Participaciones',
-                          style: TextStyle(
-                            fontSize: 13,
-                            fontWeight: FontWeight.w600,
-                            color: Colors.grey.shade600,
-                          ),
-                        ),
-                        const SizedBox(height: 8),
-                        ..._items.map((item) => _MyHistorialTile(item: item)),
-                      ] else
-                        _EmptyState(),
-                    ],
-                  ),
-                ),
+          ? _ErrorView(message: _error!, onRetry: _load)
+          : RefreshIndicator(
+              onRefresh: _load,
+              child: ListView(
+                padding: const EdgeInsets.all(16),
+                children: [
+                  if (_items.isNotEmpty) ...[
+                    _ResumenCard(
+                      puntosAcumulados: _puntosAcumulados,
+                      triviasJugadas: _triviasJugadas,
+                      triviasGanadas: _triviasGanadas,
+                      mejorPosicion: _mejorPosicion,
+                    ),
+                    const SizedBox(height: 16),
+                    Text(
+                      'Participaciones',
+                      style: TextStyle(
+                        fontSize: 13,
+                        fontWeight: FontWeight.w600,
+                        color: AppColors.of(
+                          context,
+                        ).foreground(Colors.grey.shade600),
+                      ),
+                      textAlign: TextAlign.center,
+                    ),
+                    const SizedBox(height: 8),
+                    ..._items.map((item) => _MyHistorialTile(item: item)),
+                  ] else
+                    _EmptyState(),
+                ],
+              ),
+            ),
     );
   }
 }
@@ -132,14 +148,16 @@ class _ResumenCard extends StatelessWidget {
     return Container(
       padding: const EdgeInsets.all(20),
       decoration: BoxDecoration(
-        gradient: const LinearGradient(colors: [_kPrimary, Color(0xFF1A5276)]),
+        gradient: LinearGradient(colors: AppColors.of(context).brandGradient),
         borderRadius: BorderRadius.circular(18),
       ),
       child: Column(
+        crossAxisAlignment: CrossAxisAlignment.center,
         children: [
           const Text(
             'Mi resumen',
             style: TextStyle(color: Colors.white70, fontSize: 13),
+            textAlign: TextAlign.center,
           ),
           const SizedBox(height: 6),
           Text(
@@ -149,15 +167,23 @@ class _ResumenCard extends StatelessWidget {
               fontSize: 36,
               fontWeight: FontWeight.w900,
             ),
+            textAlign: TextAlign.center,
           ),
-          const Text('puntos acumulados',
-              style: TextStyle(color: Colors.white60, fontSize: 13)),
+          const Text(
+            'puntos acumulados',
+            style: TextStyle(color: Colors.white60, fontSize: 13),
+            textAlign: TextAlign.center,
+          ),
           const SizedBox(height: 16),
           Row(
             mainAxisAlignment: MainAxisAlignment.spaceAround,
             children: [
               _ResumenStat(label: 'Jugadas', value: '$triviasJugadas'),
-              _ResumenStat(label: 'Ganadas', value: '$triviasGanadas', highlight: triviasGanadas > 0),
+              _ResumenStat(
+                label: 'Ganadas',
+                value: '$triviasGanadas',
+                highlight: triviasGanadas > 0,
+              ),
               _ResumenStat(
                 label: 'Mejor pos.',
                 value: mejorPosicion != null ? '#$mejorPosicion' : '-',
@@ -171,7 +197,11 @@ class _ResumenCard extends StatelessWidget {
 }
 
 class _ResumenStat extends StatelessWidget {
-  const _ResumenStat({required this.label, required this.value, this.highlight = false});
+  const _ResumenStat({
+    required this.label,
+    required this.value,
+    this.highlight = false,
+  });
   final String label;
   final String value;
   final bool highlight;
@@ -179,16 +209,24 @@ class _ResumenStat extends StatelessWidget {
   @override
   Widget build(BuildContext context) {
     return Column(
+      crossAxisAlignment: CrossAxisAlignment.center,
       children: [
         Text(
           value,
           style: TextStyle(
-            color: highlight ? _kGold : Colors.white,
+            color: AppColors.of(
+              context,
+            ).foreground(highlight ? _kGold : Colors.white),
             fontSize: 22,
             fontWeight: FontWeight.w800,
           ),
+          textAlign: TextAlign.center,
         ),
-        Text(label, style: const TextStyle(color: Colors.white54, fontSize: 13)),
+        Text(
+          label,
+          style: const TextStyle(color: Colors.white54, fontSize: 13),
+          textAlign: TextAlign.center,
+        ),
       ],
     );
   }
@@ -204,59 +242,77 @@ class _MyHistorialTile extends StatelessWidget {
     return Container(
       margin: const EdgeInsets.only(bottom: 10),
       decoration: BoxDecoration(
-        color: Colors.white,
+        color: AppColors.of(context).surface(Colors.white),
         borderRadius: BorderRadius.circular(14),
         border: Border.all(
-          color: esGanador ? _kGold.withValues(alpha: 0.5) : Colors.grey.shade200,
+          color: AppColors.of(context).border(
+            esGanador ? _kGold.withValues(alpha: 0.5) : Colors.grey.shade200,
+          ),
           width: esGanador ? 1.5 : 1,
         ),
       ),
       child: Padding(
         padding: const EdgeInsets.all(16),
         child: Column(
-          crossAxisAlignment: CrossAxisAlignment.start,
+          crossAxisAlignment: CrossAxisAlignment.center,
           children: [
             if (item.fueraRanking)
               const Padding(
                 padding: EdgeInsets.only(bottom: 8),
-                child: Text('Participación sin ranking'),
+                child: Text(
+                  'Participación sin ranking',
+                  textAlign: TextAlign.center,
+                ),
               ),
             Row(
+              mainAxisAlignment: MainAxisAlignment.center,
               children: [
                 if (esGanador) ...[
-                  const Text('🏆', style: TextStyle(fontSize: 18)),
+                  const Text(
+                    '🏆',
+                    style: TextStyle(fontSize: 18),
+                    textAlign: TextAlign.center,
+                  ),
                   const SizedBox(width: 6),
                 ],
                 Expanded(
                   child: Text(
                     item.titulo ?? 'Trivia',
-                    style: const TextStyle(
+                    style: TextStyle(
                       fontWeight: FontWeight.w700,
                       fontSize: 15,
-                      color: _kPrimary,
+                      color: AppColors.of(context).foreground(_kPrimary),
                     ),
+                    textAlign: TextAlign.center,
                   ),
                 ),
                 if (item.posicion != null)
                   Container(
-                    padding: const EdgeInsets.symmetric(horizontal: 10, vertical: 4),
+                    padding: const EdgeInsets.symmetric(
+                      horizontal: 10,
+                      vertical: 4,
+                    ),
                     decoration: BoxDecoration(
-                      color: _kPrimary.withValues(alpha: 0.08),
+                      color: AppColors.of(
+                        context,
+                      ).surface(_kPrimary.withValues(alpha: 0.08)),
                       borderRadius: BorderRadius.circular(20),
                     ),
                     child: Text(
                       '#${item.posicion}',
-                      style: const TextStyle(
+                      style: TextStyle(
                         fontWeight: FontWeight.w700,
-                        color: _kPrimary,
+                        color: AppColors.of(context).foreground(_kPrimary),
                         fontSize: 13,
                       ),
+                      textAlign: TextAlign.center,
                     ),
                   ),
               ],
             ),
             const SizedBox(height: 10),
             Row(
+              mainAxisAlignment: MainAxisAlignment.center,
               children: [
                 _MiniStat(
                   label: 'Puntos',
@@ -267,7 +323,7 @@ class _MyHistorialTile extends StatelessWidget {
                 _MiniStat(
                   label: 'Correctas',
                   value: '${item.correctas ?? 0}',
-                  color: const Color(0xFF2A789E),
+                  color: AppPalette.blueLight,
                 ),
                 const SizedBox(width: 10),
                 _MiniStat(
@@ -287,7 +343,11 @@ class _MyHistorialTile extends StatelessWidget {
               const SizedBox(height: 8),
               Text(
                 'Participaste el ${_fmtFechaCorta(item.fechaFinalizacion)}',
-                style: TextStyle(fontSize: 13, color: Colors.grey.shade500),
+                style: TextStyle(
+                  fontSize: 13,
+                  color: AppColors.of(context).foreground(Colors.grey.shade500),
+                ),
+                textAlign: TextAlign.center,
               ),
             ],
           ],
@@ -298,7 +358,11 @@ class _MyHistorialTile extends StatelessWidget {
 }
 
 class _MiniStat extends StatelessWidget {
-  const _MiniStat({required this.label, required this.value, required this.color});
+  const _MiniStat({
+    required this.label,
+    required this.value,
+    required this.color,
+  });
   final String label;
   final String value;
   final Color color;
@@ -309,16 +373,31 @@ class _MiniStat extends StatelessWidget {
       child: Container(
         padding: const EdgeInsets.symmetric(vertical: 8),
         decoration: BoxDecoration(
-          color: color.withValues(alpha: 0.08),
+          color: AppColors.of(context).surface(color.withValues(alpha: 0.08)),
           borderRadius: BorderRadius.circular(8),
         ),
         child: Column(
+          crossAxisAlignment: CrossAxisAlignment.center,
           children: [
             Text(
               value,
-              style: TextStyle(fontWeight: FontWeight.w800, fontSize: 14, color: color),
+              style: TextStyle(
+                fontWeight: FontWeight.w800,
+                fontSize: 14,
+                color: AppColors.of(context).foreground(color),
+              ),
+              textAlign: TextAlign.center,
             ),
-            Text(label, style: TextStyle(fontSize: 13, color: color.withValues(alpha: 0.7))),
+            Text(
+              label,
+              style: TextStyle(
+                fontSize: 13,
+                color: AppColors.of(
+                  context,
+                ).foreground(color.withValues(alpha: 0.7)),
+              ),
+              textAlign: TextAlign.center,
+            ),
           ],
         ),
       ),
@@ -333,13 +412,20 @@ class _EmptyState extends StatelessWidget {
       child: Padding(
         padding: const EdgeInsets.all(48),
         child: Column(
+          crossAxisAlignment: CrossAxisAlignment.center,
           children: [
-            Icon(Icons.person_outlined, size: 56, color: Colors.grey.shade300),
+            Icon(
+              Icons.person_rounded,
+              size: 56,
+              color: AppColors.of(context).foreground(Colors.grey.shade300),
+            ),
             const SizedBox(height: 12),
             Text(
               'Todavía no participaste en ninguna trivia.',
               textAlign: TextAlign.center,
-              style: TextStyle(color: Colors.grey.shade500),
+              style: TextStyle(
+                color: AppColors.of(context).foreground(Colors.grey.shade500),
+              ),
             ),
           ],
         ),
@@ -361,15 +447,25 @@ class _ErrorView extends StatelessWidget {
         child: Column(
           mainAxisSize: MainAxisSize.min,
           children: [
-            Icon(Icons.error_outline, size: 48, color: Colors.grey.shade400),
+            Icon(
+              Icons.error_rounded,
+              size: 48,
+              color: AppColors.of(context).foreground(Colors.grey.shade400),
+            ),
             const SizedBox(height: 12),
-            Text(message,
-                textAlign: TextAlign.center,
-                style: TextStyle(color: Colors.grey.shade600)),
+            Text(
+              message,
+              textAlign: TextAlign.center,
+              style: TextStyle(
+                color: AppColors.of(context).foreground(Colors.grey.shade600),
+              ),
+            ),
             const SizedBox(height: 20),
             FilledButton.icon(
-              style: FilledButton.styleFrom(backgroundColor: _kPrimary),
-              icon: const Icon(Icons.refresh),
+              style: FilledButton.styleFrom(
+                backgroundColor: AppColors.of(context).surface(_kPrimary),
+              ),
+              icon: const Icon(Icons.refresh_rounded),
               label: const Text('Reintentar'),
               onPressed: onRetry,
             ),

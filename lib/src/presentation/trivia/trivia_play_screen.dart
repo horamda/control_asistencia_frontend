@@ -1,3 +1,5 @@
+import 'package:ficharqr/src/presentation/widgets/app_card.dart';
+import '../theme/app_palette.dart';
 import 'dart:async';
 
 import 'package:flutter/material.dart';
@@ -5,8 +7,8 @@ import 'package:flutter/material.dart';
 import '../../core/network/mobile_api_client.dart';
 import 'trivia_result_screen.dart';
 
-const _kPrimary = Color(0xFF0E3A5B);
-const _kAccent = Color(0xFF00B09C);
+const _kPrimary = AppPalette.navy;
+const _kAccent = AppPalette.blueLight;
 
 class TriviaPlayScreen extends StatefulWidget {
   const TriviaPlayScreen({
@@ -58,7 +60,10 @@ class _TriviaPlayScreenState extends State<TriviaPlayScreen> {
     if (_seleccionActual == null) {
       ScaffoldMessenger.of(context).showSnackBar(
         const SnackBar(
-          content: Text('Seleccioná una opción antes de continuar.'),
+          content: Text(
+            'Seleccioná una opción antes de continuar.',
+            textAlign: TextAlign.center,
+          ),
           behavior: SnackBarBehavior.floating,
         ),
       );
@@ -140,7 +145,10 @@ class _TriviaPlayScreenState extends State<TriviaPlayScreen> {
 
   void _showError(String msg) {
     ScaffoldMessenger.of(context).showSnackBar(
-      SnackBar(content: Text(msg), behavior: SnackBarBehavior.floating),
+      SnackBar(
+        content: Text(msg, textAlign: TextAlign.center),
+        behavior: SnackBarBehavior.floating,
+      ),
     );
   }
 
@@ -149,17 +157,22 @@ class _TriviaPlayScreenState extends State<TriviaPlayScreen> {
     final salir = await showDialog<bool>(
       context: context,
       builder: (ctx) => AlertDialog(
-        title: const Text('Salir de la trivia'),
-        content: const Text('Si salís ahora, tu participación quedará en curso. ¿Querés salir igual?'),
+        title: const Text('Salir de la trivia', textAlign: TextAlign.center),
+        content: const Text(
+          'Si salís ahora, tu participación quedará en curso. ¿Querés salir igual?',
+          textAlign: TextAlign.center,
+        ),
         actions: [
           TextButton(
             onPressed: () => Navigator.of(ctx).pop(false),
-            child: const Text('Quedarme'),
+            child: const Text('Quedarme', textAlign: TextAlign.center),
           ),
           FilledButton(
-            style: FilledButton.styleFrom(backgroundColor: Colors.red),
+            style: FilledButton.styleFrom(
+              backgroundColor: AppColors.of(context).surface(Colors.red),
+            ),
             onPressed: () => Navigator.of(ctx).pop(true),
-            child: const Text('Salir'),
+            child: const Text('Salir', textAlign: TextAlign.center),
           ),
         ],
       ),
@@ -179,38 +192,48 @@ class _TriviaPlayScreenState extends State<TriviaPlayScreen> {
         if (!didPop) await _onWillPop();
       },
       child: Scaffold(
-        backgroundColor: const Color(0xFFF2F5F8),
+        backgroundColor: AppColors.of(context).surface(AppPalette.background),
         appBar: AppBar(
-          title: Text(widget.titulo),
-          backgroundColor: _kPrimary,
-          foregroundColor: Colors.white,
+          title: Text(widget.titulo, textAlign: TextAlign.center),
           leading: _enviando
               ? const SizedBox.shrink()
-              : BackButton(onPressed: () async {
-                  final salir = await _onWillPop();
-                  if (salir && context.mounted) Navigator.of(context).pop();
-                }),
+              : BackButton(
+                  onPressed: () async {
+                    final salir = await _onWillPop();
+                    if (salir && context.mounted) Navigator.of(context).pop();
+                  },
+                ),
         ),
         body: Stack(
           children: [
             Column(
+              crossAxisAlignment: CrossAxisAlignment.center,
               children: [
                 // ── Header de progreso ───────────────────────────────────
                 Container(
-                  color: _kPrimary,
+                  color: AppColors.of(context).surface(_kPrimary),
                   padding: const EdgeInsets.fromLTRB(16, 0, 16, 16),
                   child: Column(
+                    crossAxisAlignment: CrossAxisAlignment.center,
                     children: [
                       Row(
                         mainAxisAlignment: MainAxisAlignment.spaceBetween,
                         children: [
                           Text(
                             'Pregunta ${_currentIndex + 1} de $total',
-                            style: const TextStyle(color: Colors.white70, fontSize: 13),
+                            style: const TextStyle(
+                              color: Colors.white70,
+                              fontSize: 13,
+                            ),
+                            textAlign: TextAlign.center,
                           ),
                           Text(
                             '${(progreso * 100).toStringAsFixed(0)}%',
-                            style: const TextStyle(color: Colors.white, fontWeight: FontWeight.w700),
+                            style: const TextStyle(
+                              color: Colors.white,
+                              fontWeight: FontWeight.w700,
+                            ),
+                            textAlign: TextAlign.center,
                           ),
                         ],
                       ),
@@ -220,8 +243,12 @@ class _TriviaPlayScreenState extends State<TriviaPlayScreen> {
                         child: LinearProgressIndicator(
                           value: progreso,
                           minHeight: 6,
-                          backgroundColor: Colors.white24,
-                          valueColor: const AlwaysStoppedAnimation<Color>(_kAccent),
+                          backgroundColor: AppColors.of(
+                            context,
+                          ).surface(Colors.white24),
+                          valueColor: const AlwaysStoppedAnimation<Color>(
+                            _kAccent,
+                          ),
                         ),
                       ),
                     ],
@@ -232,19 +259,24 @@ class _TriviaPlayScreenState extends State<TriviaPlayScreen> {
                   child: ListView(
                     padding: const EdgeInsets.all(16),
                     children: [
-                      Card(
+                      AppCard(
                         elevation: 2,
-                        shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(16)),
+                        shape: RoundedRectangleBorder(
+                          borderRadius: BorderRadius.circular(16),
+                        ),
                         child: Padding(
                           padding: const EdgeInsets.all(20),
                           child: Text(
                             pregunta.texto,
-                            style: const TextStyle(
+                            style: TextStyle(
                               fontSize: 18,
                               fontWeight: FontWeight.w600,
-                              color: _kPrimary,
+                              color: AppColors.of(
+                                context,
+                              ).foreground(_kPrimary),
                               height: 1.4,
                             ),
+                            textAlign: TextAlign.center,
                           ),
                         ),
                       ),
@@ -292,14 +324,22 @@ class _TriviaPlayScreenState extends State<TriviaPlayScreen> {
                     width: double.infinity,
                     child: FilledButton(
                       style: FilledButton.styleFrom(
-                        backgroundColor: _esUltima ? const Color(0xFF2A789E) : _kAccent,
+                        backgroundColor: AppColors.of(
+                          context,
+                        ).surface(_esUltima ? AppPalette.blueLight : _kAccent),
                         padding: const EdgeInsets.symmetric(vertical: 16),
-                        shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(12)),
+                        shape: RoundedRectangleBorder(
+                          borderRadius: BorderRadius.circular(12),
+                        ),
                       ),
                       onPressed: _enviando ? null : _siguiente,
                       child: Text(
                         _esUltima ? 'Finalizar trivia' : 'Siguiente pregunta',
-                        style: const TextStyle(fontSize: 16, fontWeight: FontWeight.w700),
+                        style: const TextStyle(
+                          fontSize: 16,
+                          fontWeight: FontWeight.w700,
+                        ),
+                        textAlign: TextAlign.center,
                       ),
                     ),
                   ),
@@ -307,8 +347,7 @@ class _TriviaPlayScreenState extends State<TriviaPlayScreen> {
               ],
             ),
             // ── Overlay de envío ─────────────────────────────────────────
-            if (_enviando)
-              const _EnviandoOverlay(),
+            if (_enviando) const _EnviandoOverlay(),
           ],
         ),
       ),
@@ -334,14 +373,24 @@ class _OpcionButton extends StatelessWidget {
     return AnimatedContainer(
       duration: const Duration(milliseconds: 200),
       decoration: BoxDecoration(
-        color: seleccionada ? _kPrimary : Colors.white,
+        color: AppColors.of(
+          context,
+        ).surface(seleccionada ? _kPrimary : Colors.white),
         borderRadius: BorderRadius.circular(14),
         border: Border.all(
-          color: seleccionada ? _kPrimary : Colors.grey.shade300,
+          color: AppColors.of(
+            context,
+          ).border(seleccionada ? _kPrimary : Colors.grey.shade300),
           width: seleccionada ? 2 : 1,
         ),
         boxShadow: seleccionada
-            ? [BoxShadow(color: _kPrimary.withValues(alpha: 0.2), blurRadius: 8, offset: const Offset(0, 2))]
+            ? [
+                BoxShadow(
+                  color: _kPrimary.withValues(alpha: 0.2),
+                  blurRadius: 8,
+                  offset: const Offset(0, 2),
+                ),
+              ]
             : [],
       ),
       child: InkWell(
@@ -356,7 +405,11 @@ class _OpcionButton extends StatelessWidget {
                 height: 32,
                 decoration: BoxDecoration(
                   shape: BoxShape.circle,
-                  color: seleccionada ? Colors.white : _kPrimary.withValues(alpha: 0.08),
+                  color: AppColors.of(context).surface(
+                    seleccionada
+                        ? Colors.white
+                        : _kPrimary.withValues(alpha: 0.08),
+                  ),
                 ),
                 child: Center(
                   child: Text(
@@ -364,7 +417,9 @@ class _OpcionButton extends StatelessWidget {
                     style: TextStyle(
                       fontWeight: FontWeight.w800,
                       fontSize: 15,
-                      color: seleccionada ? _kPrimary : _kPrimary,
+                      color: AppColors.of(
+                        context,
+                      ).foreground(seleccionada ? _kPrimary : _kPrimary),
                     ),
                   ),
                 ),
@@ -375,8 +430,12 @@ class _OpcionButton extends StatelessWidget {
                   texto,
                   style: TextStyle(
                     fontSize: 15,
-                    fontWeight: seleccionada ? FontWeight.w600 : FontWeight.normal,
-                    color: seleccionada ? Colors.white : Colors.black87,
+                    fontWeight: seleccionada
+                        ? FontWeight.w600
+                        : FontWeight.normal,
+                    color: AppColors.of(
+                      context,
+                    ).foreground(seleccionada ? Colors.white : Colors.black87),
                     height: 1.3,
                   ),
                 ),
@@ -395,26 +454,40 @@ class _EnviandoOverlay extends StatelessWidget {
   @override
   Widget build(BuildContext context) {
     return DecoratedBox(
-      decoration: const BoxDecoration(color: Colors.black45),
+      decoration: BoxDecoration(
+        color: AppColors.of(context).surface(Colors.black45),
+      ),
       child: Center(
-        child: Card(
+        child: AppCard(
           margin: const EdgeInsets.symmetric(horizontal: 48),
-          shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(20)),
-          child: const Padding(
-            padding: EdgeInsets.symmetric(horizontal: 32, vertical: 36),
+          shape: RoundedRectangleBorder(
+            borderRadius: BorderRadius.circular(20),
+          ),
+          child: Padding(
+            padding: const EdgeInsets.symmetric(horizontal: 32, vertical: 36),
             child: Column(
               mainAxisSize: MainAxisSize.min,
+              crossAxisAlignment: CrossAxisAlignment.center,
               children: [
-                CircularProgressIndicator(color: _kAccent),
-                SizedBox(height: 20),
-                Text(
-                  'Enviando respuestas...',
-                  style: TextStyle(fontSize: 16, fontWeight: FontWeight.w600),
+                CircularProgressIndicator(
+                  color: AppColors.of(context).foreground(_kAccent),
                 ),
-                SizedBox(height: 6),
+                const SizedBox(height: 20),
+                const Text(
+                  'Enviando respuestas...',
+                  style: TextStyle(
+                    fontSize: 16,
+                    fontWeight: FontWeight.w600,
+                  ),
+                  textAlign: TextAlign.center,
+                ),
+                const SizedBox(height: 6),
                 Text(
                   'Por favor espera',
-                  style: TextStyle(color: Colors.grey),
+                  style: TextStyle(
+                    color: AppColors.of(context).foreground(Colors.grey),
+                  ),
+                  textAlign: TextAlign.center,
                 ),
               ],
             ),

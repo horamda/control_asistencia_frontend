@@ -1,3 +1,4 @@
+import 'package:ficharqr/src/presentation/theme/app_palette.dart';
 import 'package:flutter/material.dart';
 
 import '../../core/offline/pending_queue_controller.dart';
@@ -24,7 +25,7 @@ class AttendanceHomeActionPresenter {
         ? AttendanceHomeActionSpec(
             intent: AttendanceHomeActionIntent.openPendingQueue,
             label: 'Abrir bandeja',
-            icon: Icons.inbox_outlined,
+            icon: Icons.inbox_rounded,
             enabled: syncEnabled,
           )
         : AttendanceHomeActionSpec(
@@ -32,7 +33,7 @@ class AttendanceHomeActionPresenter {
             label: pendingQueue.syncing
                 ? 'Sincronizando...'
                 : 'Sincronizar ahora',
-            icon: Icons.sync_alt_outlined,
+            icon: Icons.sync_alt_rounded,
             enabled: syncEnabled,
             loading: pendingQueue.syncing,
           );
@@ -41,13 +42,13 @@ class AttendanceHomeActionPresenter {
         ? AttendanceHomeActionSpec(
             intent: AttendanceHomeActionIntent.syncPending,
             label: 'Intentar sincronizar',
-            icon: Icons.sync_alt_outlined,
+            icon: Icons.sync_alt_rounded,
             enabled: syncEnabled,
           )
         : AttendanceHomeActionSpec(
             intent: AttendanceHomeActionIntent.openPendingQueue,
             label: 'Ver bandeja offline',
-            icon: Icons.inbox_outlined,
+            icon: Icons.inbox_rounded,
             enabled: syncEnabled,
           );
 
@@ -55,7 +56,7 @@ class AttendanceHomeActionPresenter {
         ? AttendanceHomeActionSpec(
             intent: AttendanceHomeActionIntent.openPendingQueue,
             label: 'Abrir bandeja',
-            icon: Icons.inbox_outlined,
+            icon: Icons.inbox_rounded,
             enabled: syncEnabled,
           )
         : pendingQueue.total > 0
@@ -64,7 +65,7 @@ class AttendanceHomeActionPresenter {
             label: pendingQueue.syncing
                 ? 'Sincronizando...'
                 : 'Sincronizar pendientes',
-            icon: Icons.sync_alt_outlined,
+            icon: Icons.sync_alt_rounded,
             enabled: syncEnabled,
             loading: pendingQueue.syncing,
           )
@@ -72,7 +73,7 @@ class AttendanceHomeActionPresenter {
         ? AttendanceHomeActionSpec(
             intent: AttendanceHomeActionIntent.captureGps,
             label: locatingGps ? 'Obteniendo GPS...' : 'Validar GPS',
-            icon: Icons.my_location_outlined,
+            icon: Icons.my_location_rounded,
             enabled: gpsEnabled,
             loading: locatingGps,
           )
@@ -87,14 +88,14 @@ class AttendanceHomeActionPresenter {
         ? AttendanceHomeActionSpec(
             intent: AttendanceHomeActionIntent.syncPending,
             label: 'Intentar sincronizar',
-            icon: Icons.sync_alt_outlined,
+            icon: Icons.sync_alt_rounded,
             enabled: syncEnabled,
           )
         : viewData.hasPendingSync
         ? AttendanceHomeActionSpec(
             intent: AttendanceHomeActionIntent.openPendingQueue,
             label: 'Ver bandeja offline',
-            icon: Icons.inbox_outlined,
+            icon: Icons.inbox_rounded,
             enabled: syncEnabled,
           )
         : AttendanceHomeActionSpec(
@@ -102,7 +103,7 @@ class AttendanceHomeActionPresenter {
             label: viewData.hasFreshGps
                 ? 'Ver marcas del dia'
                 : 'Ver marcas de hoy',
-            icon: Icons.timeline_outlined,
+            icon: Icons.timeline_rounded,
             enabled: historyEnabled,
           );
 
@@ -117,64 +118,76 @@ class AttendanceHomeActionPresenter {
         icon: Icons.qr_code_scanner_rounded,
         enabled: clockEnabled,
         loading: submitting,
-        color: const Color(0xFF0E5A8A),
+        color: AppPalette.blue,
       ),
       clockSecondary: [
         AttendanceHomeActionSpec(
           intent: AttendanceHomeActionIntent.captureGps,
           label: locatingGps ? 'Obteniendo GPS...' : 'Actualizar GPS',
-          icon: Icons.my_location_outlined,
+          icon: Icons.my_location_rounded,
           enabled: gpsEnabled,
           loading: locatingGps,
         ),
         AttendanceHomeActionSpec(
           intent: AttendanceHomeActionIntent.openPendingQueue,
           label: 'Bandeja offline',
-          icon: Icons.inbox_outlined,
+          icon: Icons.inbox_rounded,
           enabled: syncEnabled,
         ),
       ],
       quickActions: [
         AttendanceHomeActionSpec(
+          intent: AttendanceHomeActionIntent.openEpp,
+          label: 'EPP y vestimenta',
+          icon: Icons.checkroom_rounded,
+          enabled: historyEnabled,
+        ),
+        AttendanceHomeActionSpec(
+          intent: AttendanceHomeActionIntent.openReintegros,
+          label: 'Viáticos y reintegros',
+          icon: Icons.receipt_long_rounded,
+          enabled: historyEnabled,
+        ),
+        AttendanceHomeActionSpec(
           intent: AttendanceHomeActionIntent.openAttendanceHistory,
           label: 'Asistencias',
-          icon: Icons.calendar_month_outlined,
+          icon: Icons.calendar_month_rounded,
           enabled: historyEnabled,
         ),
         AttendanceHomeActionSpec(
           intent: AttendanceHomeActionIntent.openGpsLocation,
           label: 'GPS real',
-          icon: Icons.my_location_outlined,
+          icon: Icons.my_location_rounded,
           enabled: historyEnabled,
         ),
         AttendanceHomeActionSpec(
           intent: AttendanceHomeActionIntent.openJustificaciones,
           label: 'Justificaciones',
-          icon: Icons.fact_check_outlined,
+          icon: Icons.fact_check_rounded,
           enabled: historyEnabled,
         ),
         AttendanceHomeActionSpec(
           intent: AttendanceHomeActionIntent.openAdelantos,
           label: 'Adelantos',
-          icon: Icons.payments_outlined,
+          icon: Icons.payments_rounded,
           enabled: historyEnabled,
         ),
         AttendanceHomeActionSpec(
           intent: AttendanceHomeActionIntent.openVacaciones,
           label: 'Vacaciones',
-          icon: Icons.beach_access_outlined,
+          icon: Icons.beach_access_rounded,
           enabled: historyEnabled,
         ),
         AttendanceHomeActionSpec(
           intent: AttendanceHomeActionIntent.openFrancos,
           label: 'Francos',
-          icon: Icons.free_cancellation_outlined,
+          icon: Icons.free_cancellation_rounded,
           enabled: historyEnabled,
         ),
         AttendanceHomeActionSpec(
           intent: AttendanceHomeActionIntent.openLegajo,
           label: 'Legajo',
-          icon: Icons.folder_open_outlined,
+          icon: Icons.folder_open_rounded,
           enabled: historyEnabled,
         ),
         if (canCreateLegajoEventos)
@@ -187,50 +200,50 @@ class AttendanceHomeActionPresenter {
         AttendanceHomeActionSpec(
           intent: AttendanceHomeActionIntent.openPedidosMercaderia,
           label: 'Mercadería',
-          icon: Icons.inventory_2_outlined,
+          icon: Icons.inventory_2_rounded,
           enabled: historyEnabled,
         ),
         if (canValidateCarga)
           AttendanceHomeActionSpec(
             intent: AttendanceHomeActionIntent.openCargas,
             label: 'Validación de carga',
-            icon: Icons.local_shipping_outlined,
+            icon: Icons.local_shipping_rounded,
             enabled: historyEnabled,
           ),
         AttendanceHomeActionSpec(
           intent: AttendanceHomeActionIntent.openSeguridad,
           label: 'Seguridad e Higiene',
-          icon: Icons.health_and_safety_outlined,
+          icon: Icons.health_and_safety_rounded,
           enabled: historyEnabled,
         ),
         AttendanceHomeActionSpec(
           intent: AttendanceHomeActionIntent.openKpisSector,
           label: 'KPIs',
-          icon: Icons.bar_chart_outlined,
+          icon: Icons.bar_chart_rounded,
           enabled: historyEnabled,
         ),
         AttendanceHomeActionSpec(
           intent: AttendanceHomeActionIntent.openFeedback,
           label: 'Feedback',
-          icon: Icons.campaign_outlined,
+          icon: Icons.campaign_rounded,
           enabled: historyEnabled,
         ),
         AttendanceHomeActionSpec(
           intent: AttendanceHomeActionIntent.openSkap,
           label: 'SKAP',
-          icon: Icons.psychology_outlined,
+          icon: Icons.psychology_rounded,
           enabled: historyEnabled,
         ),
         AttendanceHomeActionSpec(
           intent: AttendanceHomeActionIntent.openPremios,
           label: 'Premios',
-          icon: Icons.emoji_events_outlined,
+          icon: Icons.emoji_events_rounded,
           enabled: historyEnabled,
         ),
         AttendanceHomeActionSpec(
           intent: AttendanceHomeActionIntent.openHorarios,
           label: 'Horarios',
-          icon: Icons.calendar_today_outlined,
+          icon: Icons.calendar_today_rounded,
           enabled: historyEnabled,
         ),
         AttendanceHomeActionSpec(
@@ -283,6 +296,8 @@ class AttendanceHomeActionSpec {
 }
 
 enum AttendanceHomeActionIntent {
+  openReintegros,
+  openEpp,
   openCargas,
   openSeguridad,
   openPendingQueue,

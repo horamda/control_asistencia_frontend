@@ -106,7 +106,7 @@ class EmployeeAlertsRepository {
       mercaderia: mercaderia.value,
       mercaderiaError: mercaderia.error,
       feedbackDashboard: feedbackDashboard.value,
-      feedbackError: feedbackDashboard.error,
+      feedbackError: feedbackDashboard.error ?? feedbackRecent.error,
       feedbackRecent: feedbackRecent.value ?? const <FeedbackItem>[],
     );
   }

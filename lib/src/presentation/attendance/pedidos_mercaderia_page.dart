@@ -1,6 +1,10 @@
+import 'package:ficharqr/src/presentation/widgets/app_card.dart';
+import 'package:ficharqr/src/presentation/theme/app_palette.dart';
+import '../widgets/scrollable_error_state.dart';
 import 'dart:async';
 
 import 'package:flutter/material.dart';
+import '../widgets/app_page_layout.dart';
 
 import '../../core/network/mobile_api_client.dart';
 
@@ -133,18 +137,19 @@ class _PedidosMercaderiaPageState extends State<PedidosMercaderiaPage> {
     final confirmed = await showDialog<bool>(
       context: context,
       builder: (ctx) => AlertDialog(
-        title: const Text('Cancelar pedido'),
+        title: const Text('Cancelar pedido', textAlign: TextAlign.center),
         content: const Text(
           '¿Confirmás la cancelación de este pedido de mercadería?',
+          textAlign: TextAlign.center,
         ),
         actions: [
           TextButton(
             onPressed: () => Navigator.of(ctx).pop(false),
-            child: const Text('No'),
+            child: const Text('No', textAlign: TextAlign.center),
           ),
           FilledButton(
             onPressed: () => Navigator.of(ctx).pop(true),
-            child: const Text('Cancelar pedido'),
+            child: const Text('Cancelar pedido', textAlign: TextAlign.center),
           ),
         ],
       ),
@@ -157,14 +162,21 @@ class _PedidosMercaderiaPageState extends State<PedidosMercaderiaPage> {
         id: item.id,
       );
       if (!mounted) return;
-      ScaffoldMessenger.of(
-        context,
-      ).showSnackBar(const SnackBar(content: Text('Pedido cancelado.')));
+      ScaffoldMessenger.of(context).showSnackBar(
+        const SnackBar(
+          content: Text('Pedido cancelado.', textAlign: TextAlign.center),
+        ),
+      );
       unawaited(_load());
     } on ApiException catch (e) {
       if (!mounted) return;
       ScaffoldMessenger.of(context).showSnackBar(
-        SnackBar(content: Text(e.message), backgroundColor: Colors.red[700]),
+        SnackBar(
+          content: Text(e.message, textAlign: TextAlign.center),
+          backgroundColor: AppColors.of(
+            context,
+          ).optionalSurface(Colors.red[700]),
+        ),
       );
     }
   }
@@ -180,7 +192,7 @@ class _PedidosMercaderiaPageState extends State<PedidosMercaderiaPage> {
   Widget build(BuildContext context) {
     return Scaffold(
       appBar: AppBar(
-        title: const Text('Pedidos de Mercadería'),
+        title: const Text('Pedidos de Mercadería', textAlign: TextAlign.center),
         actions: [
           if (_loading)
             const Padding(
@@ -193,20 +205,22 @@ class _PedidosMercaderiaPageState extends State<PedidosMercaderiaPage> {
             )
           else
             IconButton(
-              icon: const Icon(Icons.refresh),
+              icon: const Icon(Icons.refresh_rounded),
               tooltip: 'Actualizar',
               onPressed: _load,
             ),
         ],
       ),
       floatingActionButton: _puedeCrear
-          ? FloatingActionButton.extended(
+          ? AppFloatingActionButton(
               onPressed: () => _abrir(),
-              icon: const Icon(Icons.add),
-              label: const Text('Nuevo pedido'),
+              icon: const Icon(Icons.add_rounded),
+              label: const Text('Nuevo pedido', textAlign: TextAlign.center),
             )
           : null,
-      body: RefreshIndicator(onRefresh: _load, child: _buildBody()),
+      body: AppPageBody(
+        child: RefreshIndicator(onRefresh: _load, child: _buildBody()),
+      ),
     );
   }
 
@@ -214,25 +228,7 @@ class _PedidosMercaderiaPageState extends State<PedidosMercaderiaPage> {
     if (_loading) return const Center(child: CircularProgressIndicator());
 
     if (_error != null) {
-      return Center(
-        child: Padding(
-          padding: const EdgeInsets.all(24),
-          child: Column(
-            mainAxisSize: MainAxisSize.min,
-            children: [
-              Icon(Icons.error_outline, size: 48, color: Colors.red[300]),
-              const SizedBox(height: 12),
-              Text(_error!, textAlign: TextAlign.center),
-              const SizedBox(height: 16),
-              FilledButton.icon(
-                onPressed: _load,
-                icon: const Icon(Icons.refresh),
-                label: const Text('Reintentar'),
-              ),
-            ],
-          ),
-        ),
-      );
+      return ScrollableErrorState(message: _error!, onRetry: _load);
     }
 
     return LayoutBuilder(
@@ -259,7 +255,9 @@ class _PedidosMercaderiaPageState extends State<PedidosMercaderiaPage> {
                   hPad,
                   12,
                   hPad,
-                  _puedeCrear ? 88 : 16,
+                  _puedeCrear
+                      ? AppFloatingActionButton.bottomPadding(context)
+                      : 16,
                 ),
                 itemCount:
                     1 +
@@ -275,7 +273,10 @@ class _PedidosMercaderiaPageState extends State<PedidosMercaderiaPage> {
                     return const Padding(
                       padding: EdgeInsets.only(top: 32),
                       child: Center(
-                        child: Text('No hay pedidos de mercadería.'),
+                        child: Text(
+                          'No hay pedidos de mercadería.',
+                          textAlign: TextAlign.center,
+                        ),
                       ),
                     );
                   }
@@ -321,7 +322,7 @@ class _PedidosMercaderiaPageState extends State<PedidosMercaderiaPage> {
 
     if (pedido == null) {
       return _ContextoBanner(
-        icon: Icons.inventory_2_outlined,
+        icon: Icons.inventory_2_rounded,
         message: 'No tenés pedido para $periodo.',
         action: _puedeCrear
             ? _ContextoBannerAction(
@@ -337,7 +338,7 @@ class _PedidosMercaderiaPageState extends State<PedidosMercaderiaPage> {
 
     return switch (pedido.estado) {
       'pendiente' => _ContextoBanner(
-        icon: Icons.pending_outlined,
+        icon: Icons.pending_rounded,
         message: 'Tu pedido de $periodo está pendiente de aprobación.',
         action: _ContextoBannerAction(
           label: 'Editar',
@@ -347,13 +348,13 @@ class _PedidosMercaderiaPageState extends State<PedidosMercaderiaPage> {
         onColor: cs.onPrimaryContainer,
       ),
       'aprobado' => _ContextoBanner(
-        icon: Icons.check_circle_outline,
+        icon: Icons.check_circle_rounded,
         message: 'Tu pedido de $periodo fue aprobado.',
         color: Colors.green.shade100,
         onColor: Colors.green.shade900,
       ),
       'rechazado' => _ContextoBanner(
-        icon: Icons.cancel_outlined,
+        icon: Icons.cancel_rounded,
         message: pedido.motivoRechazo != null
             ? 'Tu pedido de $periodo fue rechazado: ${pedido.motivoRechazo}'
             : 'Tu pedido de $periodo fue rechazado.',
@@ -361,7 +362,7 @@ class _PedidosMercaderiaPageState extends State<PedidosMercaderiaPage> {
         onColor: cs.onErrorContainer,
       ),
       'cancelado' => _ContextoBanner(
-        icon: Icons.info_outline,
+        icon: Icons.info_rounded,
         message: 'Tu pedido de $periodo fue cancelado. Podés armar uno nuevo.',
         action: _ContextoBannerAction(
           label: 'Nuevo pedido',
@@ -407,24 +408,37 @@ class _ContextoBanner extends StatelessWidget {
       margin: const EdgeInsets.only(bottom: 12),
       padding: const EdgeInsets.symmetric(horizontal: 16, vertical: 12),
       decoration: BoxDecoration(
-        color: color,
+        color: AppColors.of(context).surface(color),
         borderRadius: BorderRadius.circular(12),
       ),
       child: Row(
         crossAxisAlignment: CrossAxisAlignment.start,
+        mainAxisAlignment: MainAxisAlignment.center,
         children: [
-          Icon(icon, size: 20, color: onColor),
+          Icon(
+            icon,
+            size: 20,
+            color: AppColors.of(context).foreground(onColor),
+          ),
           const SizedBox(width: 10),
           Expanded(
             child: Column(
-              crossAxisAlignment: CrossAxisAlignment.start,
+              crossAxisAlignment: CrossAxisAlignment.center,
               children: [
-                Text(message, style: TextStyle(color: onColor, fontSize: 13)),
+                Text(
+                  message,
+                  style: TextStyle(
+                    color: AppColors.of(context).foreground(onColor),
+                    fontSize: 13,
+                  ),
+                  textAlign: TextAlign.center,
+                ),
                 if (action != null || secondaryAction != null) ...[
                   const SizedBox(height: 6),
                   Wrap(
                     spacing: 16,
                     runSpacing: 4,
+                    alignment: WrapAlignment.center,
                     children: [
                       if (action != null)
                         GestureDetector(
@@ -432,12 +446,13 @@ class _ContextoBanner extends StatelessWidget {
                           child: Text(
                             action!.label,
                             style: TextStyle(
-                              color: onColor,
+                              color: AppColors.of(context).foreground(onColor),
                               fontSize: 13,
                               fontWeight: FontWeight.w600,
                               decoration: TextDecoration.underline,
                               decorationColor: onColor,
                             ),
+                            textAlign: TextAlign.center,
                           ),
                         ),
                       if (secondaryAction != null)
@@ -446,12 +461,13 @@ class _ContextoBanner extends StatelessWidget {
                           child: Text(
                             secondaryAction!.label,
                             style: TextStyle(
-                              color: onColor,
+                              color: AppColors.of(context).foreground(onColor),
                               fontSize: 13,
                               fontWeight: FontWeight.w600,
                               decoration: TextDecoration.underline,
                               decorationColor: onColor,
                             ),
+                            textAlign: TextAlign.center,
                           ),
                         ),
                     ],
@@ -478,14 +494,15 @@ class _PedidoCard extends StatelessWidget {
   @override
   Widget build(BuildContext context) {
     final cs = Theme.of(context).colorScheme;
-    return Card(
+    return AppCard(
       margin: const EdgeInsets.only(bottom: 10),
       child: Padding(
         padding: const EdgeInsets.all(16),
         child: Column(
-          crossAxisAlignment: CrossAxisAlignment.start,
+          crossAxisAlignment: CrossAxisAlignment.center,
           children: [
             Row(
+              mainAxisAlignment: MainAxisAlignment.center,
               children: [
                 const Icon(Icons.inventory_2_outlined, size: 22),
                 const SizedBox(width: 8),
@@ -493,6 +510,7 @@ class _PedidoCard extends StatelessWidget {
                   child: Text(
                     item.periodo ?? '—',
                     style: const TextStyle(fontWeight: FontWeight.w600),
+                    textAlign: TextAlign.center,
                   ),
                 ),
                 if (item.totalBultos != null || item.totalUnidades != null)
@@ -503,6 +521,7 @@ class _PedidoCard extends StatelessWidget {
                       style: Theme.of(context).textTheme.bodySmall?.copyWith(
                         color: cs.onSurfaceVariant,
                       ),
+                      textAlign: TextAlign.center,
                     ),
                   ),
                 _EstadoChip(estado: item.estado),
@@ -514,6 +533,7 @@ class _PedidoCard extends StatelessWidget {
                 (l) => Padding(
                   padding: const EdgeInsets.only(bottom: 4),
                   child: Row(
+                    mainAxisAlignment: MainAxisAlignment.center,
                     children: [
                       const SizedBox(width: 30),
                       Expanded(
@@ -522,6 +542,7 @@ class _PedidoCard extends StatelessWidget {
                               l.codigoArticulo ??
                               'Artículo #${l.articuloId}',
                           style: Theme.of(context).textTheme.bodySmall,
+                          textAlign: TextAlign.center,
                         ),
                       ),
                       Text(
@@ -532,6 +553,7 @@ class _PedidoCard extends StatelessWidget {
                         style: Theme.of(context).textTheme.bodySmall?.copyWith(
                           color: cs.onSurfaceVariant,
                         ),
+                        textAlign: TextAlign.center,
                       ),
                     ],
                   ),
@@ -542,6 +564,7 @@ class _PedidoCard extends StatelessWidget {
               const SizedBox(height: 8),
               Row(
                 crossAxisAlignment: CrossAxisAlignment.start,
+                mainAxisAlignment: MainAxisAlignment.center,
                 children: [
                   Icon(Icons.info_outline, size: 14, color: cs.error),
                   const SizedBox(width: 4),
@@ -551,6 +574,7 @@ class _PedidoCard extends StatelessWidget {
                       style: Theme.of(
                         context,
                       ).textTheme.bodySmall?.copyWith(color: cs.error),
+                      textAlign: TextAlign.center,
                     ),
                   ),
                 ],
@@ -565,13 +589,16 @@ class _PedidoCard extends StatelessWidget {
                     TextButton.icon(
                       onPressed: onEditar,
                       icon: const Icon(Icons.edit_outlined, size: 18),
-                      label: const Text('Editar'),
+                      label: const Text('Editar', textAlign: TextAlign.center),
                     ),
                   if (onCancelar != null)
                     TextButton.icon(
                       onPressed: onCancelar,
                       icon: const Icon(Icons.close, size: 18),
-                      label: const Text('Cancelar'),
+                      label: const Text(
+                        'Cancelar',
+                        textAlign: TextAlign.center,
+                      ),
                       style: TextButton.styleFrom(foregroundColor: cs.error),
                     ),
                 ],
@@ -606,15 +633,16 @@ class _EstadoChip extends StatelessWidget {
     return Container(
       padding: const EdgeInsets.symmetric(horizontal: 8, vertical: 3),
       decoration: BoxDecoration(
-        color: bg,
+        color: AppColors.of(context).surface(bg),
         borderRadius: BorderRadius.circular(12),
       ),
       child: Text(
         label,
         style: Theme.of(context).textTheme.labelSmall?.copyWith(
-          color: fg,
+          color: AppColors.of(context).foreground(fg),
           fontWeight: FontWeight.w600,
         ),
+        textAlign: TextAlign.center,
       ),
     );
   }
@@ -872,7 +900,12 @@ class _PedidoFormPageState extends State<_PedidoFormPage> {
     final totalUnidades = _lineas.fold(0, (s, l) => s + l.totalUnidades);
 
     return Scaffold(
-      appBar: AppBar(title: Text(esEdicion ? 'Editar pedido' : 'Nuevo pedido')),
+      appBar: AppBar(
+        title: Text(
+          esEdicion ? 'Editar pedido' : 'Nuevo pedido',
+          textAlign: TextAlign.center,
+        ),
+      ),
       bottomNavigationBar: _buildBottomBar(totalBultos, totalUnidades),
       body: LayoutBuilder(
         builder: (context, constraints) {
@@ -885,6 +918,7 @@ class _PedidoFormPageState extends State<_PedidoFormPage> {
             child: ConstrainedBox(
               constraints: BoxConstraints(maxWidth: maxWidth),
               child: Column(
+                crossAxisAlignment: CrossAxisAlignment.center,
                 children: [
                   if (_mostrarAvisoPlantilla) _buildAvisoPlantilla(),
                   if (_lineas.isNotEmpty) _buildCarrito(),
@@ -906,6 +940,7 @@ class _PedidoFormPageState extends State<_PedidoFormPage> {
       child: Padding(
         padding: const EdgeInsets.symmetric(horizontal: 16, vertical: 10),
         child: Row(
+          mainAxisAlignment: MainAxisAlignment.center,
           children: [
             Icon(Icons.history, size: 18, color: cs.onSecondaryContainer),
             const SizedBox(width: 8),
@@ -914,6 +949,7 @@ class _PedidoFormPageState extends State<_PedidoFormPage> {
                 'Precargamos los artículos de tu último pedido aprobado. '
                 'Revisá las cantidades antes de enviar.',
                 style: TextStyle(color: cs.onSecondaryContainer, fontSize: 13),
+                textAlign: TextAlign.center,
               ),
             ),
             IconButton(
@@ -934,6 +970,7 @@ class _PedidoFormPageState extends State<_PedidoFormPage> {
     return SafeArea(
       child: Column(
         mainAxisSize: MainAxisSize.min,
+        crossAxisAlignment: CrossAxisAlignment.center,
         children: [
           if (_submitError != null) _buildErrorBanner(),
           Container(
@@ -948,6 +985,7 @@ class _PedidoFormPageState extends State<_PedidoFormPage> {
               child: ConstrainedBox(
                 constraints: const BoxConstraints(maxWidth: 1040),
                 child: Row(
+                  mainAxisAlignment: MainAxisAlignment.center,
                   children: [
                     Expanded(
                       child: _lineas.isEmpty
@@ -955,9 +993,10 @@ class _PedidoFormPageState extends State<_PedidoFormPage> {
                               'Agregá artículos al pedido',
                               style: Theme.of(context).textTheme.bodySmall
                                   ?.copyWith(color: cs.onSurfaceVariant),
+                              textAlign: TextAlign.center,
                             )
                           : Column(
-                              crossAxisAlignment: CrossAxisAlignment.start,
+                              crossAxisAlignment: CrossAxisAlignment.center,
                               mainAxisSize: MainAxisSize.min,
                               children: [
                                 Text(
@@ -966,11 +1005,13 @@ class _PedidoFormPageState extends State<_PedidoFormPage> {
                                     fontWeight: FontWeight.w600,
                                     fontSize: 14,
                                   ),
+                                  textAlign: TextAlign.center,
                                 ),
                                 Text(
                                   '${_formatPedidoCantidades(totalBultos, _lineas.fold(0, (s, l) => s + l.cantidadUnidades))} · $totalUnidades unidades equivalentes',
                                   style: Theme.of(context).textTheme.bodySmall
                                       ?.copyWith(color: cs.onSurfaceVariant),
+                                  textAlign: TextAlign.center,
                                 ),
                               ],
                             ),
@@ -994,6 +1035,7 @@ class _PedidoFormPageState extends State<_PedidoFormPage> {
                         widget.existente != null
                             ? 'Guardar cambios'
                             : 'Enviar pedido',
+                        textAlign: TextAlign.center,
                       ),
                     ),
                   ],
@@ -1012,6 +1054,7 @@ class _PedidoFormPageState extends State<_PedidoFormPage> {
       child: Padding(
         padding: const EdgeInsets.symmetric(horizontal: 16, vertical: 10),
         child: Row(
+          mainAxisAlignment: MainAxisAlignment.center,
           children: [
             Icon(
               Icons.error_outline,
@@ -1026,6 +1069,7 @@ class _PedidoFormPageState extends State<_PedidoFormPage> {
                   color: Theme.of(context).colorScheme.onErrorContainer,
                   fontSize: 13,
                 ),
+                textAlign: TextAlign.center,
               ),
             ),
             IconButton(
@@ -1047,13 +1091,14 @@ class _PedidoFormPageState extends State<_PedidoFormPage> {
       color: cs.surfaceContainerLow,
       padding: const EdgeInsets.fromLTRB(16, 8, 0, 10),
       child: Column(
-        crossAxisAlignment: CrossAxisAlignment.start,
+        crossAxisAlignment: CrossAxisAlignment.center,
         children: [
           Padding(
             padding: const EdgeInsets.only(right: 16),
             child: Text(
               'Seleccionados (${_lineas.length})',
               style: Theme.of(context).textTheme.labelMedium,
+              textAlign: TextAlign.center,
             ),
           ),
           const SizedBox(height: 6),
@@ -1070,6 +1115,7 @@ class _PedidoFormPageState extends State<_PedidoFormPage> {
                   label: Text(
                     '${l.descripcion}: ${_formatPedidoCantidades(l.cantidadBultos, l.cantidadUnidades)}',
                     maxLines: 1,
+                    textAlign: TextAlign.center,
                   ),
                   onPressed: () => _editarLineaDesdeCarrito(l),
                   onDeleted: () => setState(
@@ -1092,7 +1138,7 @@ class _PedidoFormPageState extends State<_PedidoFormPage> {
     return Padding(
       padding: const EdgeInsets.fromLTRB(16, 10, 16, 4),
       child: Column(
-        crossAxisAlignment: CrossAxisAlignment.start,
+        crossAxisAlignment: CrossAxisAlignment.center,
         children: [
           TextField(
             controller: _searchCtrl,
@@ -1119,6 +1165,7 @@ class _PedidoFormPageState extends State<_PedidoFormPage> {
             SingleChildScrollView(
               scrollDirection: Axis.horizontal,
               child: Row(
+                mainAxisAlignment: MainAxisAlignment.center,
                 children: [
                   _DivisionChip(
                     label: 'Todos',
@@ -1153,10 +1200,11 @@ class _PedidoFormPageState extends State<_PedidoFormPage> {
       return const Center(
         child: Column(
           mainAxisSize: MainAxisSize.min,
+          crossAxisAlignment: CrossAxisAlignment.center,
           children: [
             CircularProgressIndicator(),
             SizedBox(height: 12),
-            Text('Cargando catálogo...'),
+            Text('Cargando catálogo...', textAlign: TextAlign.center),
           ],
         ),
       );
@@ -1165,13 +1213,14 @@ class _PedidoFormPageState extends State<_PedidoFormPage> {
       return Center(
         child: Column(
           mainAxisSize: MainAxisSize.min,
+          crossAxisAlignment: CrossAxisAlignment.center,
           children: [
-            Text(_catalogError!),
+            Text(_catalogError!, textAlign: TextAlign.center),
             const SizedBox(height: 12),
             FilledButton.icon(
               onPressed: _loadAllCatalog,
               icon: const Icon(Icons.refresh),
-              label: const Text('Reintentar'),
+              label: const Text('Reintentar', textAlign: TextAlign.center),
             ),
           ],
         ),
@@ -1179,7 +1228,9 @@ class _PedidoFormPageState extends State<_PedidoFormPage> {
     }
     final rows = _catalogRows();
     if (rows.isEmpty) {
-      return const Center(child: Text('Sin resultados.'));
+      return const Center(
+        child: Text('Sin resultados.', textAlign: TextAlign.center),
+      );
     }
     return ListView.builder(
       padding: const EdgeInsets.symmetric(horizontal: 16),
@@ -1345,6 +1396,7 @@ class _ArticuloTile extends StatelessWidget {
       parts.join(' · '),
       maxLines: 1,
       overflow: TextOverflow.ellipsis,
+      textAlign: TextAlign.center,
     );
   }
 
@@ -1372,11 +1424,13 @@ class _ArticuloTile extends StatelessWidget {
               'Artículo #${articulo.id}',
           maxLines: 2,
           overflow: TextOverflow.ellipsis,
+          textAlign: TextAlign.center,
         ),
         subtitle: _buildSubtitle(),
         trailing: SizedBox(
           width: 184,
           child: Row(
+            mainAxisAlignment: MainAxisAlignment.center,
             children: [
               Expanded(
                 child: _CantidadStepper(

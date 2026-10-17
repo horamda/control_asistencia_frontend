@@ -1,13 +1,12 @@
+import 'package:ficharqr/src/presentation/widgets/app_card.dart';
+import 'package:ficharqr/src/presentation/theme/app_palette.dart';
+import '../widgets/scrollable_error_state.dart';
 import 'package:flutter/material.dart';
 
 import '../../core/network/mobile_api_client.dart';
 
 class PremiosPage extends StatefulWidget {
-  const PremiosPage({
-    super.key,
-    required this.apiClient,
-    required this.token,
-  });
+  const PremiosPage({super.key, required this.apiClient, required this.token});
 
   final MobileApiClient apiClient;
   final String token;
@@ -68,7 +67,7 @@ class _PremiosPageState extends State<PremiosPage> {
   Widget build(BuildContext context) {
     return Scaffold(
       appBar: AppBar(
-        title: const Text('Premios y Concursos'),
+        title: const Text('Premios y Concursos', textAlign: TextAlign.center),
         actions: [
           if (_loading)
             const Padding(
@@ -81,13 +80,14 @@ class _PremiosPageState extends State<PremiosPage> {
             )
           else
             IconButton(
-              icon: const Icon(Icons.refresh),
+              icon: const Icon(Icons.refresh_rounded),
               tooltip: 'Actualizar',
               onPressed: _load,
             ),
         ],
       ),
       body: Column(
+        crossAxisAlignment: CrossAxisAlignment.center,
         children: [
           _YearSelector(
             anio: _anio,
@@ -104,26 +104,7 @@ class _PremiosPageState extends State<PremiosPage> {
     if (_loading) return const Center(child: CircularProgressIndicator());
 
     if (_error != null) {
-      return Center(
-        child: Padding(
-          padding: const EdgeInsets.all(24),
-          child: Column(
-            mainAxisSize: MainAxisSize.min,
-            children: [
-              Icon(Icons.error_outline,
-                  size: 48, color: Theme.of(context).colorScheme.error),
-              const SizedBox(height: 12),
-              Text(_error!, textAlign: TextAlign.center),
-              const SizedBox(height: 16),
-              FilledButton.icon(
-                onPressed: _load,
-                icon: const Icon(Icons.refresh),
-                label: const Text('Reintentar'),
-              ),
-            ],
-          ),
-        ),
-      );
+      return ScrollableErrorState(message: _error!, onRetry: _load);
     }
 
     final data = _data;
@@ -154,11 +135,7 @@ class _PremiosPageState extends State<PremiosPage> {
 // ─── Year selector ────────────────────────────────────────────────────────────
 
 class _YearSelector extends StatelessWidget {
-  const _YearSelector({
-    required this.anio,
-    required this.onPrev,
-    this.onNext,
-  });
+  const _YearSelector({required this.anio, required this.onPrev, this.onNext});
 
   final int anio;
   final VoidCallback onPrev;
@@ -174,20 +151,20 @@ class _YearSelector extends StatelessWidget {
         mainAxisAlignment: MainAxisAlignment.center,
         children: [
           IconButton(
-            icon: const Icon(Icons.chevron_left),
+            icon: const Icon(Icons.chevron_left_rounded),
             onPressed: onPrev,
             tooltip: 'Año anterior',
           ),
           const SizedBox(width: 8),
           Text(
             '$anio',
-            style: Theme.of(context).textTheme.titleMedium?.copyWith(
-                  fontWeight: FontWeight.w700,
-                ),
+            style: Theme.of(
+              context,
+            ).textTheme.titleMedium?.copyWith(fontWeight: FontWeight.w700),
           ),
           const SizedBox(width: 8),
           IconButton(
-            icon: const Icon(Icons.chevron_right),
+            icon: const Icon(Icons.chevron_right_rounded),
             onPressed: onNext,
             tooltip: 'Año siguiente',
             color: onNext != null ? null : cs.onSurface.withValues(alpha: 0.3),
@@ -219,8 +196,13 @@ class _SectorChip extends StatelessWidget {
           ),
           child: Row(
             mainAxisSize: MainAxisSize.min,
+            mainAxisAlignment: MainAxisAlignment.center,
             children: [
-              Icon(Icons.group_outlined, size: 14, color: cs.onSecondaryContainer),
+              Icon(
+                Icons.group_rounded,
+                size: 14,
+                color: cs.onSecondaryContainer,
+              ),
               const SizedBox(width: 6),
               Text(
                 nombre,
@@ -229,6 +211,7 @@ class _SectorChip extends StatelessWidget {
                   fontWeight: FontWeight.w600,
                   color: cs.onSecondaryContainer,
                 ),
+                textAlign: TextAlign.center,
               ),
             ],
           ),
@@ -254,28 +237,28 @@ class _ResumenHeader extends StatelessWidget {
       runSpacing: 10,
       children: [
         _ResumenTile(
-          icon: Icons.emoji_events_outlined,
+          icon: Icons.emoji_events_rounded,
           label: 'Premios',
           value: '${resumen.totalPremios}',
           color: Colors.amber.shade700,
         ),
         if (resumen.mejorRanking != null)
           _ResumenTile(
-            icon: Icons.trending_up_outlined,
+            icon: Icons.trending_up_rounded,
             label: 'Mejor puesto',
             value: '${resumen.mejorRanking}°',
             color: _rankColor(resumen.mejorRanking!),
           ),
         if (resumen.primerosPuestos > 0)
           _ResumenTile(
-            icon: Icons.looks_one_outlined,
+            icon: Icons.looks_one_rounded,
             label: '1° puestos',
             value: '${resumen.primerosPuestos}',
             color: Colors.amber.shade600,
           ),
         if (resumen.podios > 0)
           _ResumenTile(
-            icon: Icons.military_tech_outlined,
+            icon: Icons.military_tech_rounded,
             label: 'Podios',
             value: '${resumen.podios}',
             color: Colors.blueGrey.shade600,
@@ -312,17 +295,20 @@ class _ResumenTile extends StatelessWidget {
     return Container(
       padding: const EdgeInsets.symmetric(horizontal: 14, vertical: 10),
       decoration: BoxDecoration(
-        color: color.withValues(alpha: 0.1),
+        color: AppColors.of(context).surface(color.withValues(alpha: 0.1)),
         borderRadius: BorderRadius.circular(12),
-        border: Border.all(color: color.withValues(alpha: 0.3)),
+        border: Border.all(
+          color: AppColors.of(context).border(color.withValues(alpha: 0.3)),
+        ),
       ),
       child: Row(
         mainAxisSize: MainAxisSize.min,
+        mainAxisAlignment: MainAxisAlignment.center,
         children: [
-          Icon(icon, size: 18, color: color),
+          Icon(icon, size: 18, color: AppColors.of(context).foreground(color)),
           const SizedBox(width: 8),
           Column(
-            crossAxisAlignment: CrossAxisAlignment.start,
+            crossAxisAlignment: CrossAxisAlignment.center,
             mainAxisSize: MainAxisSize.min,
             children: [
               Text(
@@ -330,14 +316,18 @@ class _ResumenTile extends StatelessWidget {
                 style: TextStyle(
                   fontSize: 16,
                   fontWeight: FontWeight.w800,
-                  color: color,
+                  color: AppColors.of(context).foreground(color),
                 ),
+                textAlign: TextAlign.center,
               ),
               Text(
                 label,
                 style: Theme.of(context).textTheme.labelSmall?.copyWith(
-                      color: color.withValues(alpha: 0.85),
-                    ),
+                  color: AppColors.of(
+                    context,
+                  ).foreground(color.withValues(alpha: 0.85)),
+                ),
+                textAlign: TextAlign.center,
               ),
             ],
           ),
@@ -363,14 +353,16 @@ class _MesCard extends StatelessWidget {
       return Padding(
         padding: const EdgeInsets.only(bottom: 6),
         child: Row(
+          mainAxisAlignment: MainAxisAlignment.center,
           children: [
             SizedBox(
               width: 80,
               child: Text(
                 mes.nombre ?? 'Mes ${mes.mes}',
                 style: Theme.of(context).textTheme.bodySmall?.copyWith(
-                      color: cs.onSurface.withValues(alpha: 0.35),
-                    ),
+                  color: cs.onSurface.withValues(alpha: 0.35),
+                ),
+                textAlign: TextAlign.center,
               ),
             ),
             Expanded(
@@ -387,16 +379,17 @@ class _MesCard extends StatelessWidget {
     return Padding(
       padding: const EdgeInsets.only(bottom: 10),
       child: Column(
-        crossAxisAlignment: CrossAxisAlignment.start,
+        crossAxisAlignment: CrossAxisAlignment.center,
         children: [
           Padding(
             padding: const EdgeInsets.only(bottom: 6),
             child: Text(
               mes.nombre ?? 'Mes ${mes.mes}',
               style: Theme.of(context).textTheme.labelMedium?.copyWith(
-                    fontWeight: FontWeight.w700,
-                    color: cs.onSurfaceVariant,
-                  ),
+                fontWeight: FontWeight.w700,
+                color: cs.onSurfaceVariant,
+              ),
+              textAlign: TextAlign.center,
             ),
           ),
           ...mes.premios.map((p) => _PremioCard(premio: p)),
@@ -424,10 +417,10 @@ class _PremioCard extends StatelessWidget {
 
   static IconData _rankIcon(int? rank) {
     return switch (rank) {
-      1 => Icons.looks_one_outlined,
-      2 => Icons.looks_two_outlined,
-      3 => Icons.looks_3_outlined,
-      _ => Icons.emoji_events_outlined,
+      1 => Icons.looks_one_rounded,
+      2 => Icons.looks_two_rounded,
+      3 => Icons.looks_3_rounded,
+      _ => Icons.emoji_events_rounded,
     };
   }
 
@@ -448,71 +441,71 @@ class _PremioCard extends StatelessWidget {
     final concursoNombre =
         premio.concurso?.nombre ?? premio.concurso?.codigo ?? 'Concurso';
 
-    return Card(
+    return AppCard(
       margin: const EdgeInsets.only(bottom: 8),
       clipBehavior: Clip.antiAlias,
       child: IntrinsicHeight(
         child: Row(
           crossAxisAlignment: CrossAxisAlignment.stretch,
+          mainAxisAlignment: MainAxisAlignment.center,
           children: [
-            Container(
-              width: 5,
-              color: color,
-            ),
+            Container(width: 5, color: AppColors.of(context).surface(color)),
             Expanded(
               child: Padding(
                 padding: const EdgeInsets.fromLTRB(14, 12, 14, 12),
                 child: Row(
+                  mainAxisAlignment: MainAxisAlignment.center,
                   children: [
                     Container(
                       width: 40,
                       height: 40,
                       decoration: BoxDecoration(
-                        color: color.withValues(alpha: 0.12),
+                        color: AppColors.of(
+                          context,
+                        ).surface(color.withValues(alpha: 0.12)),
                         shape: BoxShape.circle,
                       ),
-                      child: Icon(_rankIcon(premio.ranking),
-                          color: color, size: 22),
+                      child: Icon(
+                        _rankIcon(premio.ranking),
+                        color: AppColors.of(context).foreground(color),
+                        size: 22,
+                      ),
                     ),
                     const SizedBox(width: 12),
                     Expanded(
                       child: Column(
-                        crossAxisAlignment: CrossAxisAlignment.start,
+                        crossAxisAlignment: CrossAxisAlignment.center,
                         mainAxisAlignment: MainAxisAlignment.center,
                         children: [
                           Text(
                             concursoNombre,
-                            style: Theme.of(context)
-                                .textTheme
-                                .bodyMedium
+                            style: Theme.of(context).textTheme.bodyMedium
                                 ?.copyWith(fontWeight: FontWeight.w600),
+                            textAlign: TextAlign.center,
                           ),
                           if (premio.concurso?.alcance == 'global')
                             Text(
                               'Concurso general',
-                              style: Theme.of(context)
-                                  .textTheme
-                                  .labelSmall
+                              style: Theme.of(context).textTheme.labelSmall
                                   ?.copyWith(color: cs.onSurfaceVariant),
+                              textAlign: TextAlign.center,
                             )
                           else if (premio.sectorEmpleado?.nombre != null)
                             Text(
                               premio.sectorEmpleado!.nombre!,
-                              style: Theme.of(context)
-                                  .textTheme
-                                  .labelSmall
+                              style: Theme.of(context).textTheme.labelSmall
                                   ?.copyWith(color: cs.onSurfaceVariant),
+                              textAlign: TextAlign.center,
                             ),
                           if ((premio.observaciones ?? '').isNotEmpty) ...[
                             const SizedBox(height: 3),
                             Text(
                               premio.observaciones!,
-                              style: Theme.of(context)
-                                  .textTheme
-                                  .bodySmall
+                              style: Theme.of(context).textTheme.bodySmall
                                   ?.copyWith(color: cs.onSurfaceVariant),
                               maxLines: 2,
                               overflow: TextOverflow.ellipsis,
+                              textAlign: TextAlign.center,
                             ),
                           ],
                         ],
@@ -521,9 +514,13 @@ class _PremioCard extends StatelessWidget {
                     const SizedBox(width: 8),
                     Container(
                       padding: const EdgeInsets.symmetric(
-                          horizontal: 10, vertical: 5),
+                        horizontal: 10,
+                        vertical: 5,
+                      ),
                       decoration: BoxDecoration(
-                        color: color.withValues(alpha: 0.12),
+                        color: AppColors.of(
+                          context,
+                        ).surface(color.withValues(alpha: 0.12)),
                         borderRadius: BorderRadius.circular(20),
                       ),
                       child: Text(
@@ -531,8 +528,9 @@ class _PremioCard extends StatelessWidget {
                         style: TextStyle(
                           fontSize: 13,
                           fontWeight: FontWeight.w800,
-                          color: color,
+                          color: AppColors.of(context).foreground(color),
                         ),
+                        textAlign: TextAlign.center,
                       ),
                     ),
                   ],
@@ -562,8 +560,11 @@ class _EmptyYear extends StatelessWidget {
         child: Column(
           mainAxisSize: MainAxisSize.min,
           children: [
-            Icon(Icons.emoji_events_outlined,
-                size: 64, color: cs.outlineVariant),
+            Icon(
+              Icons.emoji_events_rounded,
+              size: 64,
+              color: cs.outlineVariant,
+            ),
             const SizedBox(height: 16),
             Text(
               'Sin premios en $anio',

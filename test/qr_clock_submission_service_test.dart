@@ -47,6 +47,41 @@ void main() {
       }
     });
 
+    test(
+      'meeting QR never captures GPS/photo or enters clock offline queue',
+      () async {
+        final api = MobileApiClient(
+          baseUrl: 'https://example.com',
+          httpClient: _QueuedClient([]),
+        );
+        final sync = PendingClockSyncService(
+          offlineClockQueue: queue,
+          clockPhotoCache: photoCache,
+          apiClient: api,
+        );
+        final service = QrClockSubmissionService(
+          apiClient: api,
+          pendingClockSyncService: sync,
+          clockPhotoCache: photoCache,
+        );
+        final result = await service.submit(
+          employeeId: 1,
+          token: 'jwt',
+          qrToken: 'fichaya://reunion?t=abc',
+          eventAt: DateTime.now(),
+          requiresPhoto: true,
+          capturePhotoToCache: () async {
+            fail('must not capture photo');
+          },
+          captureGps: () async {
+            fail('must not capture GPS');
+          },
+        );
+        expect(result.status, QrClockSubmissionStatus.apiFailure);
+        expect(data, isEmpty);
+      },
+    );
+
     test('submit registra online y limpia la foto temporal', () async {
       final sourceFile = File(
         '${sourceRoot.path}${Platform.pathSeparator}clock.jpg',
@@ -106,7 +141,11 @@ void main() {
       expect(result.photoDuration, isNotNull);
       expect(result.gpsDuration, isNotNull);
       expect(result.apiDuration, isNotNull);
-      expect(phases, ['Capturando foto...', 'Validando GPS...', 'Enviando fichada...']);
+      expect(phases, [
+        'Capturando foto...',
+        'Validando GPS...',
+        'Enviando fichada...',
+      ]);
       expect(await queue.readForEmployee(7), isEmpty);
       expect(savedPath, isNotNull);
       expect(await File(savedPath!).exists(), isFalse);

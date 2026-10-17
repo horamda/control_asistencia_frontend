@@ -44,6 +44,12 @@ class DevicePermissionBootstrap {
     return _webCameraGranted;
   }
 
+  /// Explicit user retry; startup still prompts only once.
+  Future<bool> retryCameraAccess() async {
+    if (kIsWeb) return requestCameraAccess();
+    return (await _ensureCameraPermission(userInitiated: true)).granted;
+  }
+
   Future<bool> requestLocationAccess() async {
     locationAccessError = null;
     if (!kIsWeb) return (await _ensureLocationPermission()).granted;
@@ -123,7 +129,9 @@ class DevicePermissionBootstrap {
     return Geolocator.openLocationSettings();
   }
 
-  Future<_PermissionEnsureResult> _ensureCameraPermission() async {
+  Future<_PermissionEnsureResult> _ensureCameraPermission({
+    bool userInitiated = false,
+  }) async {
     if (await isCameraGranted()) {
       await _writeBool(_cameraPermissionPromptedKey, true);
       return const _PermissionEnsureResult(
@@ -131,7 +139,8 @@ class DevicePermissionBootstrap {
         newlyConfigured: false,
       );
     }
-    if (await _readBool(_cameraPermissionPromptedKey) == true) {
+    if (!userInitiated &&
+        await _readBool(_cameraPermissionPromptedKey) == true) {
       return const _PermissionEnsureResult(
         granted: false,
         newlyConfigured: false,

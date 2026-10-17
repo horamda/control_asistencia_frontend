@@ -1,3 +1,4 @@
+import 'package:ficharqr/src/presentation/widgets/app_card.dart';
 import 'package:flutter/material.dart';
 
 import '../../config/app_config.dart';
@@ -15,10 +16,9 @@ class SplashPage extends StatelessWidget {
           builder: (context, constraints) {
             final horizontalPadding = constraints.maxWidth < 600 ? 12.0 : 20.0;
             final verticalPadding = constraints.maxHeight < 700 ? 12.0 : 24.0;
-            final minHeight =
-                (constraints.maxHeight - (verticalPadding * 2))
-                    .clamp(0.0, double.infinity)
-                    .toDouble();
+            final minHeight = (constraints.maxHeight - (verticalPadding * 2))
+                .clamp(0.0, double.infinity)
+                .toDouble();
             return SingleChildScrollView(
               padding: EdgeInsets.symmetric(
                 horizontal: horizontalPadding,
@@ -29,19 +29,23 @@ class SplashPage extends StatelessWidget {
                 child: Center(
                   child: ConstrainedBox(
                     constraints: const BoxConstraints(maxWidth: 420),
-                    child: Card(
+                    child: AppCard(
                       child: Padding(
                         padding: const EdgeInsets.all(24),
                         child: Column(
                           mainAxisSize: MainAxisSize.min,
-                          crossAxisAlignment: CrossAxisAlignment.start,
+                          crossAxisAlignment: CrossAxisAlignment.center,
                           children: [
                             Text(
                               'FichaYa',
                               style: Theme.of(context).textTheme.headlineSmall,
+                              textAlign: TextAlign.center,
                             ),
                             const SizedBox(height: 8),
-                            const Text('Informacion de configuracion'),
+                            const Text(
+                              'Informacion de configuracion',
+                              textAlign: TextAlign.center,
+                            ),
                             const SizedBox(height: 16),
                             const Divider(),
                             const SizedBox(height: 8),

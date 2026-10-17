@@ -1,0 +1,20 @@
+name: Validate FichaYa
+on: [push, pull_request, workflow_dispatch]
+permissions:
+  contents: read
+jobs:
+  validate:
+    runs-on: windows-latest
+    timeout-minutes: 25
+    steps:
+      - uses: actions/checkout@v4
+      - uses: subosito/flutter-action@v2
+        with:
+          flutter-version: '3.47.5'
+          channel: stable
+          cache: true
+      - run: flutter pub get
+      - run: flutter analyze
+      - run: flutter test --reporter expanded
+      - name: Compile web against a nonproduction placeholder
+        run: flutter build web --release --no-wasm-dry-run --dart-define=API_BASE_URL=https://staging.invalid --dart-define=APP_FLAVOR=STAGE

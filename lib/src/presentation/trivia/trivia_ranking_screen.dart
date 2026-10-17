@@ -1,10 +1,13 @@
+import '../theme/app_palette.dart';
+import 'ranking_entry_layout.dart';
+import '../widgets/app_page_layout.dart';
 import 'dart:async';
 
 import 'package:flutter/material.dart';
 
 import '../../core/network/mobile_api_client.dart';
 
-const _kPrimary = Color(0xFF0E3A5B);
+const _kPrimary = AppPalette.navy;
 const _kGold = Color(0xFFF5A623);
 const _kSilver = Color(0xFF9E9E9E);
 const _kBronze = Color(0xFF795548);
@@ -40,20 +43,32 @@ class _TriviaRankingScreenState extends State<TriviaRankingScreen> {
 
   Future<void> _load() async {
     if (!mounted) return;
-    setState(() { _loading = true; _error = null; });
+    setState(() {
+      _loading = true;
+      _error = null;
+    });
     try {
       final r = await widget.apiClient.getRankingTrivia(
         token: widget.token,
         triviaId: widget.triviaId,
       );
       if (!mounted) return;
-      setState(() { _ranking = r; _loading = false; });
+      setState(() {
+        _ranking = r;
+        _loading = false;
+      });
     } on ApiException catch (e) {
       if (!mounted) return;
-      setState(() { _error = e.message; _loading = false; });
+      setState(() {
+        _error = e.message;
+        _loading = false;
+      });
     } catch (_) {
       if (!mounted) return;
-      setState(() { _error = 'No se pudo obtener el ranking.'; _loading = false; });
+      setState(() {
+        _error = 'No se pudo obtener el ranking.';
+        _loading = false;
+      });
     }
   }
 
@@ -61,47 +76,49 @@ class _TriviaRankingScreenState extends State<TriviaRankingScreen> {
   Widget build(BuildContext context) {
     final ranking = _ranking;
     return Scaffold(
-      backgroundColor: const Color(0xFFF2F5F8),
+      backgroundColor: AppColors.of(context).surface(AppPalette.background),
       appBar: AppBar(
-        title: Text(ranking != null ? 'Ranking: ${ranking.trivia.titulo}' : 'Ranking'),
-        backgroundColor: _kPrimary,
-        foregroundColor: Colors.white,
+        title: Text('Ranking', textAlign: TextAlign.center),
         actions: [
           IconButton(
-            icon: const Icon(Icons.refresh),
+            icon: const Icon(Icons.refresh_rounded),
             onPressed: _loading ? null : _load,
           ),
         ],
       ),
-      body: _loading
-          ? const Center(child: CircularProgressIndicator())
-          : _error != null
-              ? _ErrorView(message: _error!, onRetry: _load)
-              : RefreshIndicator(
-                  onRefresh: _load,
-                  child: ListView(
-                    padding: const EdgeInsets.all(16),
-                    children: [
-                      if (ranking != null) ...[
-                        _TriviaInfoBanner(trivia: ranking.trivia),
-                        const SizedBox(height: 12),
-                        _ReglasEmpate(),
-                        const SizedBox(height: 16),
-                        if (ranking.ranking.isEmpty)
-                          _EmptyState()
-                        else
-                          ...ranking.ranking.map(
-                            (item) => _RankingTile(
-                              item: item,
-                              esPropio: item.empleadoId != null &&
-                                  widget.empleadoDni.isNotEmpty,
-                            ),
+      body: AppPageBody(
+        maxWidth: 840,
+        child: _loading
+            ? const Center(child: CircularProgressIndicator())
+            : _error != null
+            ? _ErrorView(message: _error!, onRetry: _load)
+            : RefreshIndicator(
+                onRefresh: _load,
+                child: ListView(
+                  padding: const EdgeInsets.all(16),
+                  children: [
+                    if (ranking != null) ...[
+                      _TriviaInfoBanner(trivia: ranking.trivia),
+                      const SizedBox(height: 12),
+                      _ReglasEmpate(),
+                      const SizedBox(height: 16),
+                      if (ranking.ranking.isEmpty)
+                        _EmptyState()
+                      else
+                        ...ranking.ranking.map(
+                          (item) => _RankingTile(
+                            item: item,
+                            esPropio:
+                                item.empleadoId != null &&
+                                widget.empleadoDni.isNotEmpty,
                           ),
-                        const SizedBox(height: 16),
-                      ],
+                        ),
+                      const SizedBox(height: 16),
                     ],
-                  ),
+                  ],
                 ),
+              ),
+      ),
     );
   }
 }
@@ -115,26 +132,41 @@ class _TriviaInfoBanner extends StatelessWidget {
     return Container(
       padding: const EdgeInsets.all(16),
       decoration: BoxDecoration(
-        gradient: const LinearGradient(
-          colors: [_kPrimary, Color(0xFF1A5276)],
-        ),
+        gradient: LinearGradient(colors: AppColors.of(context).brandGradient),
         borderRadius: BorderRadius.circular(16),
       ),
       child: Column(
-        crossAxisAlignment: CrossAxisAlignment.start,
+        crossAxisAlignment: CrossAxisAlignment.center,
         children: [
-          Row(children: [
-            const Icon(Icons.leaderboard, color: Colors.white, size: 20),
-            const SizedBox(width: 8),
-            Text(
-              trivia.titulo,
-              style: const TextStyle(color: Colors.white, fontWeight: FontWeight.w700, fontSize: 16),
-            ),
-          ]),
+          Row(
+            mainAxisAlignment: MainAxisAlignment.center,
+            children: [
+              const Icon(
+                Icons.leaderboard_rounded,
+                color: Colors.white,
+                size: 20,
+              ),
+              const SizedBox(width: 8),
+              Flexible(
+                child: Text(
+                  trivia.titulo,
+                  style: const TextStyle(
+                    color: Colors.white,
+                    fontWeight: FontWeight.w700,
+                    fontSize: 16,
+                  ),
+                  textAlign: TextAlign.center,
+                ),
+              ),
+            ],
+          ),
           if (trivia.premio != null) ...[
             const SizedBox(height: 8),
-            Text('Premio: ${trivia.premio}',
-                style: const TextStyle(color: Colors.white70, fontSize: 13)),
+            Text(
+              'Premio: ${trivia.premio}',
+              style: const TextStyle(color: Colors.white70, fontSize: 13),
+              textAlign: TextAlign.center,
+            ),
           ],
         ],
       ),
@@ -148,18 +180,29 @@ class _ReglasEmpate extends StatelessWidget {
     return Container(
       padding: const EdgeInsets.all(12),
       decoration: BoxDecoration(
-        color: Colors.blue.shade50,
+        color: AppColors.of(context).surface(Colors.blue.shade50),
         borderRadius: BorderRadius.circular(10),
-        border: Border.all(color: Colors.blue.shade100),
+        border: Border.all(
+          color: AppColors.of(context).border(Colors.blue.shade100),
+        ),
       ),
       child: Row(
+        mainAxisAlignment: MainAxisAlignment.center,
         children: [
-          Icon(Icons.info_outline, size: 16, color: Colors.blue.shade700),
+          Icon(
+            Icons.info_rounded,
+            size: 16,
+            color: AppColors.of(context).foreground(Colors.blue.shade700),
+          ),
           const SizedBox(width: 8),
           Expanded(
             child: Text(
               'En caso de empate gana quien tenga menor tiempo. Si el tiempo también coincide, gana quien empezó primero.',
-              style: TextStyle(fontSize: 13, color: Colors.blue.shade800),
+              style: TextStyle(
+                fontSize: 13,
+                color: AppColors.of(context).foreground(Colors.blue.shade800),
+              ),
+              textAlign: TextAlign.center,
             ),
           ),
         ],
@@ -175,19 +218,27 @@ class _RankingTile extends StatelessWidget {
 
   Color get _posColor {
     switch (item.posicion) {
-      case 1: return _kGold;
-      case 2: return _kSilver;
-      case 3: return _kBronze;
-      default: return Colors.grey.shade400;
+      case 1:
+        return _kGold;
+      case 2:
+        return _kSilver;
+      case 3:
+        return _kBronze;
+      default:
+        return Colors.grey.shade400;
     }
   }
 
   String get _medalla {
     switch (item.posicion) {
-      case 1: return '🥇';
-      case 2: return '🥈';
-      case 3: return '🥉';
-      default: return '${item.posicion}';
+      case 1:
+        return '🥇';
+      case 2:
+        return '🥈';
+      case 3:
+        return '🥉';
+      default:
+        return '${item.posicion}';
     }
   }
 
@@ -198,25 +249,37 @@ class _RankingTile extends StatelessWidget {
     return Container(
       margin: const EdgeInsets.only(bottom: 8),
       decoration: BoxDecoration(
-        color: Colors.white,
+        color: AppColors.of(context).surface(Colors.white),
         borderRadius: BorderRadius.circular(14),
         border: Border.all(
-          color: _tieneMedalla ? _posColor.withValues(alpha: 0.4) : Colors.grey.shade200,
+          color: AppColors.of(context).border(
+            _tieneMedalla
+                ? _posColor.withValues(alpha: 0.4)
+                : Colors.grey.shade200,
+          ),
           width: _tieneMedalla ? 1.5 : 1,
         ),
         boxShadow: _tieneMedalla
-            ? [BoxShadow(color: _posColor.withValues(alpha: 0.15), blurRadius: 6)]
+            ? [
+                BoxShadow(
+                  color: _posColor.withValues(alpha: 0.15),
+                  blurRadius: 6,
+                ),
+              ]
             : [],
       ),
-      child: ListTile(
-        contentPadding: const EdgeInsets.symmetric(horizontal: 16, vertical: 6),
+      child: RankingEntryLayout(
         leading: _tieneMedalla
-            ? Text(_medalla, style: const TextStyle(fontSize: 26))
+            ? Text(
+                _medalla,
+                style: const TextStyle(fontSize: 26),
+                textAlign: TextAlign.center,
+              )
             : Container(
                 width: 36,
                 height: 36,
                 decoration: BoxDecoration(
-                  color: Colors.grey.shade100,
+                  color: AppColors.of(context).surface(Colors.grey.shade100),
                   shape: BoxShape.circle,
                 ),
                 child: Center(
@@ -224,8 +287,11 @@ class _RankingTile extends StatelessWidget {
                     '${item.posicion}',
                     style: TextStyle(
                       fontWeight: FontWeight.w700,
-                      color: Colors.grey.shade600,
+                      color: AppColors.of(
+                        context,
+                      ).foreground(Colors.grey.shade600),
                     ),
+                    textAlign: TextAlign.center,
                   ),
                 ),
               ),
@@ -233,29 +299,41 @@ class _RankingTile extends StatelessWidget {
           item.empleadoNombre ?? 'Participante',
           style: TextStyle(
             fontWeight: item.posicion <= 3 ? FontWeight.w700 : FontWeight.w600,
-            color: _kPrimary,
+            color: AppColors.of(context).foreground(_kPrimary),
           ),
+          textAlign: TextAlign.center,
         ),
         subtitle: Text(
           item.sector ?? '',
-          style: TextStyle(fontSize: 13, color: Colors.grey.shade600),
+          style: TextStyle(
+            fontSize: 13,
+            color: AppColors.of(context).foreground(Colors.grey.shade600),
+          ),
+          textAlign: TextAlign.center,
         ),
         trailing: Column(
           mainAxisAlignment: MainAxisAlignment.center,
-          crossAxisAlignment: CrossAxisAlignment.end,
+          crossAxisAlignment: CrossAxisAlignment.center,
           children: [
             Text(
               '${item.puntosTotal ?? 0} pts',
               style: TextStyle(
                 fontWeight: FontWeight.w800,
                 fontSize: 15,
-                color: _tieneMedalla ? _posColor : _kPrimary,
+                color: AppColors.of(
+                  context,
+                ).foreground(_tieneMedalla ? _posColor : _kPrimary),
               ),
+              textAlign: TextAlign.center,
             ),
             if (item.tiempoTotalSegundos != null)
               Text(
                 _fmtTiempo(item.tiempoTotalSegundos),
-                style: TextStyle(fontSize: 13, color: Colors.grey.shade500),
+                style: TextStyle(
+                  fontSize: 13,
+                  color: AppColors.of(context).foreground(Colors.grey.shade500),
+                ),
+                textAlign: TextAlign.center,
               ),
           ],
         ),
@@ -271,11 +349,21 @@ class _EmptyState extends StatelessWidget {
       child: Padding(
         padding: const EdgeInsets.all(32),
         child: Column(
+          crossAxisAlignment: CrossAxisAlignment.center,
           children: [
-            Icon(Icons.leaderboard_outlined, size: 56, color: Colors.grey.shade300),
+            Icon(
+              Icons.leaderboard_rounded,
+              size: 56,
+              color: AppColors.of(context).foreground(Colors.grey.shade300),
+            ),
             const SizedBox(height: 12),
-            Text('Aún no hay participantes.',
-                style: TextStyle(color: Colors.grey.shade500)),
+            Text(
+              'Aún no hay participantes.',
+              style: TextStyle(
+                color: AppColors.of(context).foreground(Colors.grey.shade500),
+              ),
+              textAlign: TextAlign.center,
+            ),
           ],
         ),
       ),
@@ -296,14 +384,25 @@ class _ErrorView extends StatelessWidget {
         child: Column(
           mainAxisSize: MainAxisSize.min,
           children: [
-            Icon(Icons.error_outline, size: 48, color: Colors.grey.shade400),
+            Icon(
+              Icons.error_rounded,
+              size: 48,
+              color: AppColors.of(context).foreground(Colors.grey.shade400),
+            ),
             const SizedBox(height: 12),
-            Text(message, textAlign: TextAlign.center,
-                style: TextStyle(color: Colors.grey.shade600)),
+            Text(
+              message,
+              textAlign: TextAlign.center,
+              style: TextStyle(
+                color: AppColors.of(context).foreground(Colors.grey.shade600),
+              ),
+            ),
             const SizedBox(height: 20),
             FilledButton.icon(
-              style: FilledButton.styleFrom(backgroundColor: _kPrimary),
-              icon: const Icon(Icons.refresh),
+              style: FilledButton.styleFrom(
+                backgroundColor: AppColors.of(context).surface(_kPrimary),
+              ),
+              icon: const Icon(Icons.refresh_rounded),
               label: const Text('Reintentar'),
               onPressed: onRetry,
             ),

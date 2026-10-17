@@ -1,3 +1,6 @@
+import 'package:ficharqr/src/presentation/widgets/app_card.dart';
+import '../widgets/app_page_layout.dart';
+import 'package:ficharqr/src/presentation/theme/app_palette.dart';
 import 'package:flutter/foundation.dart';
 import '../widgets/browser_permission_dialog.dart';
 import 'dart:async';
@@ -163,7 +166,7 @@ class _GpsLocationPageState extends State<GpsLocationPage>
     if (_loading && location == null && _error == null) {
       return Scaffold(
         appBar: AppBar(
-          title: const Text('Mi ubicacion GPS'),
+          title: const Text('Mi ubicacion GPS', textAlign: TextAlign.center),
           actions: [
             if (_refreshing)
               const Padding(
@@ -182,7 +185,7 @@ class _GpsLocationPageState extends State<GpsLocationPage>
 
     return Scaffold(
       appBar: AppBar(
-        title: const Text('Mi ubicacion GPS'),
+        title: const Text('Mi ubicacion GPS', textAlign: TextAlign.center),
         actions: [
           if (_refreshing)
             const Padding(
@@ -197,53 +200,57 @@ class _GpsLocationPageState extends State<GpsLocationPage>
             IconButton(
               tooltip: 'Actualizar GPS real',
               onPressed: () => unawaited(_refreshLocation()),
-              icon: const Icon(Icons.refresh),
+              icon: const Icon(Icons.refresh_rounded),
             ),
         ],
       ),
-      body: RefreshIndicator(
-        onRefresh: _refreshLocation,
-        child: ListView(
-          physics: const AlwaysScrollableScrollPhysics(),
-          padding: const EdgeInsets.all(16),
-          children: [
-            _GpsHeroCard(
-              availability: availability,
-              hasLocation: location != null,
-            ),
-            if (_error != null) ...[
+      body: AppPageBody(
+        maxWidth: 760,
+        child: RefreshIndicator(
+          onRefresh: _refreshLocation,
+          child: ListView(
+            physics: const AlwaysScrollableScrollPhysics(),
+            padding: const EdgeInsets.all(16),
+            children: [
+              _GpsHeroCard(
+                availability: availability,
+                hasLocation: location != null,
+              ),
+              if (_error != null) ...[
+                const SizedBox(height: 12),
+                _ErrorCard(
+                  message: _error!,
+                  onRefresh: _refreshing ? null : _refreshLocation,
+                  onOpenLocationSettings: _openLocationSettings,
+                  onOpenAppSettings: _openAppSettings,
+                ),
+              ],
               const SizedBox(height: 12),
-              _ErrorCard(
-                message: _error!,
+              _CoordinatesCard(location: location),
+              const SizedBox(height: 12),
+              _DetailsCard(
+                location: location,
+                availability: availability,
                 onRefresh: _refreshing ? null : _refreshLocation,
                 onOpenLocationSettings: _openLocationSettings,
                 onOpenAppSettings: _openAppSettings,
               ),
-            ],
-            const SizedBox(height: 12),
-            _CoordinatesCard(location: location),
-            const SizedBox(height: 12),
-            _DetailsCard(
-              location: location,
-              availability: availability,
-              onRefresh: _refreshing ? null : _refreshLocation,
-              onOpenLocationSettings: _openLocationSettings,
-              onOpenAppSettings: _openAppSettings,
-            ),
-            const SizedBox(height: 12),
-            Card(
-              child: Padding(
-                padding: const EdgeInsets.all(16),
-                child: Text(
-                  'La lectura usa GPS real del dispositivo con alta precision. '
-                  'Si no aparece una ubicacion, revisa permisos y el GPS del telefono.',
-                  style: Theme.of(
-                    context,
-                  ).textTheme.bodyMedium?.copyWith(color: cs.onSurfaceVariant),
+              const SizedBox(height: 12),
+              AppCard(
+                child: Padding(
+                  padding: const EdgeInsets.all(16),
+                  child: Text(
+                    'La lectura usa GPS real del dispositivo con alta precision. '
+                    'Si no aparece una ubicacion, revisa permisos y el GPS del telefono.',
+                    style: Theme.of(context).textTheme.bodyMedium?.copyWith(
+                      color: cs.onSurfaceVariant,
+                    ),
+                    textAlign: TextAlign.center,
+                  ),
                 ),
               ),
-            ),
-          ],
+            ],
+          ),
         ),
       ),
     );
@@ -262,11 +269,12 @@ class _GpsHeroCard extends StatelessWidget {
     final serviceEnabled = availability?.locationServiceEnabled;
     final permissionGranted = availability?.locationGranted;
 
-    return Card(
+    return AppCard(
       margin: EdgeInsets.zero,
       child: Padding(
         padding: const EdgeInsets.all(16),
         child: Row(
+          mainAxisAlignment: MainAxisAlignment.center,
           children: [
             Container(
               width: 52,
@@ -276,20 +284,23 @@ class _GpsHeroCard extends StatelessWidget {
                 borderRadius: BorderRadius.circular(16),
               ),
               child: Icon(
-                Icons.my_location_outlined,
+                Icons.my_location_rounded,
                 color: cs.onPrimaryContainer,
               ),
             ),
             const SizedBox(width: 14),
             Expanded(
               child: Column(
-                crossAxisAlignment: CrossAxisAlignment.start,
+                crossAxisAlignment: CrossAxisAlignment.center,
                 children: [
                   Text(
-                    hasLocation ? 'Ubicación disponible' : 'Ubicación pendiente',
+                    hasLocation
+                        ? 'Ubicación disponible'
+                        : 'Ubicación pendiente',
                     style: Theme.of(context).textTheme.titleMedium?.copyWith(
                       fontWeight: FontWeight.w700,
                     ),
+                    textAlign: TextAlign.center,
                   ),
                   const SizedBox(height: 4),
                   Text(
@@ -297,11 +308,13 @@ class _GpsHeroCard extends StatelessWidget {
                     style: Theme.of(context).textTheme.bodyMedium?.copyWith(
                       color: cs.onSurfaceVariant,
                     ),
+                    textAlign: TextAlign.center,
                   ),
                   const SizedBox(height: 10),
                   Wrap(
                     spacing: 8,
                     runSpacing: 8,
+                    alignment: WrapAlignment.center,
                     children: [
                       _StatusChip(
                         label: serviceEnabled == null
@@ -345,7 +358,7 @@ class _CoordinatesCard extends StatelessWidget {
     final lat = location?.lat.toStringAsFixed(6) ?? '-';
     final lon = location?.lon.toStringAsFixed(6) ?? '-';
 
-    return Card(
+    return AppCard(
       margin: EdgeInsets.zero,
       child: Padding(
         padding: const EdgeInsets.all(16),
@@ -357,6 +370,7 @@ class _CoordinatesCard extends StatelessWidget {
               style: Theme.of(
                 context,
               ).textTheme.titleMedium?.copyWith(fontWeight: FontWeight.w700),
+              textAlign: TextAlign.center,
             ),
             const SizedBox(height: 12),
             _CoordinateBlock(label: 'Latitud', value: lat),
@@ -368,6 +382,7 @@ class _CoordinatesCard extends StatelessWidget {
               style: Theme.of(
                 context,
               ).textTheme.bodySmall?.copyWith(color: cs.onSurfaceVariant),
+              textAlign: TextAlign.center,
             ),
           ],
         ),
@@ -411,7 +426,7 @@ class _DetailsCard extends StatelessWidget {
         ? 'Concedido'
         : 'Pendiente';
 
-    return Card(
+    return AppCard(
       margin: EdgeInsets.zero,
       child: Padding(
         padding: const EdgeInsets.all(16),
@@ -423,6 +438,7 @@ class _DetailsCard extends StatelessWidget {
               style: Theme.of(
                 context,
               ).textTheme.titleMedium?.copyWith(fontWeight: FontWeight.w700),
+              textAlign: TextAlign.center,
             ),
             const SizedBox(height: 12),
             _DetailRow(label: 'Lectura', value: locationText),
@@ -434,26 +450,32 @@ class _DetailsCard extends StatelessWidget {
             Wrap(
               spacing: 8,
               runSpacing: 8,
+              alignment: WrapAlignment.center,
               children: [
                 FilledButton.icon(
                   onPressed: onRefresh == null
                       ? null
                       : () => unawaited(onRefresh!()),
-                  icon: const Icon(Icons.gps_fixed_outlined),
-                  label: const Text('Actualizar GPS'),
+                  icon: const Icon(Icons.gps_fixed_rounded),
+                  label: const Text(
+                    'Actualizar GPS',
+                    textAlign: TextAlign.center,
+                  ),
                 ),
                 OutlinedButton.icon(
                   onPressed: () => unawaited(onOpenLocationSettings()),
-                  icon: const Icon(Icons.settings_outlined),
+                  icon: const Icon(Icons.settings_rounded),
                   label: const Text(
                     kIsWeb ? 'Activar ubicacion' : 'Ajustes de ubicacion',
+                    textAlign: TextAlign.center,
                   ),
                 ),
                 OutlinedButton.icon(
                   onPressed: () => unawaited(onOpenAppSettings()),
-                  icon: const Icon(Icons.app_settings_alt_outlined),
+                  icon: const Icon(Icons.app_settings_alt_rounded),
                   label: const Text(
                     kIsWeb ? 'Permisos del navegador' : 'Ajustes de la app',
+                    textAlign: TextAlign.center,
                   ),
                 ),
               ],
@@ -480,40 +502,45 @@ class _ErrorCard extends StatelessWidget {
 
   @override
   Widget build(BuildContext context) {
-    return Card(
+    return AppCard(
       color: Theme.of(context).colorScheme.errorContainer,
       child: Padding(
         padding: const EdgeInsets.all(16),
         child: Column(
-          crossAxisAlignment: CrossAxisAlignment.start,
+          crossAxisAlignment: CrossAxisAlignment.center,
           children: [
             Text(
               message,
               style: TextStyle(
                 color: Theme.of(context).colorScheme.onErrorContainer,
               ),
+              textAlign: TextAlign.center,
             ),
             const SizedBox(height: 12),
             Wrap(
               spacing: 8,
               runSpacing: 8,
+              alignment: WrapAlignment.center,
               children: [
                 OutlinedButton.icon(
                   onPressed: onRefresh == null
                       ? null
                       : () => unawaited(onRefresh!()),
-                  icon: const Icon(Icons.refresh, size: 16),
-                  label: const Text('Reintentar'),
+                  icon: const Icon(Icons.refresh_rounded, size: 16),
+                  label: const Text('Reintentar', textAlign: TextAlign.center),
                 ),
                 OutlinedButton.icon(
                   onPressed: () => unawaited(onOpenLocationSettings()),
-                  icon: const Icon(Icons.settings_outlined, size: 16),
-                  label: const Text('Abrir ubicacion'),
+                  icon: const Icon(Icons.settings_rounded, size: 16),
+                  label: const Text(
+                    'Abrir ubicacion',
+                    textAlign: TextAlign.center,
+                  ),
                 ),
                 OutlinedButton.icon(
                   onPressed: () => unawaited(onOpenAppSettings()),
-                  icon: const Icon(Icons.app_settings_alt_outlined, size: 16),
-                  label: const Text('Abrir app'),
+                  icon: const Icon(Icons.app_settings_alt_rounded, size: 16),
+                  label: const Text('Abrir app', textAlign: TextAlign.center),
                 ),
               ],
             ),
@@ -541,6 +568,7 @@ class _CoordinateBlock extends StatelessWidget {
         border: Border.all(color: cs.outlineVariant),
       ),
       child: Row(
+        mainAxisAlignment: MainAxisAlignment.center,
         children: [
           Expanded(
             child: Text(
@@ -548,6 +576,7 @@ class _CoordinateBlock extends StatelessWidget {
               style: Theme.of(
                 context,
               ).textTheme.labelLarge?.copyWith(color: cs.onSurfaceVariant),
+              textAlign: TextAlign.center,
             ),
           ),
           const SizedBox(width: 12),
@@ -611,15 +640,16 @@ class _StatusChip extends StatelessWidget {
     return Container(
       padding: const EdgeInsets.symmetric(horizontal: 10, vertical: 6),
       decoration: BoxDecoration(
-        color: color.withValues(alpha: 0.12),
+        color: AppColors.of(context).surface(color.withValues(alpha: 0.12)),
         borderRadius: BorderRadius.circular(999),
       ),
       child: Text(
         label,
         style: Theme.of(context).textTheme.labelMedium?.copyWith(
-          color: color,
+          color: AppColors.of(context).foreground(color),
           fontWeight: FontWeight.w700,
         ),
+        textAlign: TextAlign.center,
       ),
     );
   }

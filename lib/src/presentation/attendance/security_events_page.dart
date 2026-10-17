@@ -1,3 +1,5 @@
+import 'package:ficharqr/src/presentation/widgets/app_card.dart';
+import 'package:ficharqr/src/presentation/theme/app_palette.dart';
 import 'package:flutter/material.dart';
 
 import '../../core/network/mobile_api_client.dart';
@@ -94,7 +96,9 @@ class _SecurityEventsPageState extends State<SecurityEventsPage> {
     final hasNext = (_page * _perPage) < _total;
 
     return Scaffold(
-      appBar: AppBar(title: const Text('Eventos de seguridad')),
+      appBar: AppBar(
+        title: const Text('Eventos de seguridad', textAlign: TextAlign.center),
+      ),
       body: _loading
           ? const Center(child: CircularProgressIndicator())
           : RefreshIndicator(
@@ -117,21 +121,29 @@ class _SecurityEventsPageState extends State<SecurityEventsPage> {
                         padding: EdgeInsets.all(horizontalPadding),
                         children: [
                           if (_error != null) ...[
-                            Card(
-                              color: Theme.of(context).colorScheme.errorContainer,
+                            AppCard(
+                              color: Theme.of(
+                                context,
+                              ).colorScheme.errorContainer,
                               child: Padding(
                                 padding: const EdgeInsets.all(12),
                                 child: Column(
-                                  crossAxisAlignment: CrossAxisAlignment.start,
+                                  crossAxisAlignment: CrossAxisAlignment.center,
                                   children: [
-                                    Text(_error!),
+                                    Text(_error!, textAlign: TextAlign.center),
                                     const SizedBox(height: 8),
                                     OutlinedButton.icon(
                                       onPressed: _loadingPage
                                           ? null
                                           : () => _loadPage(page: _page),
-                                      icon: const Icon(Icons.refresh, size: 16),
-                                      label: const Text('Reintentar'),
+                                      icon: const Icon(
+                                        Icons.refresh_rounded,
+                                        size: 16,
+                                      ),
+                                      label: const Text(
+                                        'Reintentar',
+                                        textAlign: TextAlign.center,
+                                      ),
                                     ),
                                   ],
                                 ),
@@ -139,19 +151,23 @@ class _SecurityEventsPageState extends State<SecurityEventsPage> {
                             ),
                             const SizedBox(height: 8),
                           ],
-                          Card(
+                          AppCard(
                             child: Padding(
                               padding: const EdgeInsets.all(12),
-                              child: Text('Página $_page | Registros: $_total'),
+                              child: Text(
+                                'Página $_page | Registros: $_total',
+                                textAlign: TextAlign.center,
+                              ),
                             ),
                           ),
                           const SizedBox(height: 8),
                           if (_items.isEmpty)
-                            const Card(
+                            const AppCard(
                               child: Padding(
                                 padding: EdgeInsets.all(16),
                                 child: Text(
                                   'No hay eventos de seguridad para mostrar.',
+                                  textAlign: TextAlign.center,
                                 ),
                               ),
                             ),
@@ -170,29 +186,45 @@ class _SecurityEventsPageState extends State<SecurityEventsPage> {
                                       onPressed: (!hasPrev || _loadingPage)
                                           ? null
                                           : () => _loadPage(page: _page - 1),
-                                      icon: const Icon(Icons.chevron_left),
-                                      label: const Text('Anterior'),
+                                      icon: const Icon(
+                                        Icons.chevron_left_rounded,
+                                      ),
+                                      label: const Text(
+                                        'Anterior',
+                                        textAlign: TextAlign.center,
+                                      ),
                                     ),
                                     const SizedBox(height: 8),
                                     OutlinedButton.icon(
                                       onPressed: (!hasNext || _loadingPage)
                                           ? null
                                           : () => _loadPage(page: _page + 1),
-                                      icon: const Icon(Icons.chevron_right),
-                                      label: const Text('Siguiente'),
+                                      icon: const Icon(
+                                        Icons.chevron_right_rounded,
+                                      ),
+                                      label: const Text(
+                                        'Siguiente',
+                                        textAlign: TextAlign.center,
+                                      ),
                                     ),
                                   ],
                                 );
                               }
                               return Row(
+                                mainAxisAlignment: MainAxisAlignment.center,
                                 children: [
                                   Expanded(
                                     child: OutlinedButton.icon(
                                       onPressed: (!hasPrev || _loadingPage)
                                           ? null
                                           : () => _loadPage(page: _page - 1),
-                                      icon: const Icon(Icons.chevron_left),
-                                      label: const Text('Anterior'),
+                                      icon: const Icon(
+                                        Icons.chevron_left_rounded,
+                                      ),
+                                      label: const Text(
+                                        'Anterior',
+                                        textAlign: TextAlign.center,
+                                      ),
                                     ),
                                   ),
                                   const SizedBox(width: 12),
@@ -201,8 +233,13 @@ class _SecurityEventsPageState extends State<SecurityEventsPage> {
                                       onPressed: (!hasNext || _loadingPage)
                                           ? null
                                           : () => _loadPage(page: _page + 1),
-                                      icon: const Icon(Icons.chevron_right),
-                                      label: const Text('Siguiente'),
+                                      icon: const Icon(
+                                        Icons.chevron_right_rounded,
+                                      ),
+                                      label: const Text(
+                                        'Siguiente',
+                                        textAlign: TextAlign.center,
+                                      ),
                                     ),
                                   ),
                                 ],
@@ -233,18 +270,21 @@ class _SecurityEventsPageState extends State<SecurityEventsPage> {
         ? 'Sin detalle adicional.'
         : details.join('\n');
 
-    return Card(
+    return AppCard(
       margin: const EdgeInsets.only(bottom: 10),
       child: ListTile(
         leading: Icon(
-          event.alertaFraude ? Icons.warning_amber_rounded : Icons.info_outline,
-          color: event.alertaFraude
-              ? Colors.red.shade700
-              : Colors.orange.shade700,
+          event.alertaFraude ? Icons.warning_amber_rounded : Icons.info_rounded,
+          color: AppColors.of(context).foreground(
+            event.alertaFraude ? Colors.red.shade700 : Colors.orange.shade700,
+          ),
         ),
-        title: Text(event.tipoEvento ?? 'evento_seguridad'),
-        subtitle: Text(subtitle),
-        trailing: Text('#${event.id}'),
+        title: Text(
+          event.tipoEvento ?? 'evento_seguridad',
+          textAlign: TextAlign.center,
+        ),
+        subtitle: Text(subtitle, textAlign: TextAlign.center),
+        trailing: Text('#${event.id}', textAlign: TextAlign.center),
         isThreeLine: true,
       ),
     );

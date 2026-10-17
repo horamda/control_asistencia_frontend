@@ -1,8 +1,12 @@
+import 'package:ficharqr/src/presentation/widgets/app_card.dart';
+import 'package:ficharqr/src/presentation/theme/app_palette.dart';
 import 'dart:async';
 
 import 'package:flutter/material.dart';
+import '../widgets/app_page_layout.dart';
 
 import '../../core/alerts/employee_alerts_repository.dart';
+import '../../core/alerts/employee_alerts_read_state.dart';
 import '../../core/network/feedback_api_models.dart';
 import '../../core/network/mobile_api_client.dart';
 import '../../core/utils/date_formatter.dart';
@@ -15,10 +19,12 @@ class EmployeeAlertsPage extends StatefulWidget {
     super.key,
     required this.apiClient,
     required this.token,
+    this.employeeId,
   });
 
   final MobileApiClient apiClient;
   final String token;
+  final int? employeeId;
 
   @override
   State<EmployeeAlertsPage> createState() => _EmployeeAlertsPageState();
@@ -28,6 +34,18 @@ class _EmployeeAlertsPageState extends State<EmployeeAlertsPage> {
   late final EmployeeAlertsRepository _alertsRepository;
 
   bool _loading = true;
+  bool _marking = false;
+  bool _readFailed = false;
+  int _unreadCount = 0;
+  Set<String> _unreadModules = {};
+  bool _showViewed = false;
+  EmployeeAlertsSnapshot? _snapshot;
+  EmployeeAlertsReadState? get _readState => widget.employeeId == null
+      ? null
+      : EmployeeAlertsReadState(
+          server: widget.apiClient.baseUrl,
+          employeeId: widget.employeeId!,
+        );
   String? _adelantosError;
   String? _mercaderiaError;
   String? _feedbackError;
@@ -54,9 +72,31 @@ class _EmployeeAlertsPageState extends State<EmployeeAlertsPage> {
     });
 
     final snapshot = await _alertsRepository.loadDetails(token: widget.token);
+    var unread = <String>{};
+    var readFailed = false;
+    try {
+      unread = await _readState?.unreadModules(snapshot) ?? <String>{};
+    } catch (_) {
+      readFailed = true;
+      if (mounted) {
+        ScaffoldMessenger.of(context).showSnackBar(
+          const SnackBar(
+            content: Text(
+              'No se pudo consultar la lectura de novedades. Volvé a actualizar.',
+              textAlign: TextAlign.center,
+            ),
+          ),
+        );
+      }
+    }
 
     if (mounted) {
       setState(() {
+        _snapshot = snapshot;
+        _unreadModules = unread;
+        _unreadCount = unread.length;
+        _readFailed = readFailed;
+        if (readFailed) _showViewed = false;
         _adelantos = snapshot.adelantos;
         _adelantosError = snapshot.adelantosError;
         _mercaderia = snapshot.mercaderia;
@@ -69,17 +109,18 @@ class _EmployeeAlertsPageState extends State<EmployeeAlertsPage> {
     }
   }
 
-  Future<void> _openAdelantos() {
-    return Navigator.of(context).push(
+  Future<void> _openAdelantos() async {
+    await Navigator.of(context).push(
       MaterialPageRoute(
         builder: (_) =>
             AdelantosPage(apiClient: widget.apiClient, token: widget.token),
       ),
     );
+    if (mounted) await _loadAll();
   }
 
-  Future<void> _openMercaderia() {
-    return Navigator.of(context).push(
+  Future<void> _openMercaderia() async {
+    await Navigator.of(context).push(
       MaterialPageRoute(
         builder: (_) => PedidosMercaderiaPage(
           apiClient: widget.apiClient,
@@ -87,103 +128,212 @@ class _EmployeeAlertsPageState extends State<EmployeeAlertsPage> {
         ),
       ),
     );
+    if (mounted) await _loadAll();
   }
 
-  Future<void> _openFeedback() {
-    return Navigator.of(context).push(
+  Future<void> _openFeedback() async {
+    await Navigator.of(context).push(
       MaterialPageRoute(
         builder: (_) =>
             FeedbackPage(apiClient: widget.apiClient, token: widget.token),
       ),
     );
+    if (mounted) await _loadAll();
   }
 
   @override
   Widget build(BuildContext context) {
-    final entries = _buildEntries();
-    final activeCount = _activeAlertsCount();
+    final entries = _buildEntries()
+        .where(
+          (entry) => _visibleModule(
+            const {
+                  'Adelantos': 'adelantos',
+                  'Mercadería': 'mercaderia',
+                  'Feedback': 'feedback',
+                }[entry.module] ??
+                '',
+          ),
+        )
+        .toList();
+    final activeCount = _unreadCount;
 
     return Scaffold(
       appBar: AppBar(
-        title: const Text('Alertas'),
+        title: const Text('Alertas', textAlign: TextAlign.center),
         actions: [
           IconButton(
             tooltip: 'Actualizar',
             onPressed: _loading ? null : () => unawaited(_loadAll()),
-            icon: const Icon(Icons.refresh),
+            icon: const Icon(Icons.refresh_rounded),
           ),
         ],
       ),
-      body: _loading
-          ? const Center(child: CircularProgressIndicator())
-          : RefreshIndicator(
-              onRefresh: _loadAll,
-              child: ListView(
-                physics: const AlwaysScrollableScrollPhysics(),
-                padding: const EdgeInsets.all(16),
-                children: [
-                  _HeroCard(
-                    activeCount: activeCount,
-                    entriesCount: entries.length,
-                  ),
-                  const SizedBox(height: 12),
-                  _ModuleSectionCard(
-                    title: 'Adelantos',
-                    icon: Icons.payments_outlined,
-                    error: _adelantosError,
-                    onOpen: _openAdelantos,
-                    child: _buildAdelantosSection(),
-                  ),
-                  const SizedBox(height: 12),
-                  _ModuleSectionCard(
-                    title: 'Mercadería',
-                    icon: Icons.inventory_2_outlined,
-                    error: _mercaderiaError,
-                    onOpen: _openMercaderia,
-                    child: _buildMercaderiaSection(),
-                  ),
-                  const SizedBox(height: 12),
-                  _ModuleSectionCard(
-                    title: 'Feedback',
-                    icon: Icons.campaign_outlined,
-                    error: _feedbackError,
-                    onOpen: _openFeedback,
-                    child: _buildFeedbackSection(),
-                  ),
-                  const SizedBox(height: 16),
-                  Text(
-                    'Cambios recientes',
-                    style: Theme.of(context).textTheme.titleMedium?.copyWith(
-                      fontWeight: FontWeight.w700,
-                    ),
-                  ),
-                  const SizedBox(height: 8),
-                  if (entries.isEmpty)
-                    const _EmptyStateCard(
-                      icon: Icons.notifications_none_outlined,
-                      title: 'Sin novedades',
-                      subtitle:
-                          'No hay aprobaciones, rechazos ni mensajes nuevos para mostrar.',
-                    )
-                  else
-                    ...entries.map(
-                      (entry) => Padding(
-                        padding: const EdgeInsets.only(bottom: 10),
-                        child: _AlertEntryCard(entry: entry),
-                      ),
-                    ),
-                ],
+      floatingActionButton:
+          !_loading && _readState != null && !_showViewed && _unreadCount > 0
+          ? AppFloatingActionButton(
+              tooltip: 'Marcar novedades como vistas',
+              onPressed: _marking || _readFailed || _unreadCount == 0
+                  ? null
+                  : _markViewed,
+              icon: const Icon(Icons.done_all_rounded),
+              label: Text(
+                _marking
+                    ? 'Guardando…'
+                    : _readFailed
+                    ? 'Lectura no disponible'
+                    : _unreadCount == 0
+                    ? 'Novedades revisadas'
+                    : 'Marcar como vistas',
+                textAlign: TextAlign.center,
               ),
-            ),
+            )
+          : null,
+      body: AppPageBody(
+        child: _loading
+            ? const Center(child: CircularProgressIndicator())
+            : RefreshIndicator(
+                onRefresh: _loadAll,
+                child: ListView(
+                  physics: const AlwaysScrollableScrollPhysics(),
+                  padding: EdgeInsets.fromLTRB(
+                    16,
+                    16,
+                    16,
+                    AppFloatingActionButton.bottomPadding(context),
+                  ),
+                  children: [
+                    _HeroCard(
+                      activeCount: activeCount,
+                      readFailed: _readFailed,
+                    ),
+                    const SizedBox(height: 12),
+                    const Text(
+                      'Las novedades revisadas pasan a “Ver vistas”. Los pedidos siguen disponibles en cada módulo. La lectura se guarda en este dispositivo.',
+                      textAlign: TextAlign.center,
+                    ),
+                    const SizedBox(height: 12),
+                    if (_readState != null && !_readFailed)
+                      Align(
+                        alignment: Alignment.centerLeft,
+                        child: TextButton.icon(
+                          icon: Icon(
+                            _showViewed
+                                ? Icons.notifications_none_rounded
+                                : Icons.history_rounded,
+                          ),
+                          label: Text(
+                            _showViewed ? 'Ver pendientes' : 'Ver vistas',
+                            textAlign: TextAlign.center,
+                          ),
+                          onPressed: () =>
+                              setState(() => _showViewed = !_showViewed),
+                        ),
+                      ),
+                    if (_visibleModule('adelantos', error: _adelantosError))
+                      _ModuleSectionCard(
+                        title: 'Adelantos',
+                        icon: Icons.payments_rounded,
+                        error: _adelantosError,
+                        onOpen: _openAdelantos,
+                        child: _buildAdelantosSection(),
+                      ),
+                    const SizedBox(height: 12),
+                    if (_visibleModule('mercaderia', error: _mercaderiaError))
+                      _ModuleSectionCard(
+                        title: 'Mercadería',
+                        icon: Icons.inventory_2_rounded,
+                        error: _mercaderiaError,
+                        onOpen: _openMercaderia,
+                        child: _buildMercaderiaSection(),
+                      ),
+                    const SizedBox(height: 12),
+                    if (_visibleModule('feedback', error: _feedbackError))
+                      _ModuleSectionCard(
+                        title: 'Feedback',
+                        icon: Icons.campaign_rounded,
+                        error: _feedbackError,
+                        onOpen: _openFeedback,
+                        child: _buildFeedbackSection(),
+                      ),
+                    const SizedBox(height: 16),
+                    Text(
+                      _showViewed ? 'Novedades vistas' : 'Cambios recientes',
+                      style: Theme.of(context).textTheme.titleMedium?.copyWith(
+                        fontWeight: FontWeight.w700,
+                      ),
+                      textAlign: TextAlign.center,
+                    ),
+                    const SizedBox(height: 8),
+                    if (entries.isEmpty &&
+                        !_readFailed &&
+                        _adelantosError == null &&
+                        _mercaderiaError == null &&
+                        _feedbackError == null)
+                      _EmptyStateCard(
+                        icon: Icons.notifications_none_rounded,
+                        title: _showViewed
+                            ? 'Sin novedades vistas'
+                            : 'Sin novedades pendientes',
+                        subtitle: _showViewed
+                            ? 'Las novedades que marques como vistas aparecerán aquí.'
+                            : 'Cuando haya cambios nuevos, aparecerán aquí.',
+                      )
+                    else
+                      ...entries.map(
+                        (entry) => Padding(
+                          padding: const EdgeInsets.only(bottom: 10),
+                          child: _AlertEntryCard(entry: entry),
+                        ),
+                      ),
+                  ],
+                ),
+              ),
+      ),
     );
   }
 
-  int _activeAlertsCount() {
-    return countEmployeeAlerts(
-      adelantos: _adelantos,
-      mercaderia: _mercaderia,
-      feedbackDashboard: _feedbackDashboard,
-    );
+  Future<void> _markViewed() async {
+    final snapshot = _snapshot;
+    final state = _readState;
+    if (snapshot == null || state == null) return;
+    setState(() => _marking = true);
+    try {
+      await state.markViewed(snapshot);
+      final remaining = await state.unreadModules(_snapshot ?? snapshot);
+      if (mounted) {
+        setState(() {
+          _unreadModules = remaining;
+          _unreadCount = remaining.length;
+          _showViewed = false;
+        });
+      }
+    } catch (_) {
+      if (mounted) {
+        ScaffoldMessenger.of(context).showSnackBar(
+          const SnackBar(
+            content: Text(
+              'No se pudo guardar la lectura. Volvé a intentar.',
+              textAlign: TextAlign.center,
+            ),
+          ),
+        );
+      }
+    } finally {
+      if (mounted) setState(() => _marking = false);
+    }
+  }
+
+  bool _visibleModule(String key, {String? error}) {
+    if (error != null) return true;
+    if (_readState == null || _readFailed) return !_showViewed;
+    final snapshot = _snapshot;
+    if (snapshot == null ||
+        !_readState!.fingerprints(snapshot).containsKey(key)) {
+      return false;
+    }
+    return _showViewed
+        ? !_unreadModules.contains(key)
+        : _unreadModules.contains(key);
   }
 
   List<_AlertEntry> _buildEntries() {
@@ -267,7 +417,7 @@ class _EmployeeAlertsPageState extends State<EmployeeAlertsPage> {
             title: 'Último pedido aprobado',
             statusLabel: 'Aprobado',
             statusColor: Colors.green.shade700,
-            icon: Icons.check_circle_outline,
+            icon: Icons.check_circle_rounded,
             message: _pedidoMessage(ultimoAprobado),
             details: _pedidoDetails(ultimoAprobado),
             timestamp: _parseDateTime(
@@ -287,7 +437,7 @@ class _EmployeeAlertsPageState extends State<EmployeeAlertsPage> {
           title: 'Resumen de feedback',
           statusLabel: _feedbackSummaryLabel(resumen),
           statusColor: _feedbackSummaryColor(resumen),
-          icon: Icons.campaign_outlined,
+          icon: Icons.campaign_rounded,
           message: _feedbackSummaryMessage(resumen),
           details: _feedbackSummaryDetails(resumen),
           timestamp: _parseDateTime(_latestFeedbackTimestamp()),
@@ -415,7 +565,7 @@ class _EmployeeAlertsPageState extends State<EmployeeAlertsPage> {
             data.ultimoPedidoAprobado!.id != data.pedidoMesActual!.id)) {
       items.add(
         _ModuleAlertTile(
-          icon: Icons.check_circle_outline,
+          icon: Icons.check_circle_rounded,
           color: Colors.green.shade700,
           title: 'Último pedido aprobado',
           statusLabel: 'Aprobado',
@@ -677,13 +827,13 @@ class _EmployeeAlertsPageState extends State<EmployeeAlertsPage> {
   IconData _statusIcon(String? status) {
     final normalized = _normalize(status);
     return switch (normalized) {
-      'aprobado' => Icons.check_circle_outline,
-      'rechazado' => Icons.cancel_outlined,
-      'cancelado' => Icons.block_outlined,
-      'resuelto' => Icons.verified_outlined,
-      'en_proceso' || 'en proceso' => Icons.timelapse,
-      'vencido' => Icons.warning_amber_outlined,
-      _ => Icons.hourglass_empty_outlined,
+      'aprobado' => Icons.check_circle_rounded,
+      'rechazado' => Icons.cancel_rounded,
+      'cancelado' => Icons.block_rounded,
+      'resuelto' => Icons.verified_rounded,
+      'en_proceso' || 'en proceso' => Icons.timelapse_rounded,
+      'vencido' => Icons.warning_amber_rounded,
+      _ => Icons.hourglass_empty_rounded,
     };
   }
 
@@ -730,19 +880,20 @@ class _EmployeeAlertsPageState extends State<EmployeeAlertsPage> {
 }
 
 class _HeroCard extends StatelessWidget {
-  const _HeroCard({required this.activeCount, required this.entriesCount});
+  const _HeroCard({required this.activeCount, required this.readFailed});
 
   final int activeCount;
-  final int entriesCount;
+  final bool readFailed;
 
   @override
   Widget build(BuildContext context) {
     final cs = Theme.of(context).colorScheme;
-    return Card(
+    return AppCard(
       margin: EdgeInsets.zero,
       child: Padding(
         padding: const EdgeInsets.all(16),
         child: Row(
+          mainAxisAlignment: MainAxisAlignment.center,
           children: [
             Container(
               width: 48,
@@ -752,20 +903,21 @@ class _HeroCard extends StatelessWidget {
                 borderRadius: BorderRadius.circular(14),
               ),
               child: Icon(
-                Icons.notifications_active_outlined,
+                Icons.notifications_active_rounded,
                 color: cs.onPrimaryContainer,
               ),
             ),
             const SizedBox(width: 14),
             Expanded(
               child: Column(
-                crossAxisAlignment: CrossAxisAlignment.start,
+                crossAxisAlignment: CrossAxisAlignment.center,
                 children: [
                   Text(
                     'Novedades del empleado',
                     style: Theme.of(context).textTheme.titleMedium?.copyWith(
                       fontWeight: FontWeight.w700,
                     ),
+                    textAlign: TextAlign.center,
                   ),
                   const SizedBox(height: 4),
                   Text(
@@ -773,14 +925,23 @@ class _HeroCard extends StatelessWidget {
                     style: Theme.of(context).textTheme.bodyMedium?.copyWith(
                       color: cs.onSurfaceVariant,
                     ),
+                    textAlign: TextAlign.center,
+                  ),
+                  const SizedBox(height: 12),
+                  Text(
+                    readFailed
+                        ? 'No se pudo consultar la lectura'
+                        : activeCount == 0
+                        ? 'Sin novedades por revisar'
+                        : '$activeCount ${activeCount == 1 ? 'módulo con novedades' : 'módulos con novedades'}',
+                    style: TextStyle(
+                      color: cs.primary,
+                      fontWeight: FontWeight.w700,
+                    ),
+                    textAlign: TextAlign.center,
                   ),
                 ],
               ),
-            ),
-            const SizedBox(width: 12),
-            _CountPill(
-              value: activeCount,
-              label: entriesCount == 1 ? 'alerta' : 'alertas',
             ),
           ],
         ),
@@ -807,7 +968,7 @@ class _ModuleSectionCard extends StatelessWidget {
   @override
   Widget build(BuildContext context) {
     final cs = Theme.of(context).colorScheme;
-    return Card(
+    return AppCard(
       margin: EdgeInsets.zero,
       child: Padding(
         padding: const EdgeInsets.all(16),
@@ -815,6 +976,7 @@ class _ModuleSectionCard extends StatelessWidget {
           crossAxisAlignment: CrossAxisAlignment.stretch,
           children: [
             Row(
+              mainAxisAlignment: MainAxisAlignment.center,
               children: [
                 Icon(icon, color: cs.primary),
                 const SizedBox(width: 10),
@@ -824,11 +986,12 @@ class _ModuleSectionCard extends StatelessWidget {
                     style: Theme.of(context).textTheme.titleMedium?.copyWith(
                       fontWeight: FontWeight.w700,
                     ),
+                    textAlign: TextAlign.center,
                   ),
                 ),
                 TextButton(
                   onPressed: () => unawaited(onOpen()),
-                  child: const Text('Abrir'),
+                  child: const Text('Abrir', textAlign: TextAlign.center),
                 ),
               ],
             ),
@@ -852,7 +1015,12 @@ class _MetricRow extends StatelessWidget {
 
   @override
   Widget build(BuildContext context) {
-    return Wrap(spacing: 8, runSpacing: 8, children: items);
+    return Wrap(
+      spacing: 8,
+      runSpacing: 8,
+      alignment: WrapAlignment.center,
+      children: items,
+    );
   }
 }
 
@@ -874,12 +1042,14 @@ class _MetricChip extends StatelessWidget {
       ),
       child: Row(
         mainAxisSize: MainAxisSize.min,
+        mainAxisAlignment: MainAxisAlignment.center,
         children: [
           Text(
             label,
             style: Theme.of(
               context,
             ).textTheme.labelMedium?.copyWith(color: cs.onSurfaceVariant),
+            textAlign: TextAlign.center,
           ),
           const SizedBox(width: 8),
           Text(
@@ -887,6 +1057,7 @@ class _MetricChip extends StatelessWidget {
             style: Theme.of(
               context,
             ).textTheme.labelLarge?.copyWith(fontWeight: FontWeight.w700),
+            textAlign: TextAlign.center,
           ),
         ],
       ),
@@ -923,26 +1094,34 @@ class _ModuleAlertTile extends StatelessWidget {
       ),
       child: Row(
         crossAxisAlignment: CrossAxisAlignment.start,
+        mainAxisAlignment: MainAxisAlignment.center,
         children: [
           Container(
             width: 40,
             height: 40,
             decoration: BoxDecoration(
-              color: color.withValues(alpha: 0.12),
+              color: AppColors.of(
+                context,
+              ).surface(color.withValues(alpha: 0.12)),
               borderRadius: BorderRadius.circular(12),
             ),
-            child: Icon(icon, color: color, size: 22),
+            child: Icon(
+              icon,
+              color: AppColors.of(context).foreground(color),
+              size: 22,
+            ),
           ),
           const SizedBox(width: 12),
           Expanded(
             child: Column(
-              crossAxisAlignment: CrossAxisAlignment.start,
+              crossAxisAlignment: CrossAxisAlignment.center,
               children: [
                 LayoutBuilder(
                   builder: (context, constraints) => Wrap(
                     spacing: 8,
                     runSpacing: 6,
                     crossAxisAlignment: WrapCrossAlignment.center,
+                    alignment: WrapAlignment.center,
                     children: [
                       ConstrainedBox(
                         constraints: BoxConstraints(
@@ -954,6 +1133,7 @@ class _ModuleAlertTile extends StatelessWidget {
                           overflow: TextOverflow.ellipsis,
                           style: Theme.of(context).textTheme.titleSmall
                               ?.copyWith(fontWeight: FontWeight.w700),
+                          textAlign: TextAlign.center,
                         ),
                       ),
                       _StatusPill(label: statusLabel, color: color),
@@ -966,6 +1146,7 @@ class _ModuleAlertTile extends StatelessWidget {
                   style: Theme.of(
                     context,
                   ).textTheme.bodyMedium?.copyWith(color: cs.onSurfaceVariant),
+                  textAlign: TextAlign.center,
                 ),
                 const SizedBox(height: 6),
                 Text(
@@ -973,6 +1154,7 @@ class _ModuleAlertTile extends StatelessWidget {
                   style: Theme.of(
                     context,
                   ).textTheme.bodySmall?.copyWith(color: cs.onSurfaceVariant),
+                  textAlign: TextAlign.center,
                 ),
               ],
             ),
@@ -991,32 +1173,40 @@ class _AlertEntryCard extends StatelessWidget {
   @override
   Widget build(BuildContext context) {
     final cs = Theme.of(context).colorScheme;
-    return Card(
+    return AppCard(
       margin: EdgeInsets.zero,
       child: Padding(
         padding: const EdgeInsets.all(14),
         child: Row(
           crossAxisAlignment: CrossAxisAlignment.start,
+          mainAxisAlignment: MainAxisAlignment.center,
           children: [
             Container(
               width: 42,
               height: 42,
               decoration: BoxDecoration(
-                color: entry.statusColor.withValues(alpha: 0.12),
+                color: AppColors.of(
+                  context,
+                ).surface(entry.statusColor.withValues(alpha: 0.12)),
                 borderRadius: BorderRadius.circular(12),
               ),
-              child: Icon(entry.icon, color: entry.statusColor, size: 22),
+              child: Icon(
+                entry.icon,
+                color: AppColors.of(context).foreground(entry.statusColor),
+                size: 22,
+              ),
             ),
             const SizedBox(width: 12),
             Expanded(
               child: Column(
-                crossAxisAlignment: CrossAxisAlignment.start,
+                crossAxisAlignment: CrossAxisAlignment.center,
                 children: [
                   LayoutBuilder(
                     builder: (context, constraints) => Wrap(
                       spacing: 8,
                       runSpacing: 6,
                       crossAxisAlignment: WrapCrossAlignment.center,
+                      alignment: WrapAlignment.center,
                       children: [
                         ConstrainedBox(
                           constraints: BoxConstraints(
@@ -1028,6 +1218,7 @@ class _AlertEntryCard extends StatelessWidget {
                             overflow: TextOverflow.ellipsis,
                             style: Theme.of(context).textTheme.titleSmall
                                 ?.copyWith(fontWeight: FontWeight.w700),
+                            textAlign: TextAlign.center,
                           ),
                         ),
                         _StatusPill(
@@ -1043,15 +1234,17 @@ class _AlertEntryCard extends StatelessWidget {
                     style: Theme.of(context).textTheme.labelMedium?.copyWith(
                       color: cs.onSurfaceVariant,
                     ),
+                    textAlign: TextAlign.center,
                   ),
                   const SizedBox(height: 6),
-                  Text(entry.message),
+                  Text(entry.message, textAlign: TextAlign.center),
                   const SizedBox(height: 6),
                   Text(
                     entry.details,
                     style: Theme.of(
                       context,
                     ).textTheme.bodySmall?.copyWith(color: cs.onSurfaceVariant),
+                    textAlign: TextAlign.center,
                   ),
                 ],
               ),
@@ -1074,7 +1267,7 @@ class _StatusPill extends StatelessWidget {
     return Container(
       padding: const EdgeInsets.symmetric(horizontal: 8, vertical: 4),
       decoration: BoxDecoration(
-        color: color.withValues(alpha: 0.12),
+        color: AppColors.of(context).surface(color.withValues(alpha: 0.12)),
         borderRadius: BorderRadius.circular(999),
       ),
       child: Text(
@@ -1082,46 +1275,10 @@ class _StatusPill extends StatelessWidget {
         maxLines: 1,
         overflow: TextOverflow.ellipsis,
         style: Theme.of(context).textTheme.labelSmall?.copyWith(
-          color: color,
+          color: AppColors.of(context).foreground(color),
           fontWeight: FontWeight.w700,
         ),
-      ),
-    );
-  }
-}
-
-class _CountPill extends StatelessWidget {
-  const _CountPill({required this.value, required this.label});
-
-  final int value;
-  final String label;
-
-  @override
-  Widget build(BuildContext context) {
-    final cs = Theme.of(context).colorScheme;
-    return Container(
-      padding: const EdgeInsets.symmetric(horizontal: 12, vertical: 10),
-      decoration: BoxDecoration(
-        color: cs.primaryContainer,
-        borderRadius: BorderRadius.circular(14),
-      ),
-      child: Column(
-        mainAxisSize: MainAxisSize.min,
-        children: [
-          Text(
-            '$value',
-            style: Theme.of(context).textTheme.titleMedium?.copyWith(
-              fontWeight: FontWeight.w800,
-              color: cs.onPrimaryContainer,
-            ),
-          ),
-          Text(
-            label,
-            style: Theme.of(
-              context,
-            ).textTheme.labelSmall?.copyWith(color: cs.onPrimaryContainer),
-          ),
-        ],
+        textAlign: TextAlign.center,
       ),
     );
   }
@@ -1142,7 +1299,11 @@ class _SectionError extends StatelessWidget {
         color: cs.errorContainer,
         borderRadius: BorderRadius.circular(12),
       ),
-      child: Text(message, style: TextStyle(color: cs.onErrorContainer)),
+      child: Text(
+        message,
+        style: TextStyle(color: cs.onErrorContainer),
+        textAlign: TextAlign.center,
+      ),
     );
   }
 }
@@ -1163,7 +1324,11 @@ class _EmptyInline extends StatelessWidget {
         borderRadius: BorderRadius.circular(12),
         border: Border.all(color: cs.outlineVariant),
       ),
-      child: Text(text, style: TextStyle(color: cs.onSurfaceVariant)),
+      child: Text(
+        text,
+        style: TextStyle(color: cs.onSurfaceVariant),
+        textAlign: TextAlign.center,
+      ),
     );
   }
 }
@@ -1182,11 +1347,12 @@ class _EmptyStateCard extends StatelessWidget {
   @override
   Widget build(BuildContext context) {
     final cs = Theme.of(context).colorScheme;
-    return Card(
+    return AppCard(
       margin: EdgeInsets.zero,
       child: Padding(
         padding: const EdgeInsets.all(20),
         child: Column(
+          crossAxisAlignment: CrossAxisAlignment.center,
           children: [
             Icon(icon, size: 44, color: cs.onSurfaceVariant),
             const SizedBox(height: 12),

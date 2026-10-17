@@ -4,6 +4,7 @@ import 'package:flutter/material.dart';
 import 'package:flutter/foundation.dart';
 import 'package:mobile_scanner/mobile_scanner.dart';
 import '../../core/permissions/device_permission_bootstrap.dart';
+import '../../core/network/reuniones_models.dart';
 
 const _qrTokenKeys = <String>['qr_token', 'token', 'qr'];
 final _jwtCompactPattern = RegExp(
@@ -11,6 +12,8 @@ final _jwtCompactPattern = RegExp(
 );
 
 String normalizeQrScanValue(String raw) {
+  // A meeting QR is an opaque payload: never extract or rewrite its token.
+  if (isReunionQr(raw)) return raw;
   final value = raw.trim();
   if (value.isEmpty) {
     return value;
@@ -100,10 +103,12 @@ class QrScanPage extends StatefulWidget {
     super.key,
     required this.title,
     this.requiresPhoto = false,
+    this.instruction,
   });
 
   final String title;
   final bool requiresPhoto;
+  final String? instruction;
 
   @override
   State<QrScanPage> createState() => _QrScanPageState();
@@ -144,6 +149,7 @@ class _QrScanPageState extends State<QrScanPage> {
           const SnackBar(
             content: Text(
               'Esta cámara no pudo abrirse. Tocá Cambiar cámara para probar la siguiente.',
+              textAlign: TextAlign.center,
             ),
           ),
         );
@@ -194,14 +200,16 @@ class _QrScanPageState extends State<QrScanPage> {
 
   @override
   Widget build(BuildContext context) {
-    final instructionText = widget.requiresPhoto
-        ? 'Apuntá al QR del punto de control.\nLuego tomá una foto de verificación.'
-        : 'Apunta al QR del punto de control para fichar.';
+    final instructionText =
+        widget.instruction ??
+        (widget.requiresPhoto
+            ? 'Apuntá al QR del punto de control.\nLuego tomá una foto de verificación.'
+            : 'Apuntá al QR de fichada o de reunión.');
 
     return Scaffold(
       backgroundColor: Colors.black,
       appBar: AppBar(
-        title: Text(widget.title),
+        title: Text(widget.title, textAlign: TextAlign.center),
         backgroundColor: Colors.black,
         foregroundColor: Colors.white,
         elevation: 0,
@@ -213,9 +221,10 @@ class _QrScanPageState extends State<QrScanPage> {
               minimumSize: const Size(0, 48),
             ),
             onPressed: _changingCamera || _detected ? null : _changeCamera,
-            icon: const Icon(Icons.cameraswitch_outlined),
+            icon: const Icon(Icons.cameraswitch_rounded),
             label: Text(
               _changingCamera ? 'Cambiando cámara…' : 'Cambiar cámara',
+              textAlign: TextAlign.center,
             ),
           ),
         ),
@@ -227,13 +236,13 @@ class _QrScanPageState extends State<QrScanPage> {
           MobileScanner(
             controller: _controller,
             onDetect: _onDetect,
-            errorBuilder: (context, error, child) => Center(
+            errorBuilder: (context, error, child) => const Center(
               child: Padding(
-                padding: const EdgeInsets.symmetric(horizontal: 40),
+                padding: EdgeInsets.symmetric(horizontal: 40),
                 child: Text(
                   'No se pudo abrir esta cámara.\nTocá Cambiar cámara para probar otra.',
                   textAlign: TextAlign.center,
-                  style: const TextStyle(color: Colors.white),
+                  style: TextStyle(color: Colors.white),
                 ),
               ),
             ),
@@ -253,7 +262,7 @@ class _QrScanPageState extends State<QrScanPage> {
                   child: AnimatedSwitcher(
                     duration: const Duration(milliseconds: 300),
                     child: _detected
-                        ? _DetectedBadge(key: const ValueKey('detected'))
+                        ? const _DetectedBadge(key: ValueKey('detected'))
                         : _InstructionBadge(
                             key: const ValueKey('instruction'),
                             text: instructionText,
@@ -287,8 +296,11 @@ class _QrScanPageState extends State<QrScanPage> {
                           padding: const EdgeInsets.symmetric(vertical: 14),
                         ),
                         onPressed: () => Navigator.of(context).pop(),
-                        icon: const Icon(Icons.close, size: 20),
-                        label: const Text('Cancelar'),
+                        icon: const Icon(Icons.close_rounded, size: 20),
+                        label: const Text(
+                          'Cancelar',
+                          textAlign: TextAlign.center,
+                        ),
                       ),
                     ),
                   ),
@@ -466,8 +478,13 @@ class _InstructionBadge extends StatelessWidget {
       ),
       child: Row(
         mainAxisSize: MainAxisSize.min,
+        mainAxisAlignment: MainAxisAlignment.center,
         children: [
-          const Icon(Icons.qr_code_scanner, color: Colors.white70, size: 18),
+          const Icon(
+            Icons.qr_code_scanner_rounded,
+            color: Colors.white70,
+            size: 18,
+          ),
           const SizedBox(width: 10),
           Flexible(
             child: Text(
@@ -479,7 +496,7 @@ class _InstructionBadge extends StatelessWidget {
           if (requiresPhoto) ...[
             const SizedBox(width: 10),
             const Icon(
-              Icons.camera_alt_outlined,
+              Icons.camera_alt_rounded,
               color: Colors.white54,
               size: 16,
             ),
@@ -505,8 +522,9 @@ class _DetectedBadge extends StatelessWidget {
       ),
       child: const Row(
         mainAxisSize: MainAxisSize.min,
+        mainAxisAlignment: MainAxisAlignment.center,
         children: [
-          Icon(Icons.check_circle_outline, color: Colors.white, size: 20),
+          Icon(Icons.check_circle_rounded, color: Colors.white, size: 20),
           SizedBox(width: 10),
           Text(
             'QR detectado — procesando...',
@@ -515,6 +533,7 @@ class _DetectedBadge extends StatelessWidget {
               fontWeight: FontWeight.w600,
               fontSize: 14,
             ),
+            textAlign: TextAlign.center,
           ),
         ],
       ),

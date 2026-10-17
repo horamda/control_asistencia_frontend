@@ -1,6 +1,10 @@
+import 'package:ficharqr/src/presentation/widgets/app_card.dart';
+import 'package:ficharqr/src/presentation/theme/app_palette.dart';
+import '../widgets/scrollable_error_state.dart';
 import 'dart:async';
 
 import 'package:flutter/material.dart';
+import '../widgets/app_page_layout.dart';
 
 import '../../core/network/mobile_api_client.dart';
 import '../../core/utils/date_formatter.dart';
@@ -110,6 +114,7 @@ class _VacacionesPageState extends State<VacacionesPage> {
             dias > 0
                 ? 'Solicitud enviada ($dias dia${dias == 1 ? '' : 's'}).'
                 : 'Solicitud de vacaciones enviada.',
+            textAlign: TextAlign.center,
           ),
         ),
       );
@@ -118,15 +123,23 @@ class _VacacionesPageState extends State<VacacionesPage> {
       if (!mounted) return;
       setState(() => _requesting = false);
       ScaffoldMessenger.of(context).showSnackBar(
-        SnackBar(content: Text(e.message), backgroundColor: Colors.red[700]),
+        SnackBar(
+          content: Text(e.message, textAlign: TextAlign.center),
+          backgroundColor: AppColors.of(
+            context,
+          ).optionalSurface(Colors.red[700]),
+        ),
       );
     } catch (_) {
       if (!mounted) return;
       setState(() => _requesting = false);
       ScaffoldMessenger.of(context).showSnackBar(
-        const SnackBar(
-          content: Text('No se pudo enviar la solicitud.'),
-          backgroundColor: Colors.red,
+        SnackBar(
+          content: const Text(
+            'No se pudo enviar la solicitud.',
+            textAlign: TextAlign.center,
+          ),
+          backgroundColor: AppColors.of(context).surface(Colors.red),
         ),
       );
     }
@@ -136,7 +149,7 @@ class _VacacionesPageState extends State<VacacionesPage> {
   Widget build(BuildContext context) {
     return Scaffold(
       appBar: AppBar(
-        title: const Text('Vacaciones'),
+        title: const Text('Vacaciones', textAlign: TextAlign.center),
         actions: [
           if (_loading)
             const Padding(
@@ -149,14 +162,14 @@ class _VacacionesPageState extends State<VacacionesPage> {
             )
           else
             IconButton(
-              icon: const Icon(Icons.refresh),
+              icon: const Icon(Icons.refresh_rounded),
               tooltip: 'Actualizar',
               onPressed: _load,
             ),
         ],
       ),
       floatingActionButton: _puedeSolicitar
-          ? FloatingActionButton.extended(
+          ? AppFloatingActionButton(
               onPressed: _requesting ? null : _solicitar,
               icon: _requesting
                   ? const SizedBox(
@@ -164,11 +177,16 @@ class _VacacionesPageState extends State<VacacionesPage> {
                       height: 18,
                       child: CircularProgressIndicator(strokeWidth: 2),
                     )
-                  : const Icon(Icons.add),
-              label: Text(_requesting ? 'Enviando...' : 'Solicitar'),
+                  : const Icon(Icons.add_rounded),
+              label: Text(
+                _requesting ? 'Enviando...' : 'Solicitar',
+                textAlign: TextAlign.center,
+              ),
             )
           : null,
-      body: RefreshIndicator(onRefresh: _load, child: _buildBody()),
+      body: AppPageBody(
+        child: RefreshIndicator(onRefresh: _load, child: _buildBody()),
+      ),
     );
   }
 
@@ -178,35 +196,24 @@ class _VacacionesPageState extends State<VacacionesPage> {
     }
 
     if (_error != null) {
-      return Center(
-        child: Padding(
-          padding: const EdgeInsets.all(24),
-          child: Column(
-            mainAxisSize: MainAxisSize.min,
-            children: [
-              Icon(Icons.error_outline, size: 48, color: Colors.red[300]),
-              const SizedBox(height: 12),
-              Text(_error!, textAlign: TextAlign.center),
-              const SizedBox(height: 16),
-              FilledButton.icon(
-                onPressed: _load,
-                icon: const Icon(Icons.refresh),
-                label: const Text('Reintentar'),
-              ),
-            ],
-          ),
-        ),
-      );
+      return ScrollableErrorState(message: _error!, onRetry: _load);
     }
 
     final resumen = _resumen;
     if (resumen == null) {
-      return const Center(child: Text('Sin datos de vacaciones.'));
+      return const Center(
+        child: Text('Sin datos de vacaciones.', textAlign: TextAlign.center),
+      );
     }
 
     return ListView(
       physics: const AlwaysScrollableScrollPhysics(),
-      padding: EdgeInsets.fromLTRB(16, 12, 16, _puedeSolicitar ? 88 : 20),
+      padding: EdgeInsets.fromLTRB(
+        16,
+        12,
+        16,
+        _puedeSolicitar ? AppFloatingActionButton.bottomPadding(context) : 20,
+      ),
       children: [
         _YearSelector(
           anio: _anio,
@@ -249,7 +256,7 @@ class _YearSelector extends StatelessWidget {
     return Row(
       children: [
         IconButton(
-          icon: const Icon(Icons.chevron_left),
+          icon: const Icon(Icons.chevron_left_rounded),
           tooltip: 'Anio anterior',
           onPressed: anio > 2000 ? onPrevious : null,
         ),
@@ -257,7 +264,7 @@ class _YearSelector extends StatelessWidget {
           child: Row(
             mainAxisAlignment: MainAxisAlignment.center,
             children: [
-              Icon(Icons.calendar_month_outlined, size: 18, color: cs.primary),
+              Icon(Icons.calendar_month_rounded, size: 18, color: cs.primary),
               const SizedBox(width: 8),
               Text(
                 '$anio',
@@ -269,7 +276,7 @@ class _YearSelector extends StatelessWidget {
           ),
         ),
         IconButton(
-          icon: const Icon(Icons.chevron_right),
+          icon: const Icon(Icons.chevron_right_rounded),
           tooltip: 'Anio siguiente',
           onPressed: anio < 2100 ? onNext : null,
         ),
@@ -291,14 +298,15 @@ class _SaldoResumenCard extends StatelessWidget {
   Widget build(BuildContext context) {
     final cs = Theme.of(context).colorScheme;
     final saldo = resumen.vacaciones;
-    return Card(
+    return AppCard(
       margin: EdgeInsets.zero,
       child: Padding(
         padding: const EdgeInsets.all(16),
         child: Column(
-          crossAxisAlignment: CrossAxisAlignment.start,
+          crossAxisAlignment: CrossAxisAlignment.center,
           children: [
             Row(
+              mainAxisAlignment: MainAxisAlignment.center,
               children: [
                 Icon(Icons.beach_access_outlined, color: cs.primary),
                 const SizedBox(width: 10),
@@ -308,6 +316,7 @@ class _SaldoResumenCard extends StatelessWidget {
                     style: Theme.of(context).textTheme.titleMedium?.copyWith(
                       fontWeight: FontWeight.w700,
                     ),
+                    textAlign: TextAlign.center,
                   ),
                 ),
               ],
@@ -316,6 +325,7 @@ class _SaldoResumenCard extends StatelessWidget {
             Wrap(
               spacing: 8,
               runSpacing: 8,
+              alignment: WrapAlignment.center,
               children: [
                 _MetricPill(
                   label: 'Disponible',
@@ -448,7 +458,7 @@ class _MetricPill extends StatelessWidget {
               maxLines: 1,
               overflow: TextOverflow.ellipsis,
               style: Theme.of(context).textTheme.titleMedium?.copyWith(
-                color: color,
+                color: AppColors.of(context).foreground(color),
                 fontWeight: FontWeight.w800,
               ),
             ),
@@ -557,19 +567,25 @@ class _InfoBanner extends StatelessWidget {
     return Container(
       padding: const EdgeInsets.symmetric(horizontal: 12, vertical: 10),
       decoration: BoxDecoration(
-        color: color,
+        color: AppColors.of(context).surface(color),
         borderRadius: BorderRadius.circular(8),
       ),
       child: Row(
+        mainAxisAlignment: MainAxisAlignment.center,
         children: [
-          Icon(icon, size: 18, color: onColor),
+          Icon(
+            icon,
+            size: 18,
+            color: AppColors.of(context).foreground(onColor),
+          ),
           const SizedBox(width: 8),
           Expanded(
             child: Text(
               text,
-              style: Theme.of(
-                context,
-              ).textTheme.bodySmall?.copyWith(color: onColor),
+              style: Theme.of(context).textTheme.bodySmall?.copyWith(
+                color: AppColors.of(context).foreground(onColor),
+              ),
+              textAlign: TextAlign.center,
             ),
           ),
         ],
@@ -626,6 +642,7 @@ class _EmptyMovimientos extends StatelessWidget {
         borderRadius: BorderRadius.circular(8),
       ),
       child: Column(
+        crossAxisAlignment: CrossAxisAlignment.center,
         children: [
           Icon(Icons.event_available_outlined, size: 34, color: cs.primary),
           const SizedBox(height: 10),
@@ -634,6 +651,7 @@ class _EmptyMovimientos extends StatelessWidget {
             style: Theme.of(
               context,
             ).textTheme.bodyMedium?.copyWith(color: cs.onSurfaceVariant),
+            textAlign: TextAlign.center,
           ),
         ],
       ),
@@ -655,7 +673,7 @@ class _MovimientoCard extends StatelessWidget {
 
     return Opacity(
       opacity: opacity,
-      child: Card(
+      child: AppCard(
         margin: const EdgeInsets.only(bottom: 10),
         shape: esReversion
             ? RoundedRectangleBorder(
@@ -670,9 +688,10 @@ class _MovimientoCard extends StatelessWidget {
         child: Padding(
           padding: const EdgeInsets.all(16),
           child: Column(
-            crossAxisAlignment: CrossAxisAlignment.start,
+            crossAxisAlignment: CrossAxisAlignment.center,
             children: [
               Row(
+                mainAxisAlignment: MainAxisAlignment.center,
                 children: [
                   Icon(
                     esReversion ? Icons.undo : _tipoIcon(movimiento.tipo),
@@ -689,6 +708,7 @@ class _MovimientoCard extends StatelessWidget {
                         fontWeight: FontWeight.w700,
                         color: esReversion ? cs.onSurfaceVariant : null,
                       ),
+                      textAlign: TextAlign.center,
                     ),
                   ),
                   if (!esReversion) _EstadoChip(estado: movimiento.estado),
@@ -696,6 +716,7 @@ class _MovimientoCard extends StatelessWidget {
               ),
               const SizedBox(height: 10),
               Row(
+                mainAxisAlignment: MainAxisAlignment.center,
                 children: [
                   Icon(Icons.date_range_outlined, size: 16, color: cs.outline),
                   const SizedBox(width: 6),
@@ -705,6 +726,7 @@ class _MovimientoCard extends StatelessWidget {
                       style: Theme.of(context).textTheme.bodySmall?.copyWith(
                         color: cs.onSurfaceVariant,
                       ),
+                      textAlign: TextAlign.center,
                     ),
                   ),
                   Flexible(
@@ -727,11 +749,13 @@ class _MovimientoCard extends StatelessWidget {
                   style: Theme.of(
                     context,
                   ).textTheme.bodySmall?.copyWith(color: cs.onSurfaceVariant),
+                  textAlign: TextAlign.center,
                 ),
               ],
               if (!afectaSaldo) ...[
                 const SizedBox(height: 8),
                 Row(
+                  mainAxisAlignment: MainAxisAlignment.center,
                   children: [
                     Icon(
                       Icons.info_outline,
@@ -744,6 +768,7 @@ class _MovimientoCard extends StatelessWidget {
                       style: Theme.of(context).textTheme.labelSmall?.copyWith(
                         color: cs.onSurfaceVariant,
                       ),
+                      textAlign: TextAlign.center,
                     ),
                   ],
                 ),
@@ -772,7 +797,7 @@ class _EstadoChip extends StatelessWidget {
     return Container(
       padding: const EdgeInsets.symmetric(horizontal: 8, vertical: 3),
       decoration: BoxDecoration(
-        color: bg,
+        color: AppColors.of(context).surface(bg),
         borderRadius: BorderRadius.circular(12),
       ),
       child: Text(
@@ -780,9 +805,10 @@ class _EstadoChip extends StatelessWidget {
         maxLines: 1,
         overflow: TextOverflow.ellipsis,
         style: Theme.of(context).textTheme.labelSmall?.copyWith(
-          color: fg,
+          color: AppColors.of(context).foreground(fg),
           fontWeight: FontWeight.w700,
         ),
+        textAlign: TextAlign.center,
       ),
     );
   }
@@ -874,10 +900,11 @@ class _VacacionFormDialogState extends State<_VacacionFormDialog> {
     final canSubmit = dias > 0 && !excedeSaldo;
 
     return AlertDialog(
-      title: const Text('Solicitar vacaciones'),
+      title: const Text('Solicitar vacaciones', textAlign: TextAlign.center),
       content: SingleChildScrollView(
         child: Column(
           mainAxisSize: MainAxisSize.min,
+          crossAxisAlignment: CrossAxisAlignment.center,
           children: [
             _InfoBanner(
               text: 'Saldo disponible: ${_formatDias(saldo)} dias',
@@ -889,15 +916,18 @@ class _VacacionFormDialogState extends State<_VacacionFormDialog> {
             ListTile(
               contentPadding: EdgeInsets.zero,
               leading: const Icon(Icons.calendar_today_outlined),
-              title: const Text('Fecha inicio'),
-              subtitle: Text(_displayDate(_inicio)),
+              title: const Text('Fecha inicio', textAlign: TextAlign.center),
+              subtitle: Text(
+                _displayDate(_inicio),
+                textAlign: TextAlign.center,
+              ),
               onTap: () => _pickDate(isInicio: true),
             ),
             ListTile(
               contentPadding: EdgeInsets.zero,
               leading: const Icon(Icons.calendar_today_outlined),
-              title: const Text('Fecha fin'),
-              subtitle: Text(_displayDate(_fin)),
+              title: const Text('Fecha fin', textAlign: TextAlign.center),
+              subtitle: Text(_displayDate(_fin), textAlign: TextAlign.center),
               onTap: () => _pickDate(isInicio: false),
             ),
             if (dias > 0) ...[
@@ -910,6 +940,7 @@ class _VacacionFormDialogState extends State<_VacacionFormDialog> {
                     color: excedeSaldo ? cs.error : cs.onSurfaceVariant,
                     fontWeight: FontWeight.w600,
                   ),
+                  textAlign: TextAlign.center,
                 ),
               ),
             ],
@@ -937,7 +968,7 @@ class _VacacionFormDialogState extends State<_VacacionFormDialog> {
       actions: [
         TextButton(
           onPressed: () => Navigator.of(context).pop(),
-          child: const Text('Cancelar'),
+          child: const Text('Cancelar', textAlign: TextAlign.center),
         ),
         FilledButton(
           onPressed: canSubmit
@@ -951,7 +982,7 @@ class _VacacionFormDialogState extends State<_VacacionFormDialog> {
                   ),
                 )
               : null,
-          child: const Text('Enviar'),
+          child: const Text('Enviar', textAlign: TextAlign.center),
         ),
       ],
     );

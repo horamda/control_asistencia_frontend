@@ -61,8 +61,17 @@ class _QrDisplayPageState extends State<QrDisplayPage> {
   @override
   Widget build(BuildContext context) {
     return Scaffold(
-      appBar: AppBar(title: const Text('Mi QR de fichada')),
-      body: _buildBody(),
+      appBar: AppBar(
+        title: const Text('Mi QR de fichada', textAlign: TextAlign.center),
+      ),
+      body: SafeArea(
+        child: Center(
+          child: ConstrainedBox(
+            constraints: const BoxConstraints(maxWidth: 640),
+            child: _buildBody(),
+          ),
+        ),
+      ),
     );
   }
 
@@ -73,21 +82,24 @@ class _QrDisplayPageState extends State<QrDisplayPage> {
 
     if (_error != null) {
       return Center(
-        child: Padding(
-          padding: const EdgeInsets.all(24),
-          child: Column(
-            mainAxisSize: MainAxisSize.min,
-            children: [
-              Icon(Icons.error_outline, size: 48, color: Colors.red[300]),
-              const SizedBox(height: 12),
-              Text(_error!, textAlign: TextAlign.center),
-              const SizedBox(height: 16),
-              FilledButton.icon(
-                onPressed: _generar,
-                icon: const Icon(Icons.refresh),
-                label: const Text('Reintentar'),
-              ),
-            ],
+        child: SingleChildScrollView(
+          child: Padding(
+            padding: const EdgeInsets.all(24),
+            child: Column(
+              mainAxisSize: MainAxisSize.min,
+              crossAxisAlignment: CrossAxisAlignment.center,
+              children: [
+                Icon(Icons.error_rounded, size: 48, color: Colors.red[300]),
+                const SizedBox(height: 12),
+                Text(_error!, textAlign: TextAlign.center),
+                const SizedBox(height: 16),
+                FilledButton.icon(
+                  onPressed: _generar,
+                  icon: const Icon(Icons.refresh_rounded),
+                  label: const Text('Reintentar', textAlign: TextAlign.center),
+                ),
+              ],
+            ),
           ),
         ),
       );
@@ -99,6 +111,7 @@ class _QrDisplayPageState extends State<QrDisplayPage> {
     return SingleChildScrollView(
       padding: const EdgeInsets.all(24),
       child: Column(
+        crossAxisAlignment: CrossAxisAlignment.center,
         children: [
           if (imgBytes != null)
             Container(
@@ -124,9 +137,7 @@ class _QrDisplayPageState extends State<QrDisplayPage> {
                 color: Theme.of(context).colorScheme.surfaceContainerHighest,
                 borderRadius: BorderRadius.circular(16),
               ),
-              child: const Center(
-                child: Icon(Icons.qr_code, size: 80),
-              ),
+              child: const Center(child: Icon(Icons.qr_code_rounded, size: 80)),
             ),
           const SizedBox(height: 24),
           _InfoRow(label: 'Acción', value: qr.accion),
@@ -146,8 +157,8 @@ class _QrDisplayPageState extends State<QrDisplayPage> {
           const SizedBox(height: 24),
           OutlinedButton.icon(
             onPressed: _generar,
-            icon: const Icon(Icons.refresh),
-            label: const Text('Regenerar QR'),
+            icon: const Icon(Icons.refresh_rounded),
+            label: const Text('Regenerar QR', textAlign: TextAlign.center),
           ),
         ],
       ),
@@ -186,10 +197,11 @@ class _InfoRow extends StatelessWidget {
     final cs = Theme.of(context).colorScheme;
     return Padding(
       padding: const EdgeInsets.symmetric(vertical: 4),
-      child: Row(
-        mainAxisAlignment: MainAxisAlignment.spaceBetween,
+      child: Column(
+        crossAxisAlignment: CrossAxisAlignment.stretch,
         children: [
           Text(label, style: TextStyle(color: cs.onSurfaceVariant)),
+          const SizedBox(height: 4),
           Text(value, style: const TextStyle(fontWeight: FontWeight.w500)),
         ],
       ),

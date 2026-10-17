@@ -1,5 +1,6 @@
 import '../image/clock_photo_cache.dart';
 import '../network/mobile_api_client.dart';
+import '../network/reuniones_models.dart';
 import '../offline/offline_clock_queue.dart';
 import '../offline/pending_clock_sync_service.dart';
 
@@ -26,6 +27,16 @@ class QrClockSubmissionService {
     required Future<ClockGpsPoint?> Function() captureGps,
     void Function(String phase)? onPhase,
   }) async {
+    if (isReunionQr(qrToken)) {
+      return QrClockSubmissionResult(
+        status: QrClockSubmissionStatus.apiFailure,
+        apiError: ApiException(
+          message: 'Este QR corresponde a una reunión.',
+          statusCode: 400,
+        ),
+        totalDuration: Duration.zero,
+      );
+    }
     final flowWatch = Stopwatch()..start();
     Duration? photoDuration;
     Duration? gpsDuration;

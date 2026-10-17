@@ -4,6 +4,100 @@ import 'package:flutter/material.dart';
 import 'package:flutter_test/flutter_test.dart';
 
 void main() {
+  testWidgets('quick actions in the same row have equal height', (
+    tester,
+  ) async {
+    await tester.binding.setSurfaceSize(const Size(468, 800));
+    addTearDown(() => tester.binding.setSurfaceSize(null));
+    await tester.pumpWidget(
+      _wrap(
+        AttendanceQuickActionsCard(
+          items: [
+            AttendanceQuickActionItem(
+              icon: Icons.checkroom,
+              label: 'EPP y vestimenta',
+              onTap: () {},
+            ),
+            AttendanceQuickActionItem(
+              icon: Icons.receipt,
+              label: 'Viáticos y reintegros',
+              onTap: () {},
+            ),
+            AttendanceQuickActionItem(
+              icon: Icons.calendar_month,
+              label: 'Asistencias',
+              onTap: () {},
+            ),
+          ],
+        ),
+      ),
+    );
+    final tiles = find.descendant(
+      of: find.byType(AttendanceQuickActionsCard),
+      matching: find.byType(InkWell),
+    );
+    expect(tiles, findsNWidgets(3));
+    final rects = [for (var i = 0; i < 3; i++) tester.getRect(tiles.at(i))];
+    for (final rect in rects.skip(1)) {
+      expect(rect.top, rects.first.top);
+      expect(rect.height, rects.first.height);
+    }
+    expect(tester.takeException(), isNull);
+  });
+  for (final width in [320.0, 440.0, 1024.0]) {
+    testWidgets('home cards fit $width with enlarged text', (tester) async {
+      await tester.binding.setSurfaceSize(Size(width, 900));
+      addTearDown(() => tester.binding.setSurfaceSize(null));
+      var tapped = false;
+      await tester.pumpWidget(
+        MaterialApp(
+          theme: buildAppTheme(),
+          home: MediaQuery(
+            data: MediaQueryData(
+              size: Size(width, 900),
+              textScaler: const TextScaler.linear(2),
+            ),
+            child: Scaffold(
+              body: SingleChildScrollView(
+                child: Column(
+                  children: [
+                    const AttendanceHeroCard(
+                      photoUrl: '',
+                      token: 'test',
+                      greeting: 'Buenos días',
+                      employeeName: 'María Alejandra',
+                      employeeDni: '12345678',
+                      syncText: 'Datos actualizados',
+                      sessionText: 'Sesión activa',
+                      sessionColor: Colors.green,
+                      sessionForeground: Colors.white,
+                      gpsStatusText: 'Ubicación pendiente de validar',
+                    ),
+                    AttendanceQuickActionsCard(
+                      items: [
+                        AttendanceQuickActionItem(
+                          icon: Icons.health_and_safety_rounded,
+                          label: 'Seguridad e Higiene',
+                          onTap: () => tapped = true,
+                        ),
+                      ],
+                    ),
+                  ],
+                ),
+              ),
+            ),
+          ),
+        ),
+      );
+      await tester.pump();
+      await tester.ensureVisible(find.text('Seguridad e Higiene'));
+      await tester.tap(find.text('Seguridad e Higiene'));
+      await tester.pump();
+      expect(tapped, isTrue);
+      expect(tester.takeException(), isNull);
+      await tester.pumpWidget(const SizedBox.shrink());
+    });
+  }
   group('attendance_dashboard_widgets', () {
     testWidgets('pending banner ejecuta acciones configuradas', (tester) async {
       var primaryCalls = 0;
@@ -19,14 +113,14 @@ void main() {
             statusMessage: 'Hay una ficha rechazada.',
             primaryAction: AttendanceActionButtonData(
               label: 'Abrir bandeja',
-              icon: Icons.inbox_outlined,
+              icon: Icons.inbox_rounded,
               onPressed: () {
                 primaryCalls += 1;
               },
             ),
             secondaryAction: AttendanceActionButtonData(
               label: 'Intentar sincronizar',
-              icon: Icons.sync_alt_outlined,
+              icon: Icons.sync_alt_rounded,
               onPressed: () {
                 secondaryCalls += 1;
               },
@@ -74,14 +168,14 @@ void main() {
             secondaryActions: [
               AttendanceActionButtonData(
                 label: 'Actualizar GPS',
-                icon: Icons.my_location_outlined,
+                icon: Icons.my_location_rounded,
                 onPressed: () {
                   gpsCalls += 1;
                 },
               ),
               AttendanceActionButtonData(
                 label: 'Bandeja offline',
-                icon: Icons.inbox_outlined,
+                icon: Icons.inbox_rounded,
                 onPressed: () {
                   queueCalls += 1;
                 },
@@ -123,14 +217,14 @@ void main() {
               AttendanceQuickActionsCard(
                 items: [
                   AttendanceQuickActionItem(
-                    icon: Icons.timeline_outlined,
+                    icon: Icons.timeline_rounded,
                     label: 'Marcas',
                     onTap: () {
                       enabledTapCalls += 1;
                     },
                   ),
                   const AttendanceQuickActionItem(
-                    icon: Icons.person_outline,
+                    icon: Icons.person_rounded,
                     label: 'Mi perfil',
                   ),
                 ],

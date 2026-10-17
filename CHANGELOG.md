@@ -5,6 +5,39 @@ Formato: `[version+build] — fecha`
 
 ---
 
+## [1.24.0+32] — 2026-10-16
+
+- Bandeja de comunicados con historial del servidor, contador de no leídos,
+  paginación, detalle con imagen completa y marcado de lectura.
+- Apertura de comunicados desde push Android/web, incluso al iniciar la app.
+- Acceso a permisos de notificación desde Comunicados; el historial no depende del push.
+- Mejoras de contraste oscuro, proporciones de tarjetas y ranking adaptable.
+- Icono adaptable Android con fondo azul, sin marco blanco de compatibilidad.
+
+## [1.23.0+31] — 2026-10-16
+
+- Push Android/web: registro, renovación y baja del token; avisos en primer plano y
+  apertura de reuniones desde notificaciones. Configuración controlada por backend.
+- Se evita duplicar recordatorios locales cuando push está activo.
+- Semana actual con totales del servidor, horas asistidas y avisos de superposición.
+- Acceso a Cámara y permisos y nombre visible Huella y sonido.
+- Tarjeta de bienvenida con foto lateral y datos al lado, adaptable a texto ampliado.
+- Ajustes de temas, botones y pantallas de permisos, perfil y pendientes para móviles y tablets.
+- Corrección del arranque y de la navegación inicial desde enlaces de reuniones.
+
+## [1.22.0+30] — 2026-10-15
+
+- Reuniones: agenda, historial, estadísticas, registro por QR y recordatorios locales.
+- Apariencia clara, oscura o según el sistema; paleta alineada al panel web.
+- Tarjetas con datos centrados y adaptación a celulares, tablets y texto ampliado.
+- Distribución Android: script release con APK por arquitectura, símbolos separados,
+  manifiesto de tamaños y SHA-256. También admite AAB y APK universal.
+- Logo de login empaquetado a 512 px usando el recurso existente optimizado; se conserva
+  el original de diseño. Se protege el icono de notificaciones ante la reducción de recursos.
+- Se mantiene el lector QR integrado para disponibilidad sin descarga inicial.
+
+---
+
 ## [1.20.5+27] — 2026-05-29
 
 ### Build

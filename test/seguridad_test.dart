@@ -61,7 +61,7 @@ void main() {
       throwsA(isA<ApiException>().having((e) => e.statusCode, 'status', 404)),
     );
   });
-  for (final width in [320.0, 800.0]) {
+  for (final width in [320.0, 440.0, 800.0, 1280.0]) {
     testWidgets('form history and rankings fit width $width', (tester) async {
       await tester.binding.setSurfaceSize(Size(width, 1000));
       addTearDown(() => tester.binding.setSurfaceSize(null));
@@ -69,10 +69,27 @@ void main() {
       addTearDown(api.dispose);
       await tester.pumpWidget(
         MaterialApp(
+          builder: (context, child) => MediaQuery(
+            data: MediaQuery.of(
+              context,
+            ).copyWith(textScaler: TextScaler.linear(width == 440 ? 1.8 : 1)),
+            child: child!,
+          ),
           home: SeguridadPage(apiClient: api, token: 'token'),
         ),
       );
       await tester.pumpAndSettle();
+      expect(tester.takeException(), isNull);
+      await tester.scrollUntilVisible(
+        find.text('Enviar reporte'),
+        200,
+        scrollable: find
+            .descendant(
+              of: find.byType(Form),
+              matching: find.byType(Scrollable),
+            )
+            .first,
+      );
       expect(tester.takeException(), isNull);
       await tester.ensureVisible(find.text('Mi historial'));
       await tester.pumpAndSettle();
@@ -83,6 +100,10 @@ void main() {
       await tester.pumpAndSettle();
       await tester.tap(find.text('Rankings'));
       await tester.pumpAndSettle();
+      if (width == 440) {
+        await tester.drag(find.byType(NestedScrollView), const Offset(0, -700));
+        await tester.pumpAndSettle();
+      }
       expect(find.text('Perez Ana'), findsOneWidget);
       expect(tester.takeException(), isNull);
     });

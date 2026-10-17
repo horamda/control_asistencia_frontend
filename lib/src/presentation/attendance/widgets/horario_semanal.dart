@@ -1,3 +1,4 @@
+import 'package:ficharqr/src/presentation/widgets/app_card.dart';
 import 'dart:async';
 
 import 'package:flutter/material.dart';
@@ -103,18 +104,21 @@ class _HorarioSemanalState extends State<HorarioSemanal> {
           style: Theme.of(
             context,
           ).textTheme.titleLarge?.copyWith(fontWeight: FontWeight.w700),
+          textAlign: TextAlign.center,
         ),
         const SizedBox(height: 6),
         const Text(
           'Horario previsto para cada fecha, con los cambios y excepciones que correspondan.',
+          textAlign: TextAlign.center,
         ),
         const SizedBox(height: 12),
         Row(
+          mainAxisAlignment: MainAxisAlignment.center,
           children: [
             IconButton(
               tooltip: 'Semana anterior',
               onPressed: () => _move(-7),
-              icon: const Icon(Icons.chevron_left),
+              icon: const Icon(Icons.chevron_left_rounded),
             ),
             Expanded(
               child: Text(
@@ -126,7 +130,7 @@ class _HorarioSemanalState extends State<HorarioSemanal> {
             IconButton(
               tooltip: 'Semana siguiente',
               onPressed: () => _move(7),
-              icon: const Icon(Icons.chevron_right),
+              icon: const Icon(Icons.chevron_right_rounded),
             ),
           ],
         ),
@@ -138,7 +142,7 @@ class _HorarioSemanalState extends State<HorarioSemanal> {
         else ...[
           for (final day in _days) ...[
             const SizedBox(height: 8),
-            Card(
+            AppCard(
               color: DateUtils.isSameDay(day.date, DateTime.now())
                   ? cs.primaryContainer
                   : null,
@@ -149,14 +153,22 @@ class _HorarioSemanalState extends State<HorarioSemanal> {
                     final title = Text(
                       '${_names[day.date.weekday - 1]} ${_short(day.date)}${DateUtils.isSameDay(day.date, DateTime.now()) ? ' · Hoy' : ''}',
                       style: const TextStyle(fontWeight: FontWeight.w700),
+                      textAlign: TextAlign.center,
                     );
                     final content = Column(
-                      crossAxisAlignment: CrossAxisAlignment.start,
+                      crossAxisAlignment: CrossAxisAlignment.center,
                       children: [
                         if (day.error != null)
-                          Text(day.error!, style: TextStyle(color: cs.error))
+                          Text(
+                            day.error!,
+                            style: TextStyle(color: cs.error),
+                            textAlign: TextAlign.center,
+                          )
                         else if (day.data == null || day.data!.bloques.isEmpty)
-                          const Text('Sin horario previsto para esta fecha')
+                          const Text(
+                            'Sin horario previsto para esta fecha',
+                            textAlign: TextAlign.center,
+                          )
                         else
                           for (final block in day.data!.bloques)
                             Padding(
@@ -165,6 +177,7 @@ class _HorarioSemanalState extends State<HorarioSemanal> {
                                 spacing: 12,
                                 runSpacing: 4,
                                 crossAxisAlignment: WrapCrossAlignment.center,
+                                alignment: WrapAlignment.center,
                                 children: [
                                   Text(
                                     'Entrada ${_time(block.entrada)}',
@@ -173,8 +186,12 @@ class _HorarioSemanalState extends State<HorarioSemanal> {
                                       fontWeight: FontWeight.w700,
                                       fontSize: 16,
                                     ),
+                                    textAlign: TextAlign.center,
                                   ),
-                                  const Icon(Icons.arrow_forward, size: 16),
+                                  const Icon(
+                                    Icons.arrow_forward_rounded,
+                                    size: 16,
+                                  ),
                                   Text(
                                     'Salida ${_time(block.salida)}',
                                     style: TextStyle(
@@ -182,6 +199,7 @@ class _HorarioSemanalState extends State<HorarioSemanal> {
                                       fontWeight: FontWeight.w700,
                                       fontSize: 16,
                                     ),
+                                    textAlign: TextAlign.center,
                                   ),
                                 ],
                               ),
@@ -191,6 +209,7 @@ class _HorarioSemanalState extends State<HorarioSemanal> {
                           const Text(
                             'Horario con excepción',
                             style: TextStyle(fontWeight: FontWeight.w600),
+                            textAlign: TextAlign.center,
                           ),
                         ],
                       ],
@@ -204,6 +223,7 @@ class _HorarioSemanalState extends State<HorarioSemanal> {
                     }
                     return Row(
                       crossAxisAlignment: CrossAxisAlignment.start,
+                      mainAxisAlignment: MainAxisAlignment.center,
                       children: [
                         SizedBox(width: 180, child: title),
                         const SizedBox(width: 16),
@@ -220,8 +240,11 @@ class _HorarioSemanalState extends State<HorarioSemanal> {
               alignment: Alignment.centerLeft,
               child: TextButton.icon(
                 onPressed: _load,
-                icon: const Icon(Icons.refresh),
-                label: const Text('Reintentar horarios'),
+                icon: const Icon(Icons.refresh_rounded),
+                label: const Text(
+                  'Reintentar horarios',
+                  textAlign: TextAlign.center,
+                ),
               ),
             ),
         ],

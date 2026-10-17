@@ -1,11 +1,13 @@
+import 'package:ficharqr/src/presentation/widgets/app_card.dart';
+import '../theme/app_palette.dart';
 import 'package:flutter/material.dart';
 
 import '../../core/network/mobile_api_client.dart';
 import 'trivia_play_screen.dart';
 import 'trivia_ranking_screen.dart';
 
-const _kPrimary = Color(0xFF0E3A5B);
-const _kAccent = Color(0xFF00B09C);
+const _kPrimary = AppPalette.navy;
+const _kAccent = AppPalette.blueLight;
 
 class TriviaResultScreen extends StatefulWidget {
   const TriviaResultScreen({
@@ -41,7 +43,10 @@ class _TriviaResultScreenState extends State<TriviaResultScreen> {
       if (resp.preguntas.isEmpty) {
         ScaffoldMessenger.of(context).showSnackBar(
           const SnackBar(
-            content: Text('No hay preguntas disponibles en este momento.'),
+            content: Text(
+              'No hay preguntas disponibles en este momento.',
+              textAlign: TextAlign.center,
+            ),
             behavior: SnackBarBehavior.floating,
           ),
         );
@@ -64,14 +69,20 @@ class _TriviaResultScreenState extends State<TriviaResultScreen> {
       if (!mounted) return;
       setState(() => _iniciandoSiguiente = false);
       ScaffoldMessenger.of(context).showSnackBar(
-        SnackBar(content: Text(e.message), behavior: SnackBarBehavior.floating),
+        SnackBar(
+          content: Text(e.message, textAlign: TextAlign.center),
+          behavior: SnackBarBehavior.floating,
+        ),
       );
     } catch (_) {
       if (!mounted) return;
       setState(() => _iniciandoSiguiente = false);
       ScaffoldMessenger.of(context).showSnackBar(
         const SnackBar(
-          content: Text('Error al iniciar la siguiente trivia. Intentá nuevamente.'),
+          content: Text(
+            'Error al iniciar la siguiente trivia. Intentá nuevamente.',
+            textAlign: TextAlign.center,
+          ),
           behavior: SnackBarBehavior.floating,
         ),
       );
@@ -89,40 +100,47 @@ class _TriviaResultScreenState extends State<TriviaResultScreen> {
     final siguiente = resultado.siguienteTriviaDisponible;
 
     return Scaffold(
-      backgroundColor: const Color(0xFFF2F5F8),
+      backgroundColor: AppColors.of(context).surface(AppPalette.background),
       appBar: AppBar(
-        title: const Text('Resultado'),
-        backgroundColor: _kPrimary,
-        foregroundColor: Colors.white,
+        title: const Text('Resultado', textAlign: TextAlign.center),
         automaticallyImplyLeading: false,
       ),
       body: ListView(
         padding: const EdgeInsets.all(20),
         children: [
           // ── Tarjeta principal ───────────────────────────────────────────
-          Card(
+          AppCard(
             elevation: 3,
-            shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(20)),
+            shape: RoundedRectangleBorder(
+              borderRadius: BorderRadius.circular(20),
+            ),
             child: Padding(
               padding: const EdgeInsets.all(28),
               child: Column(
+                crossAxisAlignment: CrossAxisAlignment.center,
                 children: [
                   Container(
                     width: 80,
                     height: 80,
                     decoration: BoxDecoration(
-                      color: _kAccent.withValues(alpha: 0.1),
+                      color: AppColors.of(
+                        context,
+                      ).surface(_kAccent.withValues(alpha: 0.1)),
                       shape: BoxShape.circle,
                     ),
-                    child: const Icon(Icons.check_circle_outline, size: 48, color: _kAccent),
+                    child: Icon(
+                      Icons.check_circle_rounded,
+                      size: 48,
+                      color: AppColors.of(context).foreground(_kAccent),
+                    ),
                   ),
                   const SizedBox(height: 16),
-                  const Text(
+                  Text(
                     '¡Participación completada!',
                     style: TextStyle(
                       fontSize: 20,
                       fontWeight: FontWeight.w800,
-                      color: _kPrimary,
+                      color: AppColors.of(context).foreground(_kPrimary),
                     ),
                     textAlign: TextAlign.center,
                   ),
@@ -130,7 +148,13 @@ class _TriviaResultScreenState extends State<TriviaResultScreen> {
                   Text(
                     '¡Gracias por participar! Sumaste puntos para el ranking anual. Seguí demostrando tu conocimiento operativo.',
                     textAlign: TextAlign.center,
-                    style: TextStyle(color: Colors.grey.shade600, fontSize: 13, height: 1.5),
+                    style: TextStyle(
+                      color: AppColors.of(
+                        context,
+                      ).foreground(Colors.grey.shade600),
+                      fontSize: 13,
+                      height: 1.5,
+                    ),
                   ),
                 ],
               ),
@@ -139,65 +163,118 @@ class _TriviaResultScreenState extends State<TriviaResultScreen> {
           const SizedBox(height: 16),
 
           // ── Stats ───────────────────────────────────────────────────────
-          Card(
+          AppCard(
             elevation: 1,
-            shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(16)),
+            shape: RoundedRectangleBorder(
+              borderRadius: BorderRadius.circular(16),
+            ),
             child: Padding(
               padding: const EdgeInsets.all(20),
               child: Column(
-                crossAxisAlignment: CrossAxisAlignment.start,
+                crossAxisAlignment: CrossAxisAlignment.center,
                 children: [
                   if (resultado.fueraRanking)
                     const Padding(
                       padding: EdgeInsets.only(bottom: 12),
-                      child: Text('Participación sin ranking'),
+                      child: Text(
+                        'Participación sin ranking',
+                        textAlign: TextAlign.center,
+                      ),
                     ),
-                  const Text(
+                  Text(
                     'Tu resultado',
-                    style: TextStyle(fontSize: 15, fontWeight: FontWeight.w700, color: _kPrimary),
+                    style: TextStyle(
+                      fontSize: 15,
+                      fontWeight: FontWeight.w700,
+                      color: AppColors.of(context).foreground(_kPrimary),
+                    ),
+                    textAlign: TextAlign.center,
                   ),
                   const SizedBox(height: 16),
-                  Row(
-                    children: [
-                      _StatTile(
-                        label: 'Puntaje',
-                        value: '$pts pts',
-                        icon: Icons.star_outlined,
-                        color: const Color(0xFFF5A623),
-                      ),
-                      const SizedBox(width: 12),
-                      _StatTile(
-                        label: 'Correctas',
-                        value: '$correctas',
-                        icon: Icons.check_circle_outline,
-                        color: _kAccent,
-                      ),
-                      const SizedBox(width: 12),
-                      _StatTile(
-                        label: 'Incorrectas',
-                        value: '$incorrectas',
-                        icon: Icons.cancel_outlined,
-                        color: const Color(0xFFC85F0F),
-                      ),
-                    ],
+                  LayoutBuilder(
+                    builder: (context, box) {
+                      final stacked =
+                          box.maxWidth < 420 ||
+                          MediaQuery.textScalerOf(context).scale(1) > 1.3;
+                      final tileWidth = stacked
+                          ? box.maxWidth
+                          : (box.maxWidth - 24) / 3;
+                      return Wrap(
+                        spacing: 12,
+                        runSpacing: 12,
+                        alignment: WrapAlignment.center,
+                        children: [
+                          SizedBox(
+                            width: tileWidth,
+                            child: _StatTile(
+                              label: 'Puntaje',
+                              value: '$pts pts',
+                              icon: Icons.star_rounded,
+                              color: const Color(0xFFF5A623),
+                            ),
+                          ),
+                          SizedBox(
+                            width: tileWidth,
+                            child: _StatTile(
+                              label: 'Correctas',
+                              value: '$correctas',
+                              icon: Icons.check_circle_rounded,
+                              color: _kAccent,
+                            ),
+                          ),
+                          SizedBox(
+                            width: tileWidth,
+                            child: _StatTile(
+                              label: 'Incorrectas',
+                              value: '$incorrectas',
+                              icon: Icons.cancel_rounded,
+                              color: const Color(0xFFC85F0F),
+                            ),
+                          ),
+                        ],
+                      );
+                    },
                   ),
                   if (tiempo != null || posicion != null) ...[
                     const SizedBox(height: 12),
                     const Divider(height: 1),
                     const SizedBox(height: 12),
-                    Row(
+                    Wrap(
+                      spacing: 6,
+                      runSpacing: 8,
+                      crossAxisAlignment: WrapCrossAlignment.center,
+                      alignment: WrapAlignment.center,
                       children: [
                         if (tiempo != null) ...[
-                          const Icon(Icons.timer_outlined, size: 16, color: Colors.grey),
+                          Icon(
+                            Icons.timer_rounded,
+                            size: 16,
+                            color: AppColors.of(
+                              context,
+                            ).foreground(Colors.grey),
+                          ),
                           const SizedBox(width: 6),
-                          Text('Tiempo: ${_fmtTiempo(tiempo)}',
-                              style: const TextStyle(fontSize: 13)),
+                          Text(
+                            'Tiempo: ${_fmtTiempo(tiempo)}',
+                            style: const TextStyle(fontSize: 13),
+                            textAlign: TextAlign.center,
+                          ),
                           const SizedBox(width: 20),
                         ],
                         if (posicion != null) ...[
-                          const Icon(Icons.leaderboard_outlined, size: 16, color: Colors.grey),
+                          Icon(
+                            Icons.leaderboard_rounded,
+                            size: 16,
+                            color: AppColors.of(
+                              context,
+                            ).foreground(Colors.grey),
+                          ),
                           const SizedBox(width: 6),
-                          Text('Posición: #$posicion', style: const TextStyle(fontSize: 13)),
+                          Text(
+                            'Posición: #$posicion',
+                            style: const TextStyle(fontSize: 13),
+                            textAlign: TextAlign.center,
+                          ),
                         ],
                       ],
                     ),
@@ -210,46 +287,63 @@ class _TriviaResultScreenState extends State<TriviaResultScreen> {
 
           // ── Siguiente trivia disponible ─────────────────────────────────
           if (siguiente != null) ...[
-            Card(
+            AppCard(
               elevation: 1,
-              color: _kAccent.withValues(alpha: 0.06),
+              color: AppColors.of(
+                context,
+              ).surface(_kAccent.withValues(alpha: 0.06)),
               shape: RoundedRectangleBorder(
                 borderRadius: BorderRadius.circular(16),
-                side: BorderSide(color: _kAccent.withValues(alpha: 0.3)),
+                side: BorderSide(
+                  color: AppColors.of(
+                    context,
+                  ).border(_kAccent.withValues(alpha: 0.3)),
+                ),
               ),
               child: Padding(
                 padding: const EdgeInsets.all(16),
                 child: Row(
+                  mainAxisAlignment: MainAxisAlignment.center,
                   children: [
                     Container(
                       padding: const EdgeInsets.all(8),
                       decoration: BoxDecoration(
-                        color: _kAccent.withValues(alpha: 0.15),
+                        color: AppColors.of(
+                          context,
+                        ).surface(_kAccent.withValues(alpha: 0.15)),
                         borderRadius: BorderRadius.circular(10),
                       ),
-                      child: const Icon(Icons.quiz_outlined, color: _kAccent, size: 24),
+                      child: Icon(
+                        Icons.quiz_rounded,
+                        color: AppColors.of(context).foreground(_kAccent),
+                        size: 24,
+                      ),
                     ),
                     const SizedBox(width: 12),
                     Expanded(
                       child: Column(
-                        crossAxisAlignment: CrossAxisAlignment.start,
+                        crossAxisAlignment: CrossAxisAlignment.center,
                         children: [
-                          const Text(
+                          Text(
                             'Siguiente trivia disponible',
                             style: TextStyle(
                               fontSize: 13,
                               fontWeight: FontWeight.w700,
-                              color: _kAccent,
+                              color: AppColors.of(context).foreground(_kAccent),
                             ),
+                            textAlign: TextAlign.center,
                           ),
                           const SizedBox(height: 2),
                           Text(
                             siguiente.titulo,
-                            style: const TextStyle(
+                            style: TextStyle(
                               fontSize: 14,
                               fontWeight: FontWeight.w600,
-                              color: _kPrimary,
+                              color: AppColors.of(
+                                context,
+                              ).foreground(_kPrimary),
                             ),
+                            textAlign: TextAlign.center,
                           ),
                         ],
                       ),
@@ -269,53 +363,80 @@ class _TriviaResultScreenState extends State<TriviaResultScreen> {
               width: double.infinity,
               child: FilledButton.icon(
                 style: FilledButton.styleFrom(
-                  backgroundColor: _kAccent,
+                  backgroundColor: AppColors.of(context).surface(_kAccent),
                   padding: const EdgeInsets.symmetric(vertical: 16),
-                  shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(12)),
+                  shape: RoundedRectangleBorder(
+                    borderRadius: BorderRadius.circular(12),
+                  ),
                 ),
                 icon: _iniciandoSiguiente
                     ? const SizedBox(
                         width: 18,
                         height: 18,
-                        child: CircularProgressIndicator(color: Colors.white, strokeWidth: 2),
+                        child: CircularProgressIndicator(
+                          color: Colors.white,
+                          strokeWidth: 2,
+                        ),
                       )
                     : const Icon(Icons.play_arrow_rounded, size: 24),
                 label: Text(
-                  _iniciandoSiguiente ? 'Cargando...' : 'Jugar siguiente trivia',
-                  style: const TextStyle(fontSize: 16, fontWeight: FontWeight.w700),
+                  _iniciandoSiguiente
+                      ? 'Cargando...'
+                      : 'Jugar siguiente trivia',
+                  style: const TextStyle(
+                    fontSize: 16,
+                    fontWeight: FontWeight.w700,
+                  ),
+                  textAlign: TextAlign.center,
                 ),
-                onPressed: _iniciandoSiguiente ? null : () => _iniciarSiguiente(siguiente),
+                onPressed: _iniciandoSiguiente
+                    ? null
+                    : () => _iniciarSiguiente(siguiente),
               ),
             ),
             const SizedBox(height: 10),
           ],
           FilledButton.icon(
             style: FilledButton.styleFrom(
-              backgroundColor: _kPrimary,
+              backgroundColor: AppColors.of(context).surface(_kPrimary),
               padding: const EdgeInsets.symmetric(vertical: 16),
-              shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(12)),
+              shape: RoundedRectangleBorder(
+                borderRadius: BorderRadius.circular(12),
+              ),
             ),
-            icon: const Icon(Icons.leaderboard),
-            label: const Text('Ver ranking', style: TextStyle(fontSize: 16, fontWeight: FontWeight.w700)),
+            icon: const Icon(Icons.leaderboard_rounded),
+            label: const Text(
+              'Ver ranking',
+              style: TextStyle(fontSize: 16, fontWeight: FontWeight.w700),
+              textAlign: TextAlign.center,
+            ),
             onPressed: () {
-              Navigator.of(context).push(MaterialPageRoute(
-                builder: (_) => TriviaRankingScreen(
-                  apiClient: widget.apiClient,
-                  token: widget.token,
-                  triviaId: widget.triviaId,
-                  empleadoDni: widget.empleadoDni,
+              Navigator.of(context).push(
+                MaterialPageRoute(
+                  builder: (_) => TriviaRankingScreen(
+                    apiClient: widget.apiClient,
+                    token: widget.token,
+                    triviaId: widget.triviaId,
+                    empleadoDni: widget.empleadoDni,
+                  ),
                 ),
-              ));
+              );
             },
           ),
           const SizedBox(height: 12),
           OutlinedButton.icon(
             style: OutlinedButton.styleFrom(
               padding: const EdgeInsets.symmetric(vertical: 14),
-              shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(12)),
+              shape: RoundedRectangleBorder(
+                borderRadius: BorderRadius.circular(12),
+              ),
             ),
-            icon: const Icon(Icons.home_outlined),
-            label: const Text('Volver al inicio', style: TextStyle(fontSize: 15)),
+            icon: const Icon(Icons.home_rounded),
+            label: const Text(
+              'Volver al inicio',
+              style: TextStyle(fontSize: 15),
+              textAlign: TextAlign.center,
+            ),
             onPressed: () {
               int count = 0;
               Navigator.of(context).popUntil((_) => count++ >= 2);
@@ -342,25 +463,36 @@ class _StatTile extends StatelessWidget {
 
   @override
   Widget build(BuildContext context) {
-    return Expanded(
-      child: Container(
-        padding: const EdgeInsets.symmetric(vertical: 14, horizontal: 8),
-        decoration: BoxDecoration(
-          color: color.withValues(alpha: 0.08),
-          borderRadius: BorderRadius.circular(12),
-        ),
-        child: Column(
-          children: [
-            Icon(icon, color: color, size: 22),
-            const SizedBox(height: 6),
-            Text(
-              value,
-              style: TextStyle(fontSize: 18, fontWeight: FontWeight.w800, color: color),
+    return Container(
+      padding: const EdgeInsets.symmetric(vertical: 14, horizontal: 8),
+      decoration: BoxDecoration(
+        color: AppColors.of(context).surface(color.withValues(alpha: 0.08)),
+        borderRadius: BorderRadius.circular(12),
+      ),
+      child: Column(
+        crossAxisAlignment: CrossAxisAlignment.center,
+        children: [
+          Icon(icon, color: AppColors.of(context).foreground(color), size: 22),
+          const SizedBox(height: 6),
+          Text(
+            value,
+            textAlign: TextAlign.center,
+            style: TextStyle(
+              fontSize: 18,
+              fontWeight: FontWeight.w800,
+              color: AppColors.of(context).foreground(color),
             ),
-            const SizedBox(height: 2),
-            Text(label, style: TextStyle(fontSize: 13, color: Colors.grey.shade600)),
-          ],
-        ),
+          ),
+          const SizedBox(height: 2),
+          Text(
+            label,
+            textAlign: TextAlign.center,
+            style: TextStyle(
+              fontSize: 13,
+              color: AppColors.of(context).foreground(Colors.grey.shade600),
+            ),
+          ),
+        ],
       ),
     );
   }

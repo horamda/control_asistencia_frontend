@@ -1,3 +1,5 @@
+import 'package:ficharqr/src/presentation/widgets/app_card.dart';
+import '../theme/app_palette.dart';
 import 'dart:async';
 
 import 'package:flutter/material.dart';
@@ -10,10 +12,10 @@ import 'trivia_ranking_screen.dart';
 import 'trivia_annual_ranking_screen.dart';
 
 // Colores de marca reutilizados en el módulo Trivia
-const _kPrimary = Color(0xFF0E3A5B);
-const _kAccent = Color(0xFF00B09C);
+const _kPrimary = AppPalette.navy;
+const _kAccent = AppPalette.blueLight;
 const _kGold = Color(0xFFF5A623);
-const _kBg = Color(0xFFF2F5F8);
+const _kBg = AppPalette.background;
 
 class TriviaHomeScreen extends StatefulWidget {
   const TriviaHomeScreen({
@@ -194,7 +196,10 @@ class _TriviaHomeScreenState extends State<TriviaHomeScreen> {
   void _showError(String msg) {
     if (!mounted) return;
     ScaffoldMessenger.of(context).showSnackBar(
-      SnackBar(content: Text(msg), behavior: SnackBarBehavior.floating),
+      SnackBar(
+        content: Text(msg, textAlign: TextAlign.center),
+        behavior: SnackBarBehavior.floating,
+      ),
     );
   }
 
@@ -250,14 +255,12 @@ class _TriviaHomeScreenState extends State<TriviaHomeScreen> {
   @override
   Widget build(BuildContext context) {
     return Scaffold(
-      backgroundColor: _kBg,
+      backgroundColor: AppColors.of(context).surface(_kBg),
       appBar: AppBar(
-        title: const Text('Trivia'),
-        backgroundColor: _kPrimary,
-        foregroundColor: Colors.white,
+        title: const Text('Trivia', textAlign: TextAlign.center),
         actions: [
           IconButton(
-            icon: const Icon(Icons.refresh),
+            icon: const Icon(Icons.refresh_rounded),
             onPressed: _loading ? null : _load,
             tooltip: 'Actualizar',
           ),
@@ -283,10 +286,13 @@ class _TriviaHomeScreenState extends State<TriviaHomeScreen> {
                   ],
                   if (_notificationError != null)
                     ListTile(
-                      title: Text(_notificationError!),
+                      title: Text(
+                        _notificationError!,
+                        textAlign: TextAlign.center,
+                      ),
                       trailing: IconButton(
                         tooltip: 'Reintentar notificaciones',
-                        icon: const Icon(Icons.refresh),
+                        icon: const Icon(Icons.refresh_rounded),
                         onPressed: _refreshNotifications,
                       ),
                     ),
@@ -358,7 +364,7 @@ class _ProgramadaCard extends StatelessWidget {
   @override
   Widget build(BuildContext context) {
     return _TriviaCard(
-      icon: Icons.schedule_outlined,
+      icon: Icons.schedule_rounded,
       iconColor: const Color(0xFF315D52),
       badge: 'Próxima trivia',
       badgeColor: const Color(0xFF315D52),
@@ -367,20 +373,26 @@ class _ProgramadaCard extends StatelessWidget {
       children: [
         if (trivia.fechaInicio != null)
           _InfoRow(
-            icon: Icons.calendar_today_outlined,
+            icon: Icons.calendar_today_rounded,
             text: 'Disponible desde: ${_fmtFecha(trivia.fechaInicio)}',
           ),
         if (trivia.fechaFin != null)
           _InfoRow(
-            icon: Icons.flag_outlined,
+            icon: Icons.flag_rounded,
             text: 'Finaliza: ${_fmtFecha(trivia.fechaFin)}',
           ),
         if (trivia.premio != null)
-          _InfoRow(icon: Icons.card_giftcard_outlined, text: 'Premio: ${trivia.premio}'),
+          _InfoRow(
+            icon: Icons.card_giftcard_rounded,
+            text: 'Premio: ${trivia.premio}',
+          ),
         const SizedBox(height: 12),
         Text(
           'La trivia estará disponible desde el día y hora indicado.',
-          style: TextStyle(color: Colors.grey.shade600, fontSize: 13),
+          style: TextStyle(
+            color: AppColors.of(context).foreground(Colors.grey.shade600),
+            fontSize: 13,
+          ),
           textAlign: TextAlign.center,
         ),
       ],
@@ -396,7 +408,7 @@ class _ActivaCard extends StatelessWidget {
   @override
   Widget build(BuildContext context) {
     return _TriviaCard(
-      icon: Icons.quiz_outlined,
+      icon: Icons.quiz_rounded,
       iconColor: _kAccent,
       badge: 'Trivia disponible',
       badgeColor: _kAccent,
@@ -404,16 +416,22 @@ class _ActivaCard extends StatelessWidget {
       description: trivia.descripcion,
       children: [
         if (trivia.premio != null)
-          _InfoRow(icon: Icons.card_giftcard_outlined, text: 'Premio: ${trivia.premio}'),
+          _InfoRow(
+            icon: Icons.card_giftcard_rounded,
+            text: 'Premio: ${trivia.premio}',
+          ),
         if (trivia.fechaFin != null)
           _InfoRow(
-            icon: Icons.timer_outlined,
+            icon: Icons.timer_rounded,
             text: 'Cierra: ${_fmtFecha(trivia.fechaFin)}',
           ),
         const SizedBox(height: 16),
         Text(
           'Demostra tu conocimiento operativo y suma puntos para el ranking anual.',
-          style: TextStyle(color: Colors.grey.shade700, fontSize: 13),
+          style: TextStyle(
+            color: AppColors.of(context).foreground(Colors.grey.shade700),
+            fontSize: 13,
+          ),
           textAlign: TextAlign.center,
         ),
         const SizedBox(height: 20),
@@ -421,12 +439,18 @@ class _ActivaCard extends StatelessWidget {
           width: double.infinity,
           child: FilledButton.icon(
             style: FilledButton.styleFrom(
-              backgroundColor: _kAccent,
+              backgroundColor: AppColors.of(context).surface(_kAccent),
               padding: const EdgeInsets.symmetric(vertical: 16),
-              shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(12)),
+              shape: RoundedRectangleBorder(
+                borderRadius: BorderRadius.circular(12),
+              ),
             ),
             icon: const Icon(Icons.play_arrow_rounded, size: 28),
-            label: const Text('Jugar ahora', style: TextStyle(fontSize: 17, fontWeight: FontWeight.w700)),
+            label: const Text(
+              'Jugar ahora',
+              style: TextStyle(fontSize: 17, fontWeight: FontWeight.w700),
+              textAlign: TextAlign.center,
+            ),
             onPressed: onJugar,
           ),
         ),
@@ -451,43 +475,54 @@ class _YaParticipoCard extends StatelessWidget {
   Widget build(BuildContext context) {
     final p = participacion;
     return _TriviaCard(
-      icon: Icons.check_circle_outline,
-      iconColor: const Color(0xFF2A789E),
+      icon: Icons.check_circle_rounded,
+      iconColor: AppPalette.blueLight,
       badge: 'Ya participaste',
-      badgeColor: const Color(0xFF2A789E),
+      badgeColor: AppPalette.blueLight,
       title: trivia.titulo,
       description: null,
       children: [
         if (p != null) ...[
           if (p.fueraRanking)
-            const Text('Participación sin ranking'),
+            const Text(
+              'Participación sin ranking',
+              textAlign: TextAlign.center,
+            ),
           _StatRow(label: 'Puntaje', value: '${p.puntosTotal ?? 0} pts'),
           if (p.posicion != null)
             _StatRow(label: 'Posición actual', value: '#${p.posicion}'),
           _StatRow(label: 'Correctas', value: '${p.correctas ?? 0}'),
           _StatRow(label: 'Incorrectas', value: '${p.incorrectas ?? 0}'),
           if (p.tiempoTotalSegundos != null)
-            _StatRow(label: 'Tiempo total', value: _fmtTiempo(p.tiempoTotalSegundos)),
+            _StatRow(
+              label: 'Tiempo total',
+              value: _fmtTiempo(p.tiempoTotalSegundos),
+            ),
         ],
         const SizedBox(height: 20),
-        Row(children: [
-          Expanded(
-            child: OutlinedButton.icon(
-              icon: const Icon(Icons.history),
-              label: const Text('Mi historial'),
-              onPressed: onMiHistorial,
+        Row(
+          mainAxisAlignment: MainAxisAlignment.center,
+          children: [
+            Expanded(
+              child: OutlinedButton.icon(
+                icon: const Icon(Icons.history_rounded),
+                label: const Text('Mi historial', textAlign: TextAlign.center),
+                onPressed: onMiHistorial,
+              ),
             ),
-          ),
-          const SizedBox(width: 12),
-          Expanded(
-            child: FilledButton.icon(
-              style: FilledButton.styleFrom(backgroundColor: _kPrimary),
-              icon: const Icon(Icons.leaderboard),
-              label: const Text('Ver ranking'),
-              onPressed: onRanking,
+            const SizedBox(width: 12),
+            Expanded(
+              child: FilledButton.icon(
+                style: FilledButton.styleFrom(
+                  backgroundColor: AppColors.of(context).surface(_kPrimary),
+                ),
+                icon: const Icon(Icons.leaderboard_rounded),
+                label: const Text('Ver ranking', textAlign: TextAlign.center),
+                onPressed: onRanking,
+              ),
             ),
-          ),
-        ]),
+          ],
+        ),
       ],
     );
   }
@@ -509,7 +544,7 @@ class _FinalizadaCard extends StatelessWidget {
   Widget build(BuildContext context) {
     final p = participacion;
     return _TriviaCard(
-      icon: Icons.emoji_events_outlined,
+      icon: Icons.emoji_events_rounded,
       iconColor: _kGold,
       badge: 'Trivia finalizada',
       badgeColor: Colors.grey.shade600,
@@ -518,75 +553,108 @@ class _FinalizadaCard extends StatelessWidget {
       children: [
         if (p != null) ...[
           if (p.fueraRanking)
-            const Text('Participación sin ranking'),
+            const Text(
+              'Participación sin ranking',
+              textAlign: TextAlign.center,
+            ),
           _StatRow(label: 'Tu puntaje', value: '${p.puntosTotal ?? 0} pts'),
-          if (p.posicion != null) _StatRow(label: 'Tu posición', value: '#${p.posicion}'),
+          if (p.posicion != null)
+            _StatRow(label: 'Tu posición', value: '#${p.posicion}'),
         ],
         const SizedBox(height: 20),
-        Row(children: [
-          Expanded(
-            child: OutlinedButton.icon(
-              icon: const Icon(Icons.history),
-              label: const Text('Historial'),
-              onPressed: onHistorial,
+        Row(
+          mainAxisAlignment: MainAxisAlignment.center,
+          children: [
+            Expanded(
+              child: OutlinedButton.icon(
+                icon: const Icon(Icons.history_rounded),
+                label: const Text('Historial', textAlign: TextAlign.center),
+                onPressed: onHistorial,
+              ),
             ),
-          ),
-          const SizedBox(width: 12),
-          Expanded(
-            child: FilledButton.icon(
-              style: FilledButton.styleFrom(backgroundColor: _kPrimary),
-              icon: const Icon(Icons.leaderboard),
-              label: const Text('Ver ranking'),
-              onPressed: onRanking,
+            const SizedBox(width: 12),
+            Expanded(
+              child: FilledButton.icon(
+                style: FilledButton.styleFrom(
+                  backgroundColor: AppColors.of(context).surface(_kPrimary),
+                ),
+                icon: const Icon(Icons.leaderboard_rounded),
+                label: const Text('Ver ranking', textAlign: TextAlign.center),
+                onPressed: onRanking,
+              ),
             ),
-          ),
-        ]),
+          ],
+        ),
       ],
     );
   }
 }
 
 class _SinTriviaCard extends StatelessWidget {
-  const _SinTriviaCard({required this.onHistorial, required this.onRankingAnual});
+  const _SinTriviaCard({
+    required this.onHistorial,
+    required this.onRankingAnual,
+  });
   final VoidCallback onHistorial;
   final VoidCallback onRankingAnual;
 
   @override
   Widget build(BuildContext context) {
-    return Card(
+    return AppCard(
       elevation: 0,
       shape: RoundedRectangleBorder(
         borderRadius: BorderRadius.circular(16),
-        side: BorderSide(color: Colors.grey.shade200),
+        side: BorderSide(
+          color: AppColors.of(context).border(Colors.grey.shade200),
+        ),
       ),
       child: Padding(
         padding: const EdgeInsets.all(28),
         child: Column(
+          crossAxisAlignment: CrossAxisAlignment.center,
           children: [
-            Icon(Icons.quiz_outlined, size: 56, color: Colors.grey.shade400),
+            Icon(
+              Icons.quiz_rounded,
+              size: 56,
+              color: AppColors.of(context).foreground(Colors.grey.shade400),
+            ),
             const SizedBox(height: 16),
             Text(
               'No hay trivias activas por el momento',
-              style: TextStyle(fontSize: 16, color: Colors.grey.shade600),
+              style: TextStyle(
+                fontSize: 16,
+                color: AppColors.of(context).foreground(Colors.grey.shade600),
+              ),
               textAlign: TextAlign.center,
             ),
             const SizedBox(height: 24),
-            Row(children: [
-              Expanded(
-                child: OutlinedButton(
-                  onPressed: onHistorial,
-                  child: const Text('Ver historial'),
+            Row(
+              mainAxisAlignment: MainAxisAlignment.center,
+              children: [
+                Expanded(
+                  child: OutlinedButton(
+                    onPressed: onHistorial,
+                    child: const Text(
+                      'Ver historial',
+                      textAlign: TextAlign.center,
+                    ),
+                  ),
                 ),
-              ),
-              const SizedBox(width: 12),
-              Expanded(
-                child: FilledButton(
-                  style: FilledButton.styleFrom(backgroundColor: _kPrimary),
-                  onPressed: onRankingAnual,
-                  child: const Text('Ranking anual'),
+                const SizedBox(width: 12),
+                Expanded(
+                  child: FilledButton(
+                    style: FilledButton.styleFrom(
+                      backgroundColor: AppColors.of(context).surface(_kPrimary),
+                    ),
+                    onPressed: onRankingAnual,
+                    child: const Text(
+                      'Ranking anual',
+                      textAlign: TextAlign.center,
+                    ),
+                  ),
                 ),
-              ),
-            ]),
+              ],
+            ),
           ],
         ),
       ),
@@ -617,33 +685,45 @@ class _TriviaCard extends StatelessWidget {
 
   @override
   Widget build(BuildContext context) {
-    return Card(
+    return AppCard(
       elevation: 2,
       shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(16)),
       child: Padding(
         padding: const EdgeInsets.all(20),
         child: Column(
-          crossAxisAlignment: CrossAxisAlignment.start,
+          crossAxisAlignment: CrossAxisAlignment.center,
           children: [
             Row(
+              mainAxisAlignment: MainAxisAlignment.center,
               children: [
                 Container(
                   padding: const EdgeInsets.all(10),
                   decoration: BoxDecoration(
-                    color: iconColor.withValues(alpha: 0.1),
+                    color: AppColors.of(
+                      context,
+                    ).surface(iconColor.withValues(alpha: 0.1)),
                     borderRadius: BorderRadius.circular(12),
                   ),
-                  child: Icon(icon, color: iconColor, size: 28),
+                  child: Icon(
+                    icon,
+                    color: AppColors.of(context).foreground(iconColor),
+                    size: 28,
+                  ),
                 ),
                 const SizedBox(width: 12),
                 Expanded(
                   child: Column(
-                    crossAxisAlignment: CrossAxisAlignment.start,
+                    crossAxisAlignment: CrossAxisAlignment.center,
                     children: [
                       Container(
-                        padding: const EdgeInsets.symmetric(horizontal: 10, vertical: 3),
+                        padding: const EdgeInsets.symmetric(
+                          horizontal: 10,
+                          vertical: 3,
+                        ),
                         decoration: BoxDecoration(
-                          color: badgeColor.withValues(alpha: 0.12),
+                          color: AppColors.of(
+                            context,
+                          ).surface(badgeColor.withValues(alpha: 0.12)),
                           borderRadius: BorderRadius.circular(20),
                         ),
                         child: Text(
@@ -651,18 +731,20 @@ class _TriviaCard extends StatelessWidget {
                           style: TextStyle(
                             fontSize: 13,
                             fontWeight: FontWeight.w700,
-                            color: badgeColor,
+                            color: AppColors.of(context).foreground(badgeColor),
                           ),
+                          textAlign: TextAlign.center,
                         ),
                       ),
                       const SizedBox(height: 4),
                       Text(
                         title,
-                        style: const TextStyle(
+                        style: TextStyle(
                           fontSize: 17,
                           fontWeight: FontWeight.w700,
-                          color: _kPrimary,
+                          color: AppColors.of(context).foreground(_kPrimary),
                         ),
+                        textAlign: TextAlign.center,
                       ),
                     ],
                   ),
@@ -671,7 +753,14 @@ class _TriviaCard extends StatelessWidget {
             ),
             if (description != null) ...[
               const SizedBox(height: 12),
-              Text(description!, style: TextStyle(color: Colors.grey.shade700, fontSize: 14)),
+              Text(
+                description!,
+                style: TextStyle(
+                  color: AppColors.of(context).foreground(Colors.grey.shade700),
+                  fontSize: 14,
+                ),
+                textAlign: TextAlign.center,
+              ),
             ],
             const SizedBox(height: 16),
             const Divider(height: 1),
@@ -695,7 +784,11 @@ class _InfoRow extends StatelessWidget {
       padding: const EdgeInsets.symmetric(vertical: 4),
       child: Row(
         children: [
-          Icon(icon, size: 16, color: Colors.grey.shade600),
+          Icon(
+            icon,
+            size: 16,
+            color: AppColors.of(context).foreground(Colors.grey.shade600),
+          ),
           const SizedBox(width: 8),
           Expanded(child: Text(text, style: const TextStyle(fontSize: 13))),
         ],
@@ -716,10 +809,22 @@ class _StatRow extends StatelessWidget {
       child: Row(
         mainAxisAlignment: MainAxisAlignment.spaceBetween,
         children: [
-          Text(label, style: TextStyle(color: Colors.grey.shade600, fontSize: 14)),
+          Text(
+            label,
+            style: TextStyle(
+              color: AppColors.of(context).foreground(Colors.grey.shade600),
+              fontSize: 14,
+            ),
+            textAlign: TextAlign.center,
+          ),
           Text(
             value,
-            style: const TextStyle(fontWeight: FontWeight.w700, fontSize: 14, color: _kPrimary),
+            style: TextStyle(
+              fontWeight: FontWeight.w700,
+              fontSize: 14,
+              color: AppColors.of(context).foreground(_kPrimary),
+            ),
+            textAlign: TextAlign.center,
           ),
         ],
       ),
@@ -747,25 +852,43 @@ class _SeccionAccesos extends StatelessWidget {
           style: TextStyle(
             fontSize: 13,
             fontWeight: FontWeight.w600,
-            color: Colors.grey.shade600,
+            color: AppColors.of(context).foreground(Colors.grey.shade600),
             letterSpacing: 0.5,
           ),
         ),
         const SizedBox(height: 10),
-        Row(children: [
-          _AccesoChip(icon: Icons.history_outlined, label: 'Historial', onTap: onHistorial),
-          const SizedBox(width: 10),
-          _AccesoChip(icon: Icons.person_outlined, label: 'Mi historial', onTap: onMiHistorial),
-          const SizedBox(width: 10),
-          _AccesoChip(icon: Icons.emoji_events_outlined, label: 'Ranking anual', onTap: onRankingAnual),
-        ]),
+        Row(
+          children: [
+            _AccesoChip(
+              icon: Icons.history_rounded,
+              label: 'Historial',
+              onTap: onHistorial,
+            ),
+            const SizedBox(width: 10),
+            _AccesoChip(
+              icon: Icons.person_rounded,
+              label: 'Mi historial',
+              onTap: onMiHistorial,
+            ),
+            const SizedBox(width: 10),
+            _AccesoChip(
+              icon: Icons.emoji_events_rounded,
+              label: 'Ranking anual',
+              onTap: onRankingAnual,
+            ),
+          ],
+        ),
       ],
     );
   }
 }
 
 class _AccesoChip extends StatelessWidget {
-  const _AccesoChip({required this.icon, required this.label, required this.onTap});
+  const _AccesoChip({
+    required this.icon,
+    required this.label,
+    required this.onTap,
+  });
   final IconData icon;
   final String label;
   final VoidCallback onTap;
@@ -779,17 +902,28 @@ class _AccesoChip extends StatelessWidget {
         child: Container(
           padding: const EdgeInsets.symmetric(vertical: 14),
           decoration: BoxDecoration(
-            color: Colors.white,
+            color: AppColors.of(context).surface(Colors.white),
             borderRadius: BorderRadius.circular(12),
-            border: Border.all(color: Colors.grey.shade200),
+            border: Border.all(
+              color: AppColors.of(context).border(Colors.grey.shade200),
+            ),
           ),
           child: Column(
+            crossAxisAlignment: CrossAxisAlignment.center,
             children: [
-              Icon(icon, size: 22, color: _kPrimary),
+              Icon(
+                icon,
+                size: 22,
+                color: AppColors.of(context).foreground(_kPrimary),
+              ),
               const SizedBox(height: 6),
               Text(
                 label,
-                style: const TextStyle(fontSize: 13, fontWeight: FontWeight.w600, color: _kPrimary),
+                style: TextStyle(
+                  fontSize: 13,
+                  fontWeight: FontWeight.w600,
+                  color: AppColors.of(context).foreground(_kPrimary),
+                ),
                 textAlign: TextAlign.center,
               ),
             ],
@@ -817,30 +951,41 @@ class _NotificacionBanner extends StatelessWidget {
     return Container(
       padding: const EdgeInsets.all(14),
       decoration: BoxDecoration(
-        color: const Color(0xFFFFF3CD),
+        color: AppColors.of(context).surface(const Color(0xFFFFF3CD)),
         borderRadius: BorderRadius.circular(12),
-        border: Border.all(color: const Color(0xFFFFD700)),
+        border: Border.all(
+          color: AppColors.of(context).border(const Color(0xFFFFD700)),
+        ),
       ),
       child: Column(
+        crossAxisAlignment: CrossAxisAlignment.center,
         children: [
           for (final notif in notificaciones)
             ListTile(
               contentPadding: EdgeInsets.zero,
-              leading: const Icon(
-                Icons.notifications_active,
-                color: Color(0xFFC47500),
+              leading: Icon(
+                Icons.notifications_active_rounded,
+                color: AppColors.of(
+                  context,
+                ).foreground(const Color(0xFFC47500)),
               ),
-              title: Text(notif.mensaje ?? 'Tenés una notificación de trivia.'),
+              title: Text(
+                notif.mensaje ?? 'Tenés una notificación de trivia.',
+                textAlign: TextAlign.center,
+              ),
               trailing: IconButton(
                 tooltip: 'Marcar como leída',
                 onPressed: busy ? null : () => onRead(notif.id),
-                icon: const Icon(Icons.done),
+                icon: const Icon(Icons.done_rounded),
               ),
             ),
           if (notificaciones.length > 1)
             TextButton(
               onPressed: busy ? null : onReadAll,
-              child: const Text('Marcar todas como leídas'),
+              child: const Text(
+                'Marcar todas como leídas',
+                textAlign: TextAlign.center,
+              ),
             ),
         ],
       ),
@@ -861,13 +1006,25 @@ class _ErrorView extends StatelessWidget {
         child: Column(
           mainAxisSize: MainAxisSize.min,
           children: [
-            Icon(Icons.wifi_off_outlined, size: 56, color: Colors.grey.shade400),
+            Icon(
+              Icons.wifi_off_rounded,
+              size: 56,
+              color: AppColors.of(context).foreground(Colors.grey.shade400),
+            ),
             const SizedBox(height: 16),
-            Text(message, textAlign: TextAlign.center, style: TextStyle(color: Colors.grey.shade600)),
+            Text(
+              message,
+              textAlign: TextAlign.center,
+              style: TextStyle(
+                color: AppColors.of(context).foreground(Colors.grey.shade600),
+              ),
+            ),
             const SizedBox(height: 24),
             FilledButton.icon(
-              style: FilledButton.styleFrom(backgroundColor: _kPrimary),
-              icon: const Icon(Icons.refresh),
+              style: FilledButton.styleFrom(
+                backgroundColor: AppColors.of(context).surface(_kPrimary),
+              ),
+              icon: const Icon(Icons.refresh_rounded),
               label: const Text('Reintentar'),
               onPressed: onRetry,
             ),

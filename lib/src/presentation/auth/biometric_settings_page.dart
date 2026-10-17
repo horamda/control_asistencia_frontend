@@ -1,3 +1,4 @@
+import 'package:ficharqr/src/presentation/widgets/app_card.dart';
 import 'dart:async';
 
 import 'package:flutter/material.dart';
@@ -6,6 +7,7 @@ import '../../core/auth/session_manager.dart';
 import '../../core/feedback/clock_feedback_audio_service.dart';
 import '../../core/feedback/clock_feedback_profile.dart';
 import '../widgets/centered_snackbar.dart';
+import '../widgets/app_page_layout.dart';
 
 class BiometricSettingsPage extends StatefulWidget {
   const BiometricSettingsPage({super.key, required this.sessionManager});
@@ -156,213 +158,222 @@ class _BiometricSettingsPageState extends State<BiometricSettingsPage> {
   @override
   Widget build(BuildContext context) {
     return Scaffold(
-      appBar: AppBar(title: const Text('Seguridad y sonido')),
-      body: AnimatedBuilder(
-        animation: widget.sessionManager,
-        builder: (context, _) {
-          final manager = widget.sessionManager;
-          final available = manager.biometricAvailable;
-          final enabled = manager.biometricEnabled;
-          final soundProfile = manager.clockFeedbackProfile;
-          final selectedSoundProfile = _selectedSoundProfile ?? soundProfile;
-          final hasUnsavedSoundChanges = selectedSoundProfile != soundProfile;
-          final loading = _updating || manager.isBiometricLoading;
-          return LayoutBuilder(
-            builder: (context, constraints) {
-              final maxWidth = constraints.maxWidth >= 1200
-                  ? 900.0
-                  : constraints.maxWidth >= 900
-                  ? 760.0
-                  : double.infinity;
-              final horizontalPadding = constraints.maxWidth < 600
-                  ? 12.0
-                  : 16.0;
-              return Center(
-                child: ConstrainedBox(
-                  constraints: BoxConstraints(maxWidth: maxWidth),
-                  child: ListView(
-                    padding: EdgeInsets.all(horizontalPadding),
-                    children: [
-                      Card(
-                        child: Padding(
-                          padding: const EdgeInsets.all(14),
-                          child: Column(
-                            crossAxisAlignment: CrossAxisAlignment.start,
-                            children: [
-                              Text(
-                                'Acceso biométrico',
-                                style: Theme.of(context).textTheme.titleMedium,
-                              ),
-                              const SizedBox(height: 8),
-                              const Text(
-                                'Activá el uso de huella para ingreso rápido y desbloqueo por inactividad.',
-                              ),
-                            ],
+      appBar: AppBar(title: const Text('Huella y sonido')),
+      body: AppPageBody(
+        maxWidth: 840,
+        child: AnimatedBuilder(
+          animation: widget.sessionManager,
+          builder: (context, _) {
+            final manager = widget.sessionManager;
+            final available = manager.biometricAvailable;
+            final enabled = manager.biometricEnabled;
+            final soundProfile = manager.clockFeedbackProfile;
+            final selectedSoundProfile = _selectedSoundProfile ?? soundProfile;
+            final hasUnsavedSoundChanges = selectedSoundProfile != soundProfile;
+            final loading = _updating || manager.isBiometricLoading;
+            return LayoutBuilder(
+              builder: (context, constraints) {
+                final maxWidth = constraints.maxWidth >= 1200
+                    ? 900.0
+                    : constraints.maxWidth >= 900
+                    ? 760.0
+                    : double.infinity;
+                final horizontalPadding = constraints.maxWidth < 600
+                    ? 12.0
+                    : 16.0;
+                return Center(
+                  child: ConstrainedBox(
+                    constraints: BoxConstraints(maxWidth: maxWidth),
+                    child: ListView(
+                      padding: EdgeInsets.all(horizontalPadding),
+                      children: [
+                        AppCard(
+                          child: Padding(
+                            padding: const EdgeInsets.all(14),
+                            child: Column(
+                              crossAxisAlignment: CrossAxisAlignment.center,
+                              children: [
+                                Text(
+                                  'Huella digital',
+                                  style: Theme.of(
+                                    context,
+                                  ).textTheme.titleMedium,
+                                ),
+                                const SizedBox(height: 8),
+                                const Text(
+                                  'Activá el uso de huella para ingreso rápido y desbloqueo por inactividad.',
+                                ),
+                              ],
+                            ),
                           ),
                         ),
-                      ),
-                      const SizedBox(height: 10),
-                      Card(
-                        child: SwitchListTile.adaptive(
-                          value: enabled,
-                          onChanged: loading ? null : _setBiometricUsage,
-                          title: const Text('Usar huella en este dispositivo'),
-                          subtitle: Text(
-                            !available
-                                ? 'No disponible. Configurá una huella en el teléfono.'
-                                : enabled
-                                ? 'Activada para desbloquear sesión.'
-                                : 'Desactivada.',
+                        const SizedBox(height: 10),
+                        AppCard(
+                          child: SwitchListTile.adaptive(
+                            value: enabled,
+                            onChanged: loading ? null : _setBiometricUsage,
+                            title: const Text(
+                              'Usar huella en este dispositivo',
+                            ),
+                            subtitle: Text(
+                              !available
+                                  ? 'No disponible. Configurá una huella en el teléfono.'
+                                  : enabled
+                                  ? 'Activada para desbloquear sesión.'
+                                  : 'Desactivada.',
+                            ),
                           ),
                         ),
-                      ),
-                      const SizedBox(height: 10),
-                      SizedBox(
-                        height: 46,
-                        child: OutlinedButton.icon(
-                          onPressed: (!available || loading)
-                              ? null
-                              : _testFingerprint,
-                          icon: loading
-                              ? const SizedBox(
-                                  width: 16,
-                                  height: 16,
-                                  child: CircularProgressIndicator(
-                                    strokeWidth: 2,
-                                  ),
-                                )
-                              : const Icon(Icons.fingerprint),
-                          label: Text(
-                            loading ? 'Validando...' : 'Probar huella',
+                        const SizedBox(height: 10),
+                        ConstrainedBox(
+                          constraints: const BoxConstraints(minHeight: 48),
+                          child: OutlinedButton.icon(
+                            onPressed: (!available || loading)
+                                ? null
+                                : _testFingerprint,
+                            icon: loading
+                                ? const SizedBox(
+                                    width: 16,
+                                    height: 16,
+                                    child: CircularProgressIndicator(
+                                      strokeWidth: 2,
+                                    ),
+                                  )
+                                : const Icon(Icons.fingerprint_rounded),
+                            label: Text(
+                              loading ? 'Validando...' : 'Probar huella',
+                            ),
                           ),
                         ),
-                      ),
-                      if (manager.statusMessage != null) ...[
+                        if (manager.statusMessage != null) ...[
+                          const SizedBox(height: 12),
+                          Text(
+                            manager.statusMessage!,
+                            style: Theme.of(context).textTheme.bodySmall,
+                          ),
+                        ],
                         const SizedBox(height: 12),
-                        Text(
-                          manager.statusMessage!,
-                          style: Theme.of(context).textTheme.bodySmall,
-                        ),
-                      ],
-                      const SizedBox(height: 12),
-                      Card(
-                        child: Padding(
-                          padding: const EdgeInsets.all(12),
-                          child: Column(
-                            crossAxisAlignment: CrossAxisAlignment.start,
-                            children: [
-                              Text(
-                                'Sonido al fichar',
-                                style: Theme.of(context).textTheme.titleMedium,
-                              ),
-                              const SizedBox(height: 6),
-                              const Text(
-                                'Define el volumen relativo de los tonos de feedback.',
-                              ),
-                              const SizedBox(height: 8),
-                              RadioGroup<ClockFeedbackProfile>(
-                                groupValue: selectedSoundProfile,
-                                onChanged: (value) {
-                                  if (loading || value == null) {
-                                    return;
-                                  }
-                                  setState(() {
-                                    _selectedSoundProfile = value;
-                                  });
-                                },
-                                child: Column(
+                        AppCard(
+                          child: Padding(
+                            padding: const EdgeInsets.all(12),
+                            child: Column(
+                              crossAxisAlignment: CrossAxisAlignment.center,
+                              children: [
+                                Text(
+                                  'Sonido al fichar',
+                                  style: Theme.of(
+                                    context,
+                                  ).textTheme.titleMedium,
+                                ),
+                                const SizedBox(height: 6),
+                                const Text(
+                                  'Define el volumen relativo de los tonos de feedback.',
+                                ),
+                                const SizedBox(height: 8),
+                                RadioGroup<ClockFeedbackProfile>(
+                                  groupValue: selectedSoundProfile,
+                                  onChanged: (value) {
+                                    if (loading || value == null) {
+                                      return;
+                                    }
+                                    setState(() {
+                                      _selectedSoundProfile = value;
+                                    });
+                                  },
+                                  child: Column(
+                                    children: [
+                                      RadioListTile<
+                                        ClockFeedbackProfile
+                                      >.adaptive(
+                                        contentPadding: EdgeInsets.zero,
+                                        value: ClockFeedbackProfile.subtle,
+                                        enabled: !loading,
+                                        title: const Text('Discreto'),
+                                        subtitle: const Text('Más suave.'),
+                                      ),
+                                      RadioListTile<
+                                        ClockFeedbackProfile
+                                      >.adaptive(
+                                        contentPadding: EdgeInsets.zero,
+                                        value: ClockFeedbackProfile.balanced,
+                                        enabled: !loading,
+                                        title: const Text('Balanceado'),
+                                        subtitle: const Text('Recomendado.'),
+                                      ),
+                                      RadioListTile<
+                                        ClockFeedbackProfile
+                                      >.adaptive(
+                                        contentPadding: EdgeInsets.zero,
+                                        value: ClockFeedbackProfile.strong,
+                                        enabled: !loading,
+                                        title: const Text('Fuerte'),
+                                        subtitle: const Text('Más notorio.'),
+                                      ),
+                                    ],
+                                  ),
+                                ),
+                                const SizedBox(height: 8),
+                                AppAdaptiveActions(
                                   children: [
-                                    RadioListTile<
-                                      ClockFeedbackProfile
-                                    >.adaptive(
-                                      contentPadding: EdgeInsets.zero,
-                                      value: ClockFeedbackProfile.subtle,
-                                      enabled: !loading,
-                                      title: const Text('Discreto'),
-                                      subtitle: const Text('Más suave.'),
+                                    OutlinedButton.icon(
+                                      onPressed: (loading || _previewing)
+                                          ? null
+                                          : _previewSoundProfile,
+                                      icon: _previewing
+                                          ? const SizedBox(
+                                              width: 14,
+                                              height: 14,
+                                              child: CircularProgressIndicator(
+                                                strokeWidth: 2,
+                                              ),
+                                            )
+                                          : const Icon(Icons.volume_up_rounded),
+                                      label: Text(
+                                        _previewing
+                                            ? 'Reproduciendo...'
+                                            : 'Probar sonido',
+                                      ),
                                     ),
-                                    RadioListTile<
-                                      ClockFeedbackProfile
-                                    >.adaptive(
-                                      contentPadding: EdgeInsets.zero,
-                                      value: ClockFeedbackProfile.balanced,
-                                      enabled: !loading,
-                                      title: const Text('Balanceado'),
-                                      subtitle: const Text('Recomendado.'),
-                                    ),
-                                    RadioListTile<
-                                      ClockFeedbackProfile
-                                    >.adaptive(
-                                      contentPadding: EdgeInsets.zero,
-                                      value: ClockFeedbackProfile.strong,
-                                      enabled: !loading,
-                                      title: const Text('Fuerte'),
-                                      subtitle: const Text('Más notorio.'),
+                                    FilledButton.icon(
+                                      onPressed:
+                                          (loading || !hasUnsavedSoundChanges)
+                                          ? null
+                                          : _saveAudioProfile,
+                                      icon: const Icon(Icons.save_rounded),
+                                      label: const Text('Guardar perfil'),
                                     ),
                                   ],
                                 ),
-                              ),
-                              const SizedBox(height: 8),
-                              Wrap(
-                                spacing: 8,
-                                runSpacing: 8,
-                                children: [
-                                  OutlinedButton.icon(
-                                    onPressed: (loading || _previewing)
-                                        ? null
-                                        : _previewSoundProfile,
-                                    icon: _previewing
-                                        ? const SizedBox(
-                                            width: 14,
-                                            height: 14,
-                                            child: CircularProgressIndicator(
-                                              strokeWidth: 2,
-                                            ),
-                                          )
-                                        : const Icon(Icons.volume_up_outlined),
-                                    label: Text(
-                                      _previewing
-                                          ? 'Reproduciendo...'
-                                          : 'Probar sonido',
-                                    ),
-                                  ),
-                                  FilledButton.icon(
-                                    onPressed:
-                                        (loading || !hasUnsavedSoundChanges)
-                                        ? null
-                                        : _saveAudioProfile,
-                                    icon: const Icon(Icons.save_outlined),
-                                    label: const Text('Guardar perfil'),
+                                if (hasUnsavedSoundChanges) ...[
+                                  const SizedBox(height: 8),
+                                  Text(
+                                    'Tenés cambios de sonido sin guardar.',
+                                    style: Theme.of(
+                                      context,
+                                    ).textTheme.bodySmall,
                                   ),
                                 ],
-                              ),
-                              if (hasUnsavedSoundChanges) ...[
-                                const SizedBox(height: 8),
-                                Text(
-                                  'Tenés cambios de sonido sin guardar.',
-                                  style: Theme.of(context).textTheme.bodySmall,
-                                ),
                               ],
-                            ],
+                            ),
                           ),
                         ),
-                      ),
-                      const SizedBox(height: 12),
-                      const Card(
-                        child: Padding(
-                          padding: EdgeInsets.all(12),
-                          child: Text(
-                            'Tip: si desactivás la huella, el bloqueo por inactividad no se usará y se pedirá el login completo al vencer el tiempo de inactividad.',
+                        const SizedBox(height: 12),
+                        const AppCard(
+                          child: Padding(
+                            padding: EdgeInsets.all(12),
+                            child: Text(
+                              'Tip: si desactivás la huella, el bloqueo por inactividad no se usará y se pedirá el login completo al vencer el tiempo de inactividad.',
+                            ),
                           ),
                         ),
-                      ),
-                    ],
+                      ],
+                    ),
                   ),
-                ),
-              );
-            },
-          );
-        },
+                );
+              },
+            );
+          },
+        ),
       ),
     );
   }

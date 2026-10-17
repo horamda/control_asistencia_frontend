@@ -1,9 +1,10 @@
+import '../../theme/app_palette.dart';
 import 'package:flutter/material.dart';
 
-const _navy = Color(0xFF123B53);
-const _green = Color(0xFF14745C);
-const _red = Color(0xFFB33138);
-const _amber = Color(0xFF895C12);
+const _navy = AppPalette.navy;
+const _green = AppPalette.success;
+const _red = AppPalette.danger;
+const _amber = AppPalette.warning;
 
 Map<String, dynamic> _map(dynamic value) =>
     value is Map ? Map<String, dynamic>.from(value) : {};
@@ -71,25 +72,31 @@ class _SkapMatrixDashboardState extends State<SkapMatrixDashboard> {
                   Text(
                     'MIS EVALUACIONES / MATRIZ OPERATIVA',
                     style: Theme.of(context).textTheme.labelSmall?.copyWith(
-                      color: _navy,
+                      color: AppColors.of(context).foreground(_navy),
                       letterSpacing: 1.2,
                     ),
+                    textAlign: TextAlign.center,
                   ),
                   const SizedBox(height: 8),
                   Text(
                     '${data['rol']} · ${data['anio']}',
                     style: Theme.of(context).textTheme.headlineSmall?.copyWith(
                       fontWeight: FontWeight.w800,
-                      color: _navy,
+                      color: AppColors.of(context).foreground(_navy),
                     ),
+                    textAlign: TextAlign.center,
                   ),
                   const SizedBox(height: 6),
                   Text(
                     '${data['sucursal'] ?? 'Sucursal sin informar'} · Escala 0–4',
                     style: Theme.of(context).textTheme.bodyMedium,
+                    textAlign: TextAlign.center,
                   ),
                   if (data['fecha_evaluacion'] != null)
-                    Text('Fecha de evaluación: ${data['fecha_evaluacion']}'),
+                    Text(
+                      'Fecha de evaluación: ${data['fecha_evaluacion']}',
+                      textAlign: TextAlign.center,
+                    ),
                   const SizedBox(height: 20),
                   _Overview(summary: summary),
                   const SizedBox(height: 16),
@@ -98,14 +105,14 @@ class _SkapMatrixDashboardState extends State<SkapMatrixDashboard> {
                       _Metric(
                         title: 'Competencias críticas',
                         summary: _map(summary['criticas']),
-                        icon: Icons.verified_user_outlined,
+                        icon: Icons.verified_user_rounded,
                       ),
                       _Panel(
                         child: Column(
-                          crossAxisAlignment: CrossAxisAlignment.start,
+                          crossAxisAlignment: CrossAxisAlignment.center,
                           children: [
                             const _Label(
-                              icon: Icons.flag_outlined,
+                              icon: Icons.flag_rounded,
                               text: 'Tu próximo paso',
                             ),
                             const SizedBox(height: 12),
@@ -120,14 +127,18 @@ class _SkapMatrixDashboardState extends State<SkapMatrixDashboard> {
                               style: Theme.of(context).textTheme.titleLarge
                                   ?.copyWith(
                                     fontWeight: FontWeight.bold,
-                                    color: gaps > 0 ? _red : _navy,
+                                    color: AppColors.of(
+                                      context,
+                                    ).foreground(gaps > 0 ? _red : _navy),
                                   ),
+                              textAlign: TextAlign.center,
                             ),
                             const SizedBox(height: 8),
                             Text(
                               gaps > 0
                                   ? 'Revisá las brechas y tu plan de desarrollo. Priorizá las competencias críticas.'
                                   : 'Consultá los resultados por competencia y el seguimiento de tu plan.',
+                              textAlign: TextAlign.center,
                             ),
                             if (gaps > 0) ...[
                               const SizedBox(height: 12),
@@ -145,8 +156,11 @@ class _SkapMatrixDashboardState extends State<SkapMatrixDashboard> {
                                     );
                                   }
                                 },
-                                icon: const Icon(Icons.filter_alt_outlined),
-                                label: const Text('Ver qué mejorar'),
+                                icon: const Icon(Icons.filter_alt_rounded),
+                                label: const Text(
+                                  'Ver qué mejorar',
+                                  textAlign: TextAlign.center,
+                                ),
                               ),
                             ],
                           ],
@@ -168,17 +182,20 @@ class _SkapMatrixDashboardState extends State<SkapMatrixDashboard> {
                     key: _resultsKey,
                     style: Theme.of(context).textTheme.titleLarge?.copyWith(
                       fontWeight: FontWeight.bold,
-                      color: _navy,
+                      color: AppColors.of(context).foreground(_navy),
                     ),
+                    textAlign: TextAlign.center,
                   ),
                   const SizedBox(height: 6),
                   const Text(
                     'Cada tarjeta muestra tu puntaje y el nivel esperado para tu rol.',
+                    textAlign: TextAlign.center,
                   ),
                   const SizedBox(height: 12),
                   Wrap(
                     spacing: 8,
                     runSpacing: 8,
+                    alignment: WrapAlignment.center,
                     children: [
                       for (final entry in {
                         'Todas': responses.length,
@@ -186,7 +203,10 @@ class _SkapMatrixDashboardState extends State<SkapMatrixDashboard> {
                         'Sin evaluar': pending,
                       }.entries)
                         ChoiceChip(
-                          label: Text('${entry.key} (${entry.value})'),
+                          label: Text(
+                            '${entry.key} (${entry.value})',
+                            textAlign: TextAlign.center,
+                          ),
                           selected: _filter == entry.key,
                           onSelected: (_) =>
                               setState(() => _filter = entry.key),
@@ -202,6 +222,7 @@ class _SkapMatrixDashboardState extends State<SkapMatrixDashboard> {
                             : _filter == 'Sin evaluar'
                             ? 'No hay competencias pendientes de evaluación.'
                             : 'Todavía no hay competencias cargadas.',
+                        textAlign: TextAlign.center,
                       ),
                     ),
                   ],
@@ -228,19 +249,22 @@ class _SkapMatrixDashboardState extends State<SkapMatrixDashboard> {
                     'Mi plan de desarrollo',
                     style: Theme.of(context).textTheme.titleLarge?.copyWith(
                       fontWeight: FontWeight.bold,
-                      color: _navy,
+                      color: AppColors.of(context).foreground(_navy),
                     ),
+                    textAlign: TextAlign.center,
                   ),
                   const SizedBox(height: 8),
                   if (actions.isEmpty)
                     const _Panel(
                       child: Text(
                         'Todavía no hay acciones de desarrollo cargadas.',
+                        textAlign: TextAlign.center,
                       ),
                     ),
                   if (actions.isNotEmpty) ...[
                     const Text(
                       'Las propuestas son próximos pasos, no capacitaciones realizadas. Tu responsable gestiona el seguimiento.',
+                      textAlign: TextAlign.center,
                     ),
                     const SizedBox(height: 12),
                     for (final action in actions) ...[
@@ -252,13 +276,17 @@ class _SkapMatrixDashboardState extends State<SkapMatrixDashboard> {
                   const _Panel(
                     child: ExpansionTile(
                       tilePadding: EdgeInsets.zero,
-                      title: Text('¿Cómo se calcula el resultado?'),
-                      leading: Icon(Icons.info_outline),
+                      title: Text(
+                        '¿Cómo se calcula el resultado?',
+                        textAlign: TextAlign.center,
+                      ),
+                      leading: Icon(Icons.info_rounded),
                       children: [
                         Padding(
                           padding: EdgeInsets.only(bottom: 12),
                           child: Text(
                             'El objetivo es alcanzar el estándar de cada competencia. El cumplimiento tiene un máximo de 100 %: superar un objetivo no compensa otra brecha. “No aplica” se excluye del cálculo. Si faltan evaluaciones, se muestra un resultado parcial. El puntaje 0 es una evaluación válida.',
+                            textAlign: TextAlign.center,
                           ),
                         ),
                       ],
@@ -281,10 +309,12 @@ class _Panel extends StatelessWidget {
   final Color? border;
   @override
   Widget build(BuildContext context) => Material(
-    color: color,
+    color: AppColors.of(context).surface(color),
     shape: RoundedRectangleBorder(
       borderRadius: BorderRadius.circular(20),
-      side: BorderSide(color: border ?? const Color(0xFFE0E7EB)),
+      side: BorderSide(
+        color: AppColors.of(context).border(border ?? const Color(0xFFE0E7EB)),
+      ),
     ),
     child: Padding(padding: const EdgeInsets.all(20), child: child),
   );
@@ -305,6 +335,7 @@ class _AdaptiveCards extends StatelessWidget {
       return Wrap(
         spacing: 16,
         runSpacing: 12,
+        alignment: WrapAlignment.center,
         children: [
           for (final child in children) SizedBox(width: width, child: child),
         ],
@@ -320,12 +351,15 @@ class _Label extends StatelessWidget {
   @override
   Widget build(BuildContext context) => Row(
     children: [
-      Icon(icon, color: _navy, size: 20),
+      Icon(icon, color: AppColors.of(context).foreground(_navy), size: 20),
       const SizedBox(width: 8),
       Expanded(
         child: Text(
           text,
-          style: const TextStyle(fontWeight: FontWeight.w600, color: _navy),
+          style: TextStyle(
+            fontWeight: FontWeight.w600,
+            color: AppColors.of(context).foreground(_navy),
+          ),
         ),
       ),
     ],
@@ -350,8 +384,10 @@ class _Overview extends StatelessWidget {
             child: CircularProgressIndicator(
               value: valid ? value / 100 : 0,
               strokeWidth: 8,
-              backgroundColor: Colors.white.withValues(alpha: .16),
-              color: const Color(0xFF70DEC0),
+              backgroundColor: AppColors.of(
+                context,
+              ).surface(Colors.white.withValues(alpha: .16)),
+              color: AppColors.of(context).foreground(const Color(0xFF70DEC0)),
             ),
           ),
           Padding(
@@ -421,9 +457,11 @@ class _Overview extends StatelessWidget {
             },
           ),
           const SizedBox(height: 18),
-          const Text(
+          Text(
             'Objetivo: alcanzar el estándar de cada competencia.',
-            style: TextStyle(color: Color(0xFFCEE0EA)),
+            style: TextStyle(
+              color: AppColors.of(context).foreground(const Color(0xFFCEE0EA)),
+            ),
           ),
           const SizedBox(height: 14),
           Wrap(
@@ -487,16 +525,17 @@ class _Badge extends StatelessWidget {
   Widget build(BuildContext context) => Container(
     padding: const EdgeInsets.symmetric(horizontal: 10, vertical: 6),
     decoration: BoxDecoration(
-      color: color,
+      color: AppColors.of(context).surface(color),
       borderRadius: BorderRadius.circular(9),
     ),
     child: Text(
       text,
       style: TextStyle(
-        color: foreground,
+        color: AppColors.of(context).foreground(foreground),
         fontSize: 13,
         fontWeight: FontWeight.w700,
       ),
+      textAlign: TextAlign.center,
     ),
   );
 }
@@ -513,7 +552,7 @@ class _Metric extends StatelessWidget {
   @override
   Widget build(BuildContext context) => _Panel(
     child: Column(
-      crossAxisAlignment: CrossAxisAlignment.start,
+      crossAxisAlignment: CrossAxisAlignment.center,
       children: [
         _Label(icon: icon, text: title),
         const SizedBox(height: 14),
@@ -521,6 +560,7 @@ class _Metric extends StatelessWidget {
         const SizedBox(height: 10),
         Text(
           '${summary['evaluadas'] ?? 0} evaluadas · ${summary['brechas'] ?? 0} brechas · ${summary['faltantes'] ?? 0} sin evaluar',
+          textAlign: TextAlign.center,
         ),
       ],
     ),
@@ -546,7 +586,10 @@ class _SummaryProgress extends StatelessWidget {
               : definitive == null
               ? 'Resultado incompleto · Parcial: ${_pct(value)}'
               : 'Cumplimiento: ${_pct(value)}',
-          style: const TextStyle(fontWeight: FontWeight.w700, color: _navy),
+          style: TextStyle(
+            fontWeight: FontWeight.w700,
+            color: AppColors.of(context).foreground(_navy),
+          ),
         ),
         const SizedBox(height: 10),
         if (value != null)
@@ -556,8 +599,12 @@ class _SummaryProgress extends StatelessWidget {
               value: value / 100,
               minHeight: 7,
               borderRadius: BorderRadius.circular(8),
-              color: (summary['brechas'] as num? ?? 0) > 0 ? _amber : _green,
-              backgroundColor: const Color(0xFFE8EEF0),
+              color: AppColors.of(context).foreground(
+                (summary['brechas'] as num? ?? 0) > 0 ? _amber : _green,
+              ),
+              backgroundColor: AppColors.of(
+                context,
+              ).surface(const Color(0xFFE8EEF0)),
             ),
           ),
       ],
@@ -582,16 +629,25 @@ class _Notice extends StatelessWidget {
   Widget build(BuildContext context) => Container(
     padding: const EdgeInsets.all(12),
     decoration: BoxDecoration(
-      color: const Color(0xFFFFF3DE),
+      color: AppColors.of(context).surface(const Color(0xFFFFF3DE)),
       borderRadius: BorderRadius.circular(12),
     ),
     child: Row(
       crossAxisAlignment: CrossAxisAlignment.start,
+      mainAxisAlignment: MainAxisAlignment.center,
       children: [
-        const Icon(Icons.info_outline, size: 20, color: _amber),
+        Icon(
+          Icons.info_rounded,
+          size: 20,
+          color: AppColors.of(context).foreground(_amber),
+        ),
         const SizedBox(width: 8),
         Expanded(
-          child: Text(text, style: const TextStyle(color: _amber)),
+          child: Text(
+            text,
+            style: TextStyle(color: AppColors.of(context).foreground(_amber)),
+            textAlign: TextAlign.center,
+          ),
         ),
       ],
     ),
@@ -610,7 +666,7 @@ class _BlockHeader extends StatelessWidget {
         name,
         style: Theme.of(context).textTheme.titleMedium?.copyWith(
           fontWeight: FontWeight.w800,
-          color: _navy,
+          color: AppColors.of(context).foreground(_navy),
         ),
       ),
       if (summary.isNotEmpty) ...[
@@ -691,11 +747,16 @@ class _Competency extends StatelessWidget {
                     : na
                     ? 'No aplica'
                     : 'Sin evaluar'}',
-                style: TextStyle(fontWeight: FontWeight.w800, color: color),
+                style: TextStyle(
+                  fontWeight: FontWeight.w800,
+                  color: AppColors.of(context).foreground(color),
+                ),
               ),
               Text(
                 'Objetivo: ${_score(target)} / 4',
-                style: const TextStyle(color: _navy),
+                style: TextStyle(
+                  color: AppColors.of(context).foreground(_navy),
+                ),
               ),
             ],
           ),
@@ -714,12 +775,19 @@ class _Competency extends StatelessWidget {
                           Container(
                             height: 12,
                             decoration: BoxDecoration(
-                              color: value != null && value >= step
-                                  ? color
-                                  : const Color(0xFFE5EAED),
+                              color: AppColors.of(context).surface(
+                                value != null && value >= step
+                                    ? color
+                                    : const Color(0xFFE5EAED),
+                              ),
                               borderRadius: BorderRadius.circular(3),
                               border: target == step
-                                  ? Border.all(color: _navy, width: 2)
+                                  ? Border.all(
+                                      color: AppColors.of(
+                                        context,
+                                      ).border(_navy),
+                                      width: 2,
+                                    )
                                   : null,
                             ),
                           ),
@@ -728,7 +796,9 @@ class _Competency extends StatelessWidget {
                             '$step',
                             style: TextStyle(
                               fontSize: 13,
-                              color: target == step ? _navy : Colors.blueGrey,
+                              color: AppColors.of(context).foreground(
+                                target == step ? _navy : Colors.blueGrey,
+                              ),
                               fontWeight: target == step
                                   ? FontWeight.bold
                                   : FontWeight.normal,
@@ -747,12 +817,12 @@ class _Competency extends StatelessWidget {
             children: [
               Icon(
                 gap
-                    ? Icons.trending_up
+                    ? Icons.trending_up_rounded
                     : met
-                    ? Icons.check_circle_outline
-                    : Icons.remove_circle_outline,
+                    ? Icons.check_circle_rounded
+                    : Icons.remove_circle_rounded,
                 size: 18,
-                color: color,
+                color: AppColors.of(context).foreground(color),
               ),
               const SizedBox(width: 6),
               Expanded(
@@ -766,7 +836,10 @@ class _Competency extends StatelessWidget {
                       : na
                       ? 'Esta competencia no entra en el cálculo.'
                       : 'Todavía no hay un puntaje registrado.',
-                  style: TextStyle(color: color, fontSize: 13),
+                  style: TextStyle(
+                    color: AppColors.of(context).foreground(color),
+                    fontSize: 13,
+                  ),
                 ),
               ),
             ],
@@ -775,7 +848,10 @@ class _Competency extends StatelessWidget {
             const SizedBox(height: 8),
             Text(
               'Criticidad: ${row['criticidad'] ?? 'Sin definir'}',
-              style: const TextStyle(fontSize: 13, color: Colors.blueGrey),
+              style: TextStyle(
+                fontSize: 13,
+                color: AppColors.of(context).foreground(Colors.blueGrey),
+              ),
             ),
           ],
         ],
@@ -801,21 +877,24 @@ class _ActionCard extends StatelessWidget {
     return _Panel(
       child: ExpansionTile(
         tilePadding: EdgeInsets.zero,
-        title: Text('${action['accion']}'),
+        title: Text('${action['accion']}', textAlign: TextAlign.center),
         subtitle: Padding(
           padding: const EdgeInsets.only(top: 10),
           child: Column(
-            crossAxisAlignment: CrossAxisAlignment.start,
+            crossAxisAlignment: CrossAxisAlignment.center,
             children: [
               Text(
                 '$state · ${progress == null ? 'Sin avance informado' : '${_score(progress)} %'}',
+                textAlign: TextAlign.center,
               ),
               if (progress != null) ...[
                 const SizedBox(height: 8),
                 LinearProgressIndicator(
                   value: (progress / 100).clamp(0.0, 1.0),
-                  color: _green,
-                  backgroundColor: const Color(0xFFE5EAED),
+                  color: AppColors.of(context).foreground(_green),
+                  backgroundColor: AppColors.of(
+                    context,
+                  ).surface(const Color(0xFFE5EAED)),
                   minHeight: 5,
                   borderRadius: BorderRadius.circular(4),
                 ),
@@ -829,15 +908,25 @@ class _ActionCard extends StatelessWidget {
             child: Padding(
               padding: const EdgeInsets.only(top: 16),
               child: Column(
-                crossAxisAlignment: CrossAxisAlignment.start,
+                crossAxisAlignment: CrossAxisAlignment.center,
                 children: [
                   Text(
                     'Responsable: ${action['responsable'] ?? 'Sin asignar'}',
+                    textAlign: TextAlign.center,
                   ),
-                  Text('Inicio: ${action['fecha_inicio'] ?? 'Sin definir'}'),
-                  Text('Fin: ${action['fecha_fin'] ?? 'Sin definir'}'),
+                  Text(
+                    'Inicio: ${action['fecha_inicio'] ?? 'Sin definir'}',
+                    textAlign: TextAlign.center,
+                  ),
+                  Text(
+                    'Fin: ${action['fecha_fin'] ?? 'Sin definir'}',
+                    textAlign: TextAlign.center,
+                  ),
                   if (action['comentarios'] != null)
-                    Text('${action['comentarios']}'),
+                    Text(
+                      '${action['comentarios']}',
+                      textAlign: TextAlign.center,
+                    ),
                 ],
               ),
             ),

@@ -1,11 +1,12 @@
+import '../../theme/app_palette.dart';
 import 'package:flutter/material.dart';
 
 import '../../../core/network/feedback_api_models.dart';
 
-const _blue = Color(0xFF145DBF);
-const _ink = Color(0xFF17324D);
-const _green = Color(0xFF14745C);
-const _red = Color(0xFFB33138);
+const _blue = AppPalette.blue;
+const _ink = AppPalette.navy;
+const _green = AppPalette.success;
+const _red = AppPalette.danger;
 
 double? _ratio(int? part, int? total) =>
     part == null || total == null || total <= 0 || part < 0 || part > total
@@ -40,16 +41,19 @@ class FeedbackSummaryDashboard extends StatelessWidget {
         _Card(
           color: _blue,
           child: Column(
-            crossAxisAlignment: CrossAxisAlignment.start,
+            crossAxisAlignment: CrossAxisAlignment.center,
             children: [
-              const Text(
+              Text(
                 'FEEDBACK DE CALLE',
                 style: TextStyle(
-                  color: Color(0xFFDCEBFF),
+                  color: AppColors.of(
+                    context,
+                  ).foreground(const Color(0xFFDCEBFF)),
                   fontWeight: FontWeight.w700,
                   letterSpacing: 1.4,
                   fontSize: 13,
                 ),
+                textAlign: TextAlign.center,
               ),
               const SizedBox(height: 16),
               LayoutBuilder(
@@ -64,8 +68,12 @@ class FeedbackSummaryDashboard extends StatelessWidget {
                           child: CircularProgressIndicator(
                             value: resolution ?? 0,
                             strokeWidth: 8,
-                            backgroundColor: Colors.white.withValues(alpha: .2),
-                            color: const Color(0xFF8DE7CE),
+                            backgroundColor: AppColors.of(
+                              context,
+                            ).surface(Colors.white.withValues(alpha: .2)),
+                            color: AppColors.of(
+                              context,
+                            ).foreground(const Color(0xFF8DE7CE)),
                           ),
                         ),
                         Padding(
@@ -80,6 +88,7 @@ class FeedbackSummaryDashboard extends StatelessWidget {
                                 fontSize: 27,
                                 fontWeight: FontWeight.w800,
                               ),
+                              textAlign: TextAlign.center,
                             ),
                           ),
                         ),
@@ -87,7 +96,7 @@ class FeedbackSummaryDashboard extends StatelessWidget {
                     ),
                   );
                   final info = Column(
-                    crossAxisAlignment: CrossAxisAlignment.start,
+                    crossAxisAlignment: CrossAxisAlignment.center,
                     children: [
                       const Text(
                         'Resolución del equipo',
@@ -96,6 +105,7 @@ class FeedbackSummaryDashboard extends StatelessWidget {
                           fontSize: 23,
                           fontWeight: FontWeight.w800,
                         ),
+                        textAlign: TextAlign.center,
                       ),
                       const SizedBox(height: 8),
                       Text(
@@ -104,26 +114,31 @@ class FeedbackSummaryDashboard extends StatelessWidget {
                           color: Colors.white,
                           height: 1.5,
                         ),
+                        textAlign: TextAlign.center,
                       ),
                       const SizedBox(height: 6),
-                      const Text(
+                      Text(
                         'Resumen general · Tus cargas se muestran por separado.',
                         style: TextStyle(
-                          color: Color(0xFFDCEBFF),
+                          color: AppColors.of(
+                            context,
+                          ).foreground(const Color(0xFFDCEBFF)),
                           fontSize: 13,
                           height: 1.5,
                         ),
+                        textAlign: TextAlign.center,
                       ),
                     ],
                   );
                   if (box.maxWidth < 310 ||
                       MediaQuery.textScalerOf(context).scale(16) >= 24) {
                     return Column(
-                      crossAxisAlignment: CrossAxisAlignment.start,
+                      crossAxisAlignment: CrossAxisAlignment.center,
                       children: [ring, const SizedBox(height: 20), info],
                     );
                   }
                   return Row(
+                    mainAxisAlignment: MainAxisAlignment.center,
                     children: [
                       ring,
                       const SizedBox(width: 24),
@@ -143,7 +158,7 @@ class FeedbackSummaryDashboard extends StatelessWidget {
               value: _percent(sla),
               detail:
                   '${_count(summary.resueltosEnSla)} de ${_count(slaTotal)} cierres con plazo evaluado',
-              icon: Icons.verified_outlined,
+              icon: Icons.verified_rounded,
               color: _green,
               ratio: sla,
             ),
@@ -163,15 +178,16 @@ class FeedbackSummaryDashboard extends StatelessWidget {
           child: Column(
             crossAxisAlignment: CrossAxisAlignment.stretch,
             children: [
-              const _Heading(icon: Icons.person_outline, text: 'Tu aporte'),
+              const _Heading(icon: Icons.person_rounded, text: 'Tu aporte'),
               if (dashboard.empleado != null) ...[
                 const SizedBox(height: 8),
                 Text(
                   dashboard.empleado!.displayName,
-                  style: const TextStyle(
-                    color: _ink,
+                  style: TextStyle(
+                    color: AppColors.of(context).foreground(_ink),
                     fontWeight: FontWeight.w600,
                   ),
+                  textAlign: TextAlign.center,
                 ),
               ],
               const SizedBox(height: 18),
@@ -195,23 +211,27 @@ class FeedbackSummaryDashboard extends StatelessWidget {
               Wrap(
                 spacing: 20,
                 runSpacing: 8,
+                alignment: WrapAlignment.center,
                 children: [
                   Text(
                     'Posición por cantidad de cargas: ${personal?.posicionRanking == null ? 'Sin posición' : '#${personal!.posicionRanking}'}',
+                    textAlign: TextAlign.center,
                   ),
                   Text(
                     'Promedio por empleado activo: ${personal?.promedioPorEmpleado?.toStringAsFixed(2) ?? '—'}',
+                    textAlign: TextAlign.center,
                   ),
                 ],
               ),
               const SizedBox(height: 8),
-              const Text(
+              Text(
                 'La participación y la posición miden cantidad de cargas, no calidad ni desempeño.',
                 style: TextStyle(
-                  color: Color(0xFF586B7D),
+                  color: AppColors.of(context).foreground(AppPalette.muted),
                   fontSize: 13,
                   height: 1.5,
                 ),
+                textAlign: TextAlign.center,
               ),
             ],
           ),
@@ -222,13 +242,16 @@ class FeedbackSummaryDashboard extends StatelessWidget {
             crossAxisAlignment: CrossAxisAlignment.stretch,
             children: [
               const _Heading(
-                icon: Icons.donut_small_outlined,
+                icon: Icons.donut_small_rounded,
                 text: 'Estado de los feedbacks',
               ),
               const SizedBox(height: 6),
               Text(
                 '${_count(summary.total)} registros en el resumen general',
-                style: const TextStyle(color: Color(0xFF586B7D)),
+                style: TextStyle(
+                  color: AppColors.of(context).foreground(AppPalette.muted),
+                ),
+                textAlign: TextAlign.center,
               ),
               const SizedBox(height: 16),
               for (final state in [
@@ -245,13 +268,15 @@ class FeedbackSummaryDashboard extends StatelessWidget {
                     Text(
                       state.$1,
                       style: const TextStyle(fontWeight: FontWeight.w600),
+                      textAlign: TextAlign.center,
                     ),
                     Text(
                       '${_count(state.$2)} · ${_percent(_ratio(state.$2, summary.total))}',
                       style: TextStyle(
-                        color: state.$3,
+                        color: AppColors.of(context).foreground(state.$3),
                         fontWeight: FontWeight.w700,
                       ),
+                      textAlign: TextAlign.center,
                     ),
                   ],
                 ),
@@ -261,19 +286,21 @@ class FeedbackSummaryDashboard extends StatelessWidget {
               ],
               Text(
                 'Resueltos fuera de plazo: ${_count(summary.resueltosFueraSla)}',
-                style: const TextStyle(
-                  color: _red,
+                style: TextStyle(
+                  color: AppColors.of(context).foreground(_red),
                   fontWeight: FontWeight.w600,
                 ),
+                textAlign: TextAlign.center,
               ),
               const SizedBox(height: 6),
-              const Text(
+              Text(
                 'Los vencidos se muestran aparte de los pendientes en plazo. SLA indica el plazo previsto de resolución.',
                 style: TextStyle(
-                  color: Color(0xFF586B7D),
+                  color: AppColors.of(context).foreground(AppPalette.muted),
                   fontSize: 13,
                   height: 1.5,
                 ),
+                textAlign: TextAlign.center,
               ),
             ],
           ),
@@ -286,31 +313,35 @@ class FeedbackSummaryDashboard extends StatelessWidget {
               value: _percent(participation),
               detail:
                   '${_count(dashboard.totales.empleadosConCarga)} de ${_count(dashboard.totales.empleadosActivos)} empleados activos tienen cargas',
-              icon: Icons.groups_outlined,
+              icon: Icons.groups_rounded,
               color: _blue,
               ratio: participation,
             ),
             _Card(
               child: Column(
-                crossAxisAlignment: CrossAxisAlignment.start,
+                crossAxisAlignment: CrossAxisAlignment.center,
                 children: [
                   const _Heading(
-                    icon: Icons.storefront_outlined,
+                    icon: Icons.storefront_rounded,
                     text: 'Alcance del feedback',
                   ),
                   const SizedBox(height: 16),
                   Text(
                     '${_count(summary.clientesDistintos)} clientes',
-                    style: const TextStyle(
+                    style: TextStyle(
                       fontSize: 22,
                       fontWeight: FontWeight.w800,
-                      color: _ink,
+                      color: AppColors.of(context).foreground(_ink),
                     ),
+                    textAlign: TextAlign.center,
                   ),
                   const SizedBox(height: 8),
                   Text(
                     '${_count(summary.motivosDistintos)} motivos distintos',
-                    style: const TextStyle(color: Color(0xFF586B7D)),
+                    style: TextStyle(
+                      color: AppColors.of(context).foreground(AppPalette.muted),
+                    ),
+                    textAlign: TextAlign.center,
                   ),
                 ],
               ),
@@ -334,9 +365,12 @@ class FeedbackMotivosChart extends StatelessWidget {
   Widget build(BuildContext context) => Column(
     crossAxisAlignment: CrossAxisAlignment.stretch,
     children: [
-      const Text(
+      Text(
         'Porcentaje sobre el total de feedbacks',
-        style: TextStyle(color: Color(0xFF586B7D), fontSize: 13),
+        style: TextStyle(
+          color: AppColors.of(context).foreground(AppPalette.muted),
+          fontSize: 13,
+        ),
       ),
       for (final item in items.take(5)) ...[
         const SizedBox(height: 16),
@@ -363,13 +397,22 @@ class _Card extends StatelessWidget {
   Widget build(BuildContext context) => Container(
     padding: const EdgeInsets.all(20),
     decoration: BoxDecoration(
-      color: color,
+      color: AppColors.of(context).surface(color),
       borderRadius: BorderRadius.circular(20),
       border: Border.all(
-        color: color == Colors.white ? const Color(0xFFDCE5EB) : color,
+        color: AppColors.of(
+          context,
+        ).border(color == Colors.white ? AppPalette.border : color),
       ),
     ),
-    child: child,
+    child: DefaultTextStyle.merge(
+      textAlign: TextAlign.center,
+      child: Align(
+        alignment: Alignment.topCenter,
+        heightFactor: 1,
+        child: child,
+      ),
+    ),
   );
 }
 
@@ -416,21 +459,26 @@ class _Metric extends StatelessWidget {
   @override
   Widget build(BuildContext context) => _Card(
     child: Column(
-      crossAxisAlignment: CrossAxisAlignment.start,
+      crossAxisAlignment: CrossAxisAlignment.stretch,
       children: [
-        Icon(icon, color: color),
+        Icon(icon, color: AppColors.of(context).foreground(color)),
         const SizedBox(height: 12),
         Text(
           title,
-          style: const TextStyle(fontWeight: FontWeight.w600, color: _ink),
+          textAlign: TextAlign.center,
+          style: TextStyle(
+            fontWeight: FontWeight.w600,
+            color: AppColors.of(context).foreground(_ink),
+          ),
         ),
         const SizedBox(height: 8),
         Text(
           value,
+          textAlign: TextAlign.center,
           style: TextStyle(
             fontSize: 30,
             fontWeight: FontWeight.w800,
-            color: color,
+            color: AppColors.of(context).foreground(color),
           ),
         ),
         const SizedBox(height: 10),
@@ -438,10 +486,11 @@ class _Metric extends StatelessWidget {
         const SizedBox(height: 10),
         Text(
           detail,
-          style: const TextStyle(
+          textAlign: TextAlign.center,
+          style: TextStyle(
             fontSize: 13,
             height: 1.5,
-            color: Color(0xFF586B7D),
+            color: AppColors.of(context).foreground(AppPalette.muted),
           ),
         ),
       ],
@@ -460,12 +509,13 @@ class _Number extends StatelessWidget {
   final Color color;
   @override
   Widget build(BuildContext context) => Column(
-    crossAxisAlignment: CrossAxisAlignment.start,
+    crossAxisAlignment: CrossAxisAlignment.stretch,
     children: [
       Text(
         value,
+        textAlign: TextAlign.center,
         style: TextStyle(
-          color: color,
+          color: AppColors.of(context).foreground(color),
           fontSize: 30,
           fontWeight: FontWeight.w800,
         ),
@@ -473,7 +523,11 @@ class _Number extends StatelessWidget {
       const SizedBox(height: 4),
       Text(
         label,
-        style: const TextStyle(color: Color(0xFF586B7D), fontSize: 13),
+        textAlign: TextAlign.center,
+        style: TextStyle(
+          color: AppColors.of(context).foreground(AppPalette.muted),
+          fontSize: 13,
+        ),
       ),
     ],
   );
@@ -486,15 +540,15 @@ class _Heading extends StatelessWidget {
   @override
   Widget build(BuildContext context) => Row(
     children: [
-      Icon(icon, size: 22, color: _ink),
+      Icon(icon, size: 22, color: AppColors.of(context).foreground(_ink)),
       const SizedBox(width: 10),
       Expanded(
         child: Text(
           text,
-          style: const TextStyle(
+          style: TextStyle(
             fontSize: 17,
             fontWeight: FontWeight.w700,
-            color: _ink,
+            color: AppColors.of(context).foreground(_ink),
           ),
         ),
       ),
@@ -511,8 +565,10 @@ class _Bar extends StatelessWidget {
     label: value == null ? 'Porcentaje no disponible' : _percent(value),
     child: LinearProgressIndicator(
       value: value ?? 0,
-      color: value == null ? Colors.blueGrey : color,
-      backgroundColor: const Color(0xFFEAF0F4),
+      color: AppColors.of(
+        context,
+      ).foreground(value == null ? Colors.blueGrey : color),
+      backgroundColor: AppColors.of(context).surface(const Color(0xFFEAF0F4)),
       minHeight: 7,
       borderRadius: BorderRadius.circular(8),
     ),

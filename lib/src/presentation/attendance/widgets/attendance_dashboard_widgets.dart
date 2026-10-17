@@ -1,3 +1,6 @@
+import 'package:ficharqr/src/presentation/widgets/app_card.dart';
+import '../../theme/app_palette.dart';
+import '../../theme/card_typography.dart';
 import 'dart:async';
 
 import 'package:flutter/material.dart';
@@ -50,17 +53,18 @@ class AttendancePendingBanner extends StatelessWidget {
   @override
   Widget build(BuildContext context) {
     final cs = Theme.of(context).colorScheme;
-    return Card(
+    return AppCard(
       color: hasErrors ? cs.errorContainer : cs.tertiaryContainer,
       child: Padding(
         padding: const EdgeInsets.fromLTRB(12, 12, 12, 12),
         child: Column(
-          crossAxisAlignment: CrossAxisAlignment.start,
+          crossAxisAlignment: CrossAxisAlignment.center,
           children: [
             Row(
+              mainAxisAlignment: MainAxisAlignment.center,
               children: [
                 Icon(
-                  hasErrors ? Icons.error_outline : Icons.wifi_off_outlined,
+                  hasErrors ? Icons.error_rounded : Icons.wifi_off_rounded,
                   color: hasErrors
                       ? cs.onErrorContainer
                       : cs.onTertiaryContainer,
@@ -76,6 +80,7 @@ class AttendancePendingBanner extends StatelessWidget {
                           ? cs.onErrorContainer
                           : cs.onTertiaryContainer,
                     ),
+                    textAlign: TextAlign.center,
                   ),
                 ),
               ],
@@ -86,12 +91,14 @@ class AttendancePendingBanner extends StatelessWidget {
               style: TextStyle(
                 color: hasErrors ? cs.onErrorContainer : cs.onTertiaryContainer,
               ),
+              textAlign: TextAlign.center,
             ),
             Text(
               'Última sincronización: $lastSyncText',
               style: TextStyle(
                 color: hasErrors ? cs.onErrorContainer : cs.onTertiaryContainer,
               ),
+              textAlign: TextAlign.center,
             ),
             if ((statusMessage ?? '').trim().isNotEmpty) ...[
               const SizedBox(height: 4),
@@ -102,18 +109,23 @@ class AttendancePendingBanner extends StatelessWidget {
                       ? cs.onErrorContainer
                       : cs.onTertiaryContainer,
                 ),
+                textAlign: TextAlign.center,
               ),
             ],
             const SizedBox(height: 8),
             Wrap(
               spacing: 8,
               runSpacing: 8,
+              alignment: WrapAlignment.center,
               children: [
                 _FilledActionButton(action: primaryAction),
                 OutlinedButton.icon(
                   onPressed: secondaryAction.onPressed,
                   icon: Icon(secondaryAction.icon),
-                  label: Text(secondaryAction.label),
+                  label: Text(
+                    secondaryAction.label,
+                    textAlign: TextAlign.center,
+                  ),
                 ),
               ],
             ),
@@ -159,100 +171,130 @@ class AttendanceHeroCard extends StatelessWidget {
     return Container(
       decoration: BoxDecoration(
         borderRadius: BorderRadius.circular(18),
-        gradient: const LinearGradient(
+        gradient: LinearGradient(
           begin: Alignment.topLeft,
           end: Alignment.bottomRight,
-          colors: [Color(0xFF0D3B66), Color(0xFF1B5C8A), Color(0xFF2A789E)],
+          colors: AppColors.of(context).brandGradient,
         ),
       ),
       child: Padding(
         padding: const EdgeInsets.fromLTRB(16, 16, 16, 14),
         child: Column(
-          crossAxisAlignment: CrossAxisAlignment.start,
+          crossAxisAlignment: CrossAxisAlignment.center,
           children: [
-            // ── Greeting row ──────────────────────────────────────────────
-            Row(
-              crossAxisAlignment: CrossAxisAlignment.center,
-              children: [
-                EmployeePhotoWidget(
-                  photoUrl: photoUrl,
-                  token: token,
-                  radius: 28,
-                ),
-                const SizedBox(width: 14),
-                Expanded(
-                  child: Column(
-                    crossAxisAlignment: CrossAxisAlignment.start,
-                    children: [
-                      Text(
-                        '$greeting,',
-                        maxLines: 1,
-                        overflow: TextOverflow.ellipsis,
-                        style: const TextStyle(
-                          color: Colors.white70,
-                          fontSize: 13,
-                        ),
-                      ),
-                      Text(
-                        firstName,
-                        maxLines: 1,
-                        overflow: TextOverflow.ellipsis,
-                        style: const TextStyle(
-                          color: Colors.white,
-                          fontSize: 22,
-                          fontWeight: FontWeight.w800,
-                          height: 1.1,
-                        ),
-                      ),
-                      const SizedBox(height: 3),
-                      Text(
-                        'DNI: $employeeDni',
-                        maxLines: 1,
-                        overflow: TextOverflow.ellipsis,
-                        style: const TextStyle(
-                          color: Colors.white54,
-                          fontSize: 13,
-                        ),
-                      ),
-                    ],
+            LayoutBuilder(
+              builder: (context, constraints) {
+                final scale = MediaQuery.textScalerOf(context).scale(16) / 16;
+                final stacked =
+                    constraints.maxWidth < 280 ||
+                    (scale > 1.4 && constraints.maxWidth < 500);
+                final photo = Container(
+                  padding: const EdgeInsets.all(4),
+                  decoration: BoxDecoration(
+                    shape: BoxShape.circle,
+                    color: Colors.white.withValues(alpha: .08),
+                    border: Border.all(color: Colors.white24, width: 1.5),
                   ),
-                ),
-                // Reloj en vivo a la derecha
-                const _LiveClock(),
-              ],
+                  child: EmployeePhotoWidget(
+                    photoUrl: photoUrl,
+                    token: token,
+                    radius: 34,
+                  ),
+                );
+                final identity = Column(
+                  mainAxisSize: MainAxisSize.min,
+                  crossAxisAlignment: CrossAxisAlignment.center,
+                  children: [
+                    Text(
+                      '$greeting,',
+                      textAlign: TextAlign.center,
+                      style: const TextStyle(
+                        color: Colors.white70,
+                        fontSize: 14,
+                      ),
+                    ),
+                    const SizedBox(height: 4),
+                    Text(
+                      firstName,
+                      textAlign: TextAlign.center,
+                      style: const TextStyle(
+                        color: Colors.white,
+                        fontSize: 24,
+                        fontWeight: FontWeight.w800,
+                        height: 1.15,
+                      ),
+                    ),
+                    const SizedBox(height: 6),
+                    Text(
+                      'DNI: $employeeDni',
+                      textAlign: TextAlign.center,
+                      style: const TextStyle(
+                        color: Colors.white70,
+                        fontSize: 13,
+                      ),
+                    ),
+                  ],
+                );
+                return Center(
+                  child: ConstrainedBox(
+                    constraints: const BoxConstraints(maxWidth: 560),
+                    child: stacked
+                        ? Column(
+                            children: [
+                              photo,
+                              const SizedBox(height: 12),
+                              identity,
+                            ],
+                          )
+                        : Row(
+                            children: [
+                              photo,
+                              const SizedBox(width: 20),
+                              Expanded(child: identity),
+                            ],
+                          ),
+                  ),
+                );
+              },
             ),
             const SizedBox(height: 12),
             const Divider(color: Colors.white24, height: 1),
             const SizedBox(height: 10),
             // ── Status pills ──────────────────────────────────────────────
             Row(
+              mainAxisAlignment: MainAxisAlignment.center,
               children: [
-                Text(
-                  _heroDate(),
-                  style: const TextStyle(color: Colors.white60, fontSize: 13),
+                Expanded(
+                  child: Text(
+                    _heroDate(),
+                    style: const TextStyle(color: Colors.white70, fontSize: 13),
+                    textAlign: TextAlign.center,
+                  ),
                 ),
-                const Spacer(),
+                const SizedBox(width: 12),
+                const _LiveClock(),
               ],
             ),
             const SizedBox(height: 8),
             Wrap(
               spacing: 8,
               runSpacing: 6,
+              alignment: WrapAlignment.center,
               children: [
                 DashboardStatusPill(
-                  icon: Icons.cloud_done_outlined,
+                  icon: Icons.cloud_done_rounded,
                   text: syncText,
                   background: const Color(0x26FFFFFF),
                   foreground: Colors.white,
                 ),
                 DashboardStatusPill(
-                  icon: Icons.shield_moon_outlined,
+                  icon: Icons.shield_moon_rounded,
                   text: sessionText,
                   background: sessionColor.withAlpha(225),
                   foreground: sessionForeground,
                 ),
                 DashboardStatusPill(
-                  icon: Icons.place_outlined,
+                  icon: Icons.place_rounded,
                   text: gpsStatusText,
                   background: const Color(0x26FFFFFF),
                   foreground: Colors.white,
@@ -301,28 +343,28 @@ class AttendanceStatusBanner extends StatelessWidget {
     if (hasPendingErrors) {
       bg = const Color(0xFFB71C1C);
       fg = Colors.white;
-      icon = Icons.error_outline;
+      icon = Icons.error_rounded;
       title = 'Fichadas con error';
       subtitle = 'Revisar y reintentar';
       badge = '$pendingFailed';
     } else if (hasPending) {
       bg = const Color(0xFFE65100);
       fg = Colors.white;
-      icon = Icons.cloud_upload_outlined;
+      icon = Icons.cloud_upload_rounded;
       title = 'Fichadas en cola';
       subtitle = 'Pendientes de sincronización';
       badge = '$pendingTotal';
     } else if (!hasClockToday) {
       bg = const Color(0xFF1565C0);
       fg = Colors.white;
-      icon = Icons.qr_code_scanner;
+      icon = Icons.qr_code_scanner_rounded;
       title = 'Sin fichar hoy';
       subtitle = 'Escanea el QR para registrar ingreso';
       badge = '!';
     } else {
       bg = const Color(0xFF1B5E20);
       fg = Colors.white;
-      icon = Icons.check_circle_outline;
+      icon = Icons.check_circle_rounded;
       title = 'Jornada registrada';
       subtitle = 'Última fichada: $lastClockText';
       badge = 'OK';
@@ -332,40 +374,51 @@ class AttendanceStatusBanner extends StatelessWidget {
       onTap: onTap,
       child: Container(
         decoration: BoxDecoration(
-          color: bg,
+          color: AppColors.of(context).surface(bg),
           borderRadius: BorderRadius.circular(14),
         ),
         padding: const EdgeInsets.symmetric(horizontal: 16, vertical: 14),
         child: Row(
+          mainAxisAlignment: MainAxisAlignment.center,
           children: [
             Container(
               width: 42,
               height: 42,
               decoration: BoxDecoration(
-                color: Colors.white.withValues(alpha: 0.15),
+                color: AppColors.of(
+                  context,
+                ).surface(Colors.white.withValues(alpha: 0.15)),
                 shape: BoxShape.circle,
               ),
-              child: Icon(icon, color: fg, size: 22),
+              child: Icon(
+                icon,
+                color: AppColors.of(context).foreground(fg),
+                size: 22,
+              ),
             ),
             const SizedBox(width: 14),
             Expanded(
               child: Column(
-                crossAxisAlignment: CrossAxisAlignment.start,
+                crossAxisAlignment: CrossAxisAlignment.center,
                 children: [
                   Text(
                     title,
                     style: TextStyle(
-                      color: fg,
+                      color: AppColors.of(context).foreground(fg),
                       fontWeight: FontWeight.w700,
                       fontSize: 15,
                     ),
+                    textAlign: TextAlign.center,
                   ),
                   Text(
                     subtitle,
                     style: TextStyle(
-                      color: fg.withValues(alpha: 0.8),
+                      color: AppColors.of(
+                        context,
+                      ).foreground(fg.withValues(alpha: 0.8)),
                       fontSize: 13,
                     ),
+                    textAlign: TextAlign.center,
                   ),
                 ],
               ),
@@ -373,23 +426,31 @@ class AttendanceStatusBanner extends StatelessWidget {
             Container(
               padding: const EdgeInsets.symmetric(horizontal: 12, vertical: 6),
               decoration: BoxDecoration(
-                color: Colors.white.withValues(alpha: 0.20),
+                color: AppColors.of(
+                  context,
+                ).surface(Colors.white.withValues(alpha: 0.20)),
                 borderRadius: BorderRadius.circular(20),
               ),
               child: Row(
                 mainAxisSize: MainAxisSize.min,
+                mainAxisAlignment: MainAxisAlignment.center,
                 children: [
                   Text(
                     badge,
                     style: TextStyle(
-                      color: fg,
+                      color: AppColors.of(context).foreground(fg),
                       fontWeight: FontWeight.w900,
                       fontSize: 18,
                     ),
+                    textAlign: TextAlign.center,
                   ),
                   if (onTap != null) ...[
                     const SizedBox(width: 4),
-                    Icon(Icons.chevron_right, color: fg, size: 18),
+                    Icon(
+                      Icons.chevron_right_rounded,
+                      color: AppColors.of(context).foreground(fg),
+                      size: 18,
+                    ),
                   ],
                 ],
               ),
@@ -423,20 +484,22 @@ class AttendanceNextStepCard extends StatelessWidget {
 
   @override
   Widget build(BuildContext context) {
-    return Card(
+    return AppCard(
       child: Padding(
         padding: const EdgeInsets.fromLTRB(14, 14, 14, 14),
         child: Column(
-          crossAxisAlignment: CrossAxisAlignment.start,
+          crossAxisAlignment: CrossAxisAlignment.center,
           children: [
             Row(
+              mainAxisAlignment: MainAxisAlignment.center,
               children: [
-                const Icon(Icons.route_outlined, size: 20),
+                const Icon(Icons.route_rounded, size: 20),
                 const SizedBox(width: 8),
                 Expanded(
                   child: Text(
                     'Siguiente paso',
                     style: Theme.of(context).textTheme.titleMedium,
+                    textAlign: TextAlign.center,
                   ),
                 ),
                 Container(
@@ -445,15 +508,18 @@ class AttendanceNextStepCard extends StatelessWidget {
                     vertical: 4,
                   ),
                   decoration: BoxDecoration(
-                    color: priorityBackground,
+                    color: AppColors.of(context).surface(priorityBackground),
                     borderRadius: BorderRadius.circular(999),
                   ),
                   child: Text(
                     priorityLabel,
                     style: Theme.of(context).textTheme.labelSmall?.copyWith(
-                      color: priorityForeground,
+                      color: AppColors.of(
+                        context,
+                      ).foreground(priorityForeground),
                       fontWeight: FontWeight.w700,
                     ),
+                    textAlign: TextAlign.center,
                   ),
                 ),
               ],
@@ -464,9 +530,10 @@ class AttendanceNextStepCard extends StatelessWidget {
               style: Theme.of(
                 context,
               ).textTheme.titleSmall?.copyWith(fontWeight: FontWeight.w700),
+              textAlign: TextAlign.center,
             ),
             const SizedBox(height: 4),
-            Text(body),
+            Text(body, textAlign: TextAlign.center),
             const SizedBox(height: 12),
             _FilledActionButton(action: primaryAction),
             if (secondaryAction != null) ...[
@@ -474,7 +541,10 @@ class AttendanceNextStepCard extends StatelessWidget {
               OutlinedButton.icon(
                 onPressed: secondaryAction!.onPressed,
                 icon: Icon(secondaryAction!.icon),
-                label: Text(secondaryAction!.label),
+                label: Text(
+                  secondaryAction!.label,
+                  textAlign: TextAlign.center,
+                ),
               ),
             ],
           ],
@@ -538,47 +608,53 @@ class AttendanceClockPanel extends StatelessWidget {
 
   @override
   Widget build(BuildContext context) {
-    return Card(
+    return AppCard(
       child: Padding(
         padding: const EdgeInsets.fromLTRB(14, 14, 14, 14),
         child: Column(
-          crossAxisAlignment: CrossAxisAlignment.start,
+          crossAxisAlignment: CrossAxisAlignment.center,
           children: [
             if ((sectionTitle ?? '').isNotEmpty) ...[
               Row(
+                mainAxisAlignment: MainAxisAlignment.center,
                 children: [
-                  const Icon(Icons.qr_code_2_outlined),
+                  const Icon(Icons.qr_code_2_rounded),
                   const SizedBox(width: 8),
                   Text(
                     sectionTitle!,
                     style: Theme.of(context).textTheme.titleMedium,
+                    textAlign: TextAlign.center,
                   ),
                 ],
               ),
               if ((sectionSubtitle ?? '').isNotEmpty) ...[
                 const SizedBox(height: 4),
-                Text(sectionSubtitle!),
+                Text(sectionSubtitle!, textAlign: TextAlign.center),
               ],
               const SizedBox(height: 12),
             ],
             Container(
               padding: const EdgeInsets.all(12),
               decoration: BoxDecoration(
-                color: const Color(0xFFF6F8FB),
+                color: AppColors.of(context).surface(const Color(0xFFF6F8FB)),
                 borderRadius: BorderRadius.circular(14),
-                border: Border.all(color: const Color(0xFFD8E1EA)),
+                border: Border.all(
+                  color: AppColors.of(context).border(const Color(0xFFD8E1EA)),
+                ),
               ),
               child: Column(
-                crossAxisAlignment: CrossAxisAlignment.start,
+                crossAxisAlignment: CrossAxisAlignment.center,
                 children: [
                   Row(
+                    mainAxisAlignment: MainAxisAlignment.center,
                     children: [
-                      const Icon(Icons.bolt_outlined, size: 18),
+                      const Icon(Icons.bolt_rounded, size: 18),
                       const SizedBox(width: 8),
                       Expanded(
                         child: Text(
                           'Preparación de fichada',
                           style: Theme.of(context).textTheme.titleSmall,
+                          textAlign: TextAlign.center,
                         ),
                       ),
                       if (warming)
@@ -593,6 +669,7 @@ class AttendanceClockPanel extends StatelessWidget {
                   Wrap(
                     spacing: 8,
                     runSpacing: 8,
+                    alignment: WrapAlignment.center,
                     children: readinessBadges
                         .map(
                           (badge) => AttendanceReadinessChip(
@@ -606,11 +683,13 @@ class AttendanceClockPanel extends StatelessWidget {
                   Text(
                     readinessSummary,
                     style: Theme.of(context).textTheme.bodySmall,
+                    textAlign: TextAlign.center,
                   ),
                   const SizedBox(height: 4),
                   Text(
                     'Chequeado $readinessCheckText.',
                     style: Theme.of(context).textTheme.bodySmall,
+                    textAlign: TextAlign.center,
                   ),
                 ],
               ),
@@ -623,14 +702,17 @@ class AttendanceClockPanel extends StatelessWidget {
                   vertical: 10,
                 ),
                 decoration: BoxDecoration(
-                  color: const Color(0xFFFFF8E1),
+                  color: AppColors.of(context).surface(const Color(0xFFFFF8E1)),
                   borderRadius: BorderRadius.circular(12),
                   border: Border.all(
-                    color: const Color(0xFFFFCC02),
+                    color: AppColors.of(
+                      context,
+                    ).border(const Color(0xFFFFCC02)),
                     width: 1.5,
                   ),
                 ),
                 child: Row(
+                  mainAxisAlignment: MainAxisAlignment.center,
                   children: [
                     const SizedBox(
                       width: 18,
@@ -648,8 +730,11 @@ class AttendanceClockPanel extends StatelessWidget {
                         phaseText!,
                         style: Theme.of(context).textTheme.bodyMedium?.copyWith(
                           fontWeight: FontWeight.w600,
-                          color: const Color(0xFF92400E),
+                          color: AppColors.of(
+                            context,
+                          ).foreground(const Color(0xFF92400E)),
                         ),
+                        textAlign: TextAlign.center,
                       ),
                     ),
                   ],
@@ -660,7 +745,7 @@ class AttendanceClockPanel extends StatelessWidget {
             PhysicalClockButton(
               label: mainAction.label,
               icon: mainAction.icon,
-              color: mainAction.color ?? const Color(0xFF0E5A8A),
+              color: mainAction.color ?? AppPalette.blue,
               enabled: mainAction.onPressed != null,
               loading: mainAction.loading,
               onPressed: mainAction.onPressed ?? () {},
@@ -682,6 +767,7 @@ class AttendanceClockPanel extends StatelessWidget {
                   );
                 }
                 return Row(
+                  mainAxisAlignment: MainAxisAlignment.center,
                   children: [
                     for (var i = 0; i < secondaryActions.length; i++) ...[
                       Expanded(
@@ -697,11 +783,16 @@ class AttendanceClockPanel extends StatelessWidget {
               },
             ),
             const SizedBox(height: 8),
-            Text('GPS: $gpsText', style: Theme.of(context).textTheme.bodySmall),
+            Text(
+              'GPS: $gpsText',
+              style: Theme.of(context).textTheme.bodySmall,
+              textAlign: TextAlign.center,
+            ),
             if ((lastQrText ?? '').trim().isNotEmpty)
               Text(
                 'Último QR: $lastQrText',
                 style: Theme.of(context).textTheme.bodySmall,
+                textAlign: TextAlign.center,
               ),
           ],
         ),
@@ -719,19 +810,23 @@ class AttendanceQuickActionsCard extends StatelessWidget {
   @override
   Widget build(BuildContext context) {
     if (items.isEmpty) return const SizedBox.shrink();
-    return Card(
+    return AppCard(
       child: Padding(
         padding: const EdgeInsets.fromLTRB(14, 14, 14, 14),
         child: Column(
-          crossAxisAlignment: CrossAxisAlignment.start,
+          crossAxisAlignment: CrossAxisAlignment.center,
           children: [
             Row(
+              mainAxisAlignment: MainAxisAlignment.center,
               children: [
-                const Icon(Icons.widgets_outlined),
+                const Icon(Icons.widgets_rounded),
                 const SizedBox(width: 8),
-                Text(
-                  'Accesos rapidos',
-                  style: Theme.of(context).textTheme.titleMedium,
+                Expanded(
+                  child: Text(
+                    'Accesos rapidos',
+                    style: Theme.of(context).textTheme.titleMedium,
+                    textAlign: TextAlign.center,
+                  ),
                 ),
               ],
             ),
@@ -739,20 +834,37 @@ class AttendanceQuickActionsCard extends StatelessWidget {
             LayoutBuilder(
               builder: (context, constraints) {
                 const spacing = 8.0;
-                final cols = constraints.maxWidth >= 600 ? 4 : 2;
-                final itemW =
-                    (constraints.maxWidth - spacing * (cols - 1)) / cols;
-                return Wrap(
-                  spacing: spacing,
-                  runSpacing: spacing,
+                final textScale =
+                    MediaQuery.textScalerOf(context).scale(14) / 14;
+                final cols =
+                    ((constraints.maxWidth + spacing) /
+                            (120 * textScale + spacing))
+                        .floor()
+                        .clamp(1, 4);
+                return Column(
                   children: [
-                    for (final item in items)
-                      SizedBox(
-                        width: itemW,
-                        child: _QuickActionGridItem(
-                          icon: item.icon,
-                          label: item.label,
-                          onTap: item.onTap,
+                    for (var start = 0; start < items.length; start += cols)
+                      Padding(
+                        padding: EdgeInsets.only(top: start == 0 ? 0 : spacing),
+                        child: IntrinsicHeight(
+                          child: Row(
+                            crossAxisAlignment: CrossAxisAlignment.stretch,
+                            children: [
+                              for (var column = 0; column < cols; column++) ...[
+                                if (column > 0) const SizedBox(width: spacing),
+                                Expanded(
+                                  child: start + column < items.length
+                                      ? _QuickActionGridItem(
+                                          icon: items[start + column].icon,
+                                          label: items[start + column].label,
+                                          onTap: items[start + column].onTap,
+                                          horizontal: cols == 1,
+                                        )
+                                      : const SizedBox.shrink(),
+                                ),
+                              ],
+                            ],
+                          ),
                         ),
                       ),
                   ],
@@ -771,11 +883,13 @@ class _QuickActionGridItem extends StatelessWidget {
     required this.icon,
     required this.label,
     this.onTap,
+    this.horizontal = false,
   });
 
   final IconData icon;
   final String label;
   final VoidCallback? onTap;
+  final bool horizontal;
 
   @override
   Widget build(BuildContext context) {
@@ -786,30 +900,57 @@ class _QuickActionGridItem extends StatelessWidget {
         : cs.onSurface.withValues(alpha: 0.38);
     return Material(
       color: enabled ? cs.surfaceContainerLow : cs.surfaceContainerLowest,
-      borderRadius: BorderRadius.circular(12),
+      shape: RoundedRectangleBorder(
+        borderRadius: BorderRadius.circular(12),
+        side: BorderSide(color: cs.outline.withValues(alpha: .65)),
+      ),
       child: InkWell(
         borderRadius: BorderRadius.circular(12),
         onTap: onTap,
         child: Padding(
           padding: const EdgeInsets.symmetric(horizontal: 12, vertical: 13),
-          child: Row(
-            children: [
-              Icon(icon, size: 20, color: fg),
-              const SizedBox(width: 10),
-              Expanded(
-                child: Text(
-                  label,
-                  maxLines: 1,
-                  overflow: TextOverflow.ellipsis,
-                  style: TextStyle(
-                    color: fg,
-                    fontSize: 13,
-                    fontWeight: FontWeight.w600,
-                  ),
+          child: horizontal
+              ? Row(
+                  children: [
+                    Icon(
+                      icon,
+                      size: 24,
+                      color: AppColors.of(context).foreground(fg),
+                    ),
+                    const SizedBox(width: 12),
+                    Expanded(
+                      child: Text(
+                        label,
+                        style: TextStyle(
+                          color: fg,
+                          fontSize: 14,
+                          fontWeight: FontWeight.w600,
+                        ),
+                      ),
+                    ),
+                  ],
+                )
+              : Column(
+                  mainAxisSize: MainAxisSize.min,
+                  crossAxisAlignment: CrossAxisAlignment.stretch,
+                  children: [
+                    Icon(
+                      icon,
+                      size: 24,
+                      color: AppColors.of(context).foreground(fg),
+                    ),
+                    const SizedBox(height: 10),
+                    Text(
+                      label,
+                      textAlign: TextAlign.center,
+                      style: TextStyle(
+                        color: AppColors.of(context).foreground(fg),
+                        fontSize: 14,
+                        fontWeight: FontWeight.w600,
+                      ),
+                    ),
+                  ],
                 ),
-              ),
-            ],
-          ),
         ),
       ),
     );
@@ -837,16 +978,17 @@ class AttendanceReadinessStrip extends StatelessWidget {
     final cs = Theme.of(context).colorScheme;
     final allReady = badges.every((b) => b.ready);
 
-    return Card(
+    return AppCard(
       child: Padding(
         padding: const EdgeInsets.symmetric(horizontal: 14, vertical: 10),
         child: Column(
-          crossAxisAlignment: CrossAxisAlignment.start,
+          crossAxisAlignment: CrossAxisAlignment.center,
           children: [
             Row(
+              mainAxisAlignment: MainAxisAlignment.center,
               children: [
                 Icon(
-                  allReady ? Icons.check_circle_outline : Icons.bolt_outlined,
+                  allReady ? Icons.check_circle_rounded : Icons.bolt_rounded,
                   size: 15,
                   color: allReady ? Colors.green.shade700 : cs.onSurfaceVariant,
                 ),
@@ -858,6 +1000,7 @@ class AttendanceReadinessStrip extends StatelessWidget {
                         ? Colors.green.shade700
                         : cs.onSurfaceVariant,
                   ),
+                  textAlign: TextAlign.center,
                 ),
                 const Spacer(),
                 if (warming)
@@ -872,6 +1015,7 @@ class AttendanceReadinessStrip extends StatelessWidget {
             Wrap(
               spacing: 6,
               runSpacing: 6,
+              alignment: WrapAlignment.center,
               children: badges
                   .map(
                     (b) =>
@@ -887,14 +1031,17 @@ class AttendanceReadinessStrip extends StatelessWidget {
                   vertical: 8,
                 ),
                 decoration: BoxDecoration(
-                  color: const Color(0xFFFFF8E1),
+                  color: AppColors.of(context).surface(const Color(0xFFFFF8E1)),
                   borderRadius: BorderRadius.circular(10),
                   border: Border.all(
-                    color: const Color(0xFFFFCC02),
+                    color: AppColors.of(
+                      context,
+                    ).border(const Color(0xFFFFCC02)),
                     width: 1.5,
                   ),
                 ),
                 child: Row(
+                  mainAxisAlignment: MainAxisAlignment.center,
                   children: [
                     const SizedBox(
                       width: 14,
@@ -912,8 +1059,11 @@ class AttendanceReadinessStrip extends StatelessWidget {
                         phaseText!,
                         style: Theme.of(context).textTheme.bodySmall?.copyWith(
                           fontWeight: FontWeight.w600,
-                          color: const Color(0xFF92400E),
+                          color: AppColors.of(
+                            context,
+                          ).foreground(const Color(0xFF92400E)),
                         ),
+                        textAlign: TextAlign.center,
                       ),
                     ),
                   ],
@@ -957,41 +1107,54 @@ class AttendanceDiagnosticsCard extends StatelessWidget {
 
   @override
   Widget build(BuildContext context) {
-    return Card(
+    return AppCard(
       child: ExpansionTile(
         initiallyExpanded: false,
         tilePadding: const EdgeInsets.symmetric(horizontal: 14, vertical: 2),
-        title: const Text('Diagnóstico y reglas'),
-        subtitle: const Text('Información técnica para soporte.'),
+        title: const Text('Diagnóstico y reglas', textAlign: TextAlign.center),
+        subtitle: const Text(
+          'Información técnica para soporte.',
+          textAlign: TextAlign.center,
+        ),
         childrenPadding: const EdgeInsets.fromLTRB(14, 0, 14, 12),
         children: [
           if (ruleBadges.isNotEmpty)
-            Wrap(spacing: 12, runSpacing: 6, children: ruleBadges),
+            Wrap(
+              spacing: 12,
+              runSpacing: 6,
+              alignment: WrapAlignment.center,
+              children: ruleBadges,
+            ),
           if (hasMetrics) ...[
             const SizedBox(height: 10),
             Text(
               'Rendimiento de fichada',
               style: Theme.of(context).textTheme.titleSmall,
+              textAlign: TextAlign.center,
             ),
             const SizedBox(height: 4),
             Text(
               'Muestras: $sampleCount${(lastClockText ?? '').trim().isNotEmpty ? ' | Última: $lastClockText' : ''}',
+              textAlign: TextAlign.center,
             ),
             if ((lastTotalText ?? '').trim().isNotEmpty)
-              Text('Último total: $lastTotalText'),
+              Text('Último total: $lastTotalText', textAlign: TextAlign.center),
             if ((lastApiText ?? '').trim().isNotEmpty)
-              Text('Última API: $lastApiText'),
+              Text('Última API: $lastApiText', textAlign: TextAlign.center),
             if ((lastGpsText ?? '').trim().isNotEmpty)
-              Text('Último GPS: $lastGpsText'),
+              Text('Último GPS: $lastGpsText', textAlign: TextAlign.center),
             if ((lastPhotoText ?? '').trim().isNotEmpty)
-              Text('Última foto: $lastPhotoText'),
+              Text('Última foto: $lastPhotoText', textAlign: TextAlign.center),
             const SizedBox(height: 4),
-            Text('Promedio total: $averageTotalText'),
-            Text('Promedio API: $averageApiText'),
+            Text(
+              'Promedio total: $averageTotalText',
+              textAlign: TextAlign.center,
+            ),
+            Text('Promedio API: $averageApiText', textAlign: TextAlign.center),
           ],
           if ((lastQrText ?? '').trim().isNotEmpty) ...[
             const SizedBox(height: 8),
-            Text('Último QR: $lastQrText'),
+            Text('Último QR: $lastQrText', textAlign: TextAlign.center),
           ],
         ],
       ),
@@ -1088,13 +1251,18 @@ class DashboardStatusPill extends StatelessWidget {
       constraints: const BoxConstraints(minHeight: 32),
       padding: const EdgeInsets.symmetric(horizontal: 10, vertical: 6),
       decoration: BoxDecoration(
-        color: background,
+        color: AppColors.of(context).surface(background),
         borderRadius: BorderRadius.circular(20),
       ),
       child: Row(
         mainAxisSize: MainAxisSize.min,
+        mainAxisAlignment: MainAxisAlignment.center,
         children: [
-          Icon(icon, size: 14, color: foreground),
+          Icon(
+            icon,
+            size: 14,
+            color: AppColors.of(context).foreground(foreground),
+          ),
           const SizedBox(width: 5),
           Flexible(
             child: Text(
@@ -1102,10 +1270,11 @@ class DashboardStatusPill extends StatelessWidget {
               maxLines: 1,
               overflow: TextOverflow.ellipsis,
               style: TextStyle(
-                color: foreground,
+                color: AppColors.of(context).foreground(foreground),
                 fontWeight: FontWeight.w600,
                 fontSize: 13,
               ),
+              textAlign: TextAlign.center,
             ),
           ),
         ],
@@ -1136,21 +1305,22 @@ class DashboardStatCard extends StatelessWidget {
       decoration: BoxDecoration(
         color: Theme.of(context).colorScheme.surfaceContainerLow,
         borderRadius: BorderRadius.circular(14),
-        border: Border.all(color: accent.withAlpha(95)),
+        border: Border.all(
+          color: AppColors.of(context).border(accent.withAlpha(95)),
+        ),
       ),
       child: Column(
         mainAxisAlignment: MainAxisAlignment.center,
         crossAxisAlignment: CrossAxisAlignment.center,
         children: [
-          Icon(icon, size: 14, color: accent),
+          Icon(icon, size: 20, color: AppColors.of(context).foreground(accent)),
           const SizedBox(height: 4),
           Text(
             title,
             softWrap: true,
             textAlign: TextAlign.center,
-            style: Theme.of(context).textTheme.labelSmall?.copyWith(
-              color: const Color(0xFF4F637A),
-              fontSize: 13,
+            style: CardTypography.label(context).copyWith(
+              color: AppColors.of(context).foreground(const Color(0xFF4F637A)),
             ),
           ),
           const SizedBox(height: 4),
@@ -1158,9 +1328,7 @@ class DashboardStatCard extends StatelessWidget {
             value,
             softWrap: true,
             textAlign: TextAlign.center,
-            style: Theme.of(
-              context,
-            ).textTheme.titleMedium?.copyWith(fontWeight: FontWeight.w700),
+            style: CardTypography.value(context),
           ),
         ],
       ),
@@ -1197,17 +1365,19 @@ class DashboardQuickActionTile extends StatelessWidget {
         child: Padding(
           padding: const EdgeInsets.symmetric(horizontal: 10, vertical: 10),
           child: Row(
+            mainAxisAlignment: MainAxisAlignment.center,
             children: [
-              Icon(icon, size: 18, color: fg),
+              Icon(icon, size: 18, color: AppColors.of(context).foreground(fg)),
               const SizedBox(width: 8),
               Expanded(
                 child: Text(
                   label,
                   style: TextStyle(
-                    color: fg,
+                    color: AppColors.of(context).foreground(fg),
                     fontWeight: FontWeight.w600,
                     height: 1.1,
                   ),
+                  textAlign: TextAlign.center,
                 ),
               ),
             ],
@@ -1243,7 +1413,7 @@ class PhysicalClockButton extends StatelessWidget {
       child: ElevatedButton(
         onPressed: enabled ? onPressed : null,
         style: ElevatedButton.styleFrom(
-          backgroundColor: color,
+          backgroundColor: AppColors.of(context).surface(color),
           foregroundColor: Colors.white,
           elevation: 10,
           shadowColor: Colors.black45,
@@ -1254,7 +1424,10 @@ class PhysicalClockButton extends StatelessWidget {
           ),
           shape: RoundedRectangleBorder(
             borderRadius: BorderRadius.circular(16),
-            side: const BorderSide(color: Colors.white24, width: 1.5),
+            side: BorderSide(
+              color: AppColors.of(context).border(Colors.white24),
+              width: 1.5,
+            ),
           ),
         ),
         child: Row(
@@ -1376,6 +1549,7 @@ class _LiveClockState extends State<_LiveClock> {
         fontWeight: FontWeight.w700,
         letterSpacing: 1.0,
       ),
+      textAlign: TextAlign.center,
     );
   }
 }

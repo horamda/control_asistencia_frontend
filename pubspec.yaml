@@ -16,7 +16,7 @@ publish_to: 'none' # Remove this line if you wish to publish to pub.dev
 # https://developer.apple.com/library/archive/documentation/General/Reference/InfoPlistKeyReference/Articles/CoreFoundationKeys.html
 # In Windows, build-name is used as the major, minor, and patch parts
 # of the product and file versions while build-number is used as the build suffix.
-version: 1.20.6+28
+version: 1.24.0+32
 
 environment:
   sdk: ^3.8.0
@@ -28,6 +28,7 @@ environment:
 # the latest version available on pub.dev. To see which dependencies have newer
 # versions available, run `flutter pub outdated`.
 dependencies:
+  image: ^4.8.0
   flutter:
     sdk: flutter
 
@@ -56,8 +57,14 @@ dependencies:
   file_picker: ^11.0.2
   url_launcher: ^6.3.0
   image_cropper: ^12.2.1
+  lottie: ^3.6.1
+  flutter_local_notifications: 19.5.0
+  timezone: 0.10.1
+  firebase_core: 4.4.0
+  firebase_messaging: 16.1.0
 
 dev_dependencies:
+  firebase_core_platform_interface: ^6.0.3
   flutter_test:
     sdk: flutter
   flutter_secure_storage_platform_interface: ^1.1.2
@@ -83,18 +90,24 @@ flutter:
   assets:
     - assets/sounds/
     - assets/certs/
-    - assets/branding/
+    - assets/branding/fichaya-login.png
+    - assets/branding/fichaya-header.png
+    - assets/branding/fichaya_splash.json
 
 flutter_launcher_icons:
   android: true
   ios: true
+  remove_alpha_ios: true
   web:
     generate: true
   windows:
     generate: true
   macos:
     generate: true
-  image_path: assets/branding/logo_dp.png
+  image_path: assets/branding/fichaya-launcher.png
+  adaptive_icon_background: '#113B59'
+  adaptive_icon_foreground: assets/branding/fichaya-launcher.png
+  adaptive_icon_foreground_inset: 16
 
   # To add assets to your application, add an assets section, like this:
   # assets:

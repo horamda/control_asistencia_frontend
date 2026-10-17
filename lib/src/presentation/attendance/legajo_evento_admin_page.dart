@@ -1,3 +1,5 @@
+import 'package:ficharqr/src/presentation/widgets/app_card.dart';
+import 'package:ficharqr/src/presentation/theme/app_palette.dart';
 import 'package:file_picker/file_picker.dart';
 import 'package:flutter/foundation.dart';
 import 'package:flutter/material.dart';
@@ -236,8 +238,10 @@ class _LegajoEventoAdminPageState extends State<LegajoEventoAdminPage> {
   void _show(String text, {bool isError = false}) {
     ScaffoldMessenger.of(context).showSnackBar(
       SnackBar(
-        content: Text(text),
-        backgroundColor: isError ? Colors.red[700] : Colors.green[700],
+        content: Text(text, textAlign: TextAlign.center),
+        backgroundColor: AppColors.of(
+          context,
+        ).optionalSurface(isError ? Colors.red[700] : Colors.green[700]),
       ),
     );
   }
@@ -246,7 +250,12 @@ class _LegajoEventoAdminPageState extends State<LegajoEventoAdminPage> {
   Widget build(BuildContext context) {
     final cs = Theme.of(context).colorScheme;
     return Scaffold(
-      appBar: AppBar(title: const Text('Cargar evento de legajo')),
+      appBar: AppBar(
+        title: const Text(
+          'Cargar evento de legajo',
+          textAlign: TextAlign.center,
+        ),
+      ),
       body: _loading
           ? const Center(child: CircularProgressIndicator())
           : _error != null && _tipos.isEmpty && _empleados.isEmpty
@@ -261,6 +270,7 @@ class _LegajoEventoAdminPageState extends State<LegajoEventoAdminPage> {
                   title: 'Empleado',
                   icon: Icons.person_search_outlined,
                   child: Column(
+                    crossAxisAlignment: CrossAxisAlignment.center,
                     children: [
                       TextField(
                         controller: _searchCtrl,
@@ -294,15 +304,21 @@ class _LegajoEventoAdminPageState extends State<LegajoEventoAdminPage> {
                                 ? Theme.of(context).colorScheme.primary
                                 : null,
                           ),
-                          title: Text(e.title),
-                          subtitle: Text(e.subtitle),
+                          title: Text(e.title, textAlign: TextAlign.center),
+                          subtitle: Text(
+                            e.subtitle,
+                            textAlign: TextAlign.center,
+                          ),
                           onTap: () => setState(() => _empleado = e),
                         ),
                       ),
                       if (_empleados.isEmpty)
                         const Padding(
                           padding: EdgeInsets.symmetric(vertical: 18),
-                          child: Text('No hay empleados para mostrar.'),
+                          child: Text(
+                            'No hay empleados para mostrar.',
+                            textAlign: TextAlign.center,
+                          ),
                         ),
                     ],
                   ),
@@ -312,6 +328,7 @@ class _LegajoEventoAdminPageState extends State<LegajoEventoAdminPage> {
                   title: 'Evento',
                   icon: Icons.assignment_outlined,
                   child: Column(
+                    crossAxisAlignment: CrossAxisAlignment.center,
                     children: [
                       DropdownButtonFormField<int>(
                         initialValue: _tipo?.id,
@@ -320,7 +337,10 @@ class _LegajoEventoAdminPageState extends State<LegajoEventoAdminPage> {
                             .map(
                               (t) => DropdownMenuItem<int>(
                                 value: t.id,
-                                child: Text(t.nombre),
+                                child: Text(
+                                  t.nombre,
+                                  textAlign: TextAlign.center,
+                                ),
                               ),
                             )
                             .toList(),
@@ -354,14 +374,17 @@ class _LegajoEventoAdminPageState extends State<LegajoEventoAdminPage> {
                           labelText: 'Severidad',
                         ),
                         items: const [
-                          DropdownMenuItem(value: 'leve', child: Text('Leve')),
+                          DropdownMenuItem(
+                            value: 'leve',
+                            child: Text('Leve', textAlign: TextAlign.center),
+                          ),
                           DropdownMenuItem(
                             value: 'media',
-                            child: Text('Media'),
+                            child: Text('Media', textAlign: TextAlign.center),
                           ),
                           DropdownMenuItem(
                             value: 'grave',
-                            child: Text('Grave'),
+                            child: Text('Grave', textAlign: TextAlign.center),
                           ),
                         ],
                         onChanged: (value) {
@@ -439,7 +462,10 @@ class _LegajoEventoAdminPageState extends State<LegajoEventoAdminPage> {
                   child: CircularProgressIndicator(strokeWidth: 2),
                 )
               : const Icon(Icons.save_outlined),
-          label: Text(_saving ? 'Guardando...' : 'Guardar evento'),
+          label: Text(
+            _saving ? 'Guardando...' : 'Guardar evento',
+            textAlign: TextAlign.center,
+          ),
           style: FilledButton.styleFrom(
             minimumSize: const Size.fromHeight(48),
             backgroundColor: cs.primary,
@@ -739,18 +765,23 @@ class _HeaderCard extends StatelessWidget {
         border: Border.all(color: cs.outlineVariant),
       ),
       child: Row(
+        mainAxisAlignment: MainAxisAlignment.center,
         children: [
           Icon(Icons.admin_panel_settings_outlined, color: cs.primary),
           const SizedBox(width: 12),
           Expanded(
             child: Column(
-              crossAxisAlignment: CrossAxisAlignment.start,
+              crossAxisAlignment: CrossAxisAlignment.center,
               children: [
                 const Text(
                   'Carga administrativa',
                   style: TextStyle(fontWeight: FontWeight.w700),
+                  textAlign: TextAlign.center,
                 ),
-                Text('Alcance: ${alcance ?? 'configurado'}'),
+                Text(
+                  'Alcance: ${alcance ?? 'configurado'}',
+                  textAlign: TextAlign.center,
+                ),
               ],
             ),
           ),
@@ -774,18 +805,23 @@ class _SectionCard extends StatelessWidget {
   @override
   Widget build(BuildContext context) {
     final cs = Theme.of(context).colorScheme;
-    return Card(
+    return AppCard(
       clipBehavior: Clip.antiAlias,
       child: Padding(
         padding: const EdgeInsets.all(14),
         child: Column(
-          crossAxisAlignment: CrossAxisAlignment.start,
+          crossAxisAlignment: CrossAxisAlignment.center,
           children: [
             Row(
+              mainAxisAlignment: MainAxisAlignment.center,
               children: [
                 Icon(icon, color: cs.primary),
                 const SizedBox(width: 8),
-                Text(title, style: Theme.of(context).textTheme.titleMedium),
+                Text(
+                  title,
+                  style: Theme.of(context).textTheme.titleMedium,
+                  textAlign: TextAlign.center,
+                ),
               ],
             ),
             const SizedBox(height: 12),
@@ -813,8 +849,8 @@ class _DateTile extends StatelessWidget {
     return ListTile(
       contentPadding: EdgeInsets.zero,
       leading: const Icon(Icons.event_outlined),
-      title: Text(label),
-      subtitle: Text(value),
+      title: Text(label, textAlign: TextAlign.center),
+      subtitle: Text(value, textAlign: TextAlign.center),
       trailing: const Icon(Icons.chevron_right),
       onTap: onTap,
     );
@@ -831,13 +867,20 @@ class _InlineError extends StatelessWidget {
     return Padding(
       padding: const EdgeInsets.only(bottom: 12),
       child: Material(
-        color: Colors.red.withValues(alpha: 0.08),
+        color: AppColors.of(
+          context,
+        ).surface(Colors.red.withValues(alpha: 0.08)),
         borderRadius: BorderRadius.circular(12),
         child: Padding(
           padding: const EdgeInsets.all(12),
           child: Row(
             children: [
-              Icon(Icons.error_outline, color: Colors.red[700]),
+              Icon(
+                Icons.error_outline,
+                color: AppColors.of(
+                  context,
+                ).optionalForeground(Colors.red[700]),
+              ),
               const SizedBox(width: 8),
               Expanded(child: Text(message)),
             ],
@@ -861,15 +904,20 @@ class _ErrorState extends StatelessWidget {
         padding: const EdgeInsets.all(24),
         child: Column(
           mainAxisSize: MainAxisSize.min,
+          crossAxisAlignment: CrossAxisAlignment.center,
           children: [
-            Icon(Icons.lock_outline, size: 48, color: Colors.red[300]),
+            Icon(
+              Icons.lock_outline,
+              size: 48,
+              color: AppColors.of(context).optionalForeground(Colors.red[300]),
+            ),
             const SizedBox(height: 12),
             Text(message, textAlign: TextAlign.center),
             const SizedBox(height: 16),
             FilledButton.icon(
               onPressed: onRetry,
               icon: const Icon(Icons.refresh),
-              label: const Text('Reintentar'),
+              label: const Text('Reintentar', textAlign: TextAlign.center),
             ),
           ],
         ),

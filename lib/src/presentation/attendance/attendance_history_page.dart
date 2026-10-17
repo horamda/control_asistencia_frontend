@@ -1,3 +1,5 @@
+import 'package:ficharqr/src/presentation/widgets/app_card.dart';
+import 'package:ficharqr/src/presentation/theme/app_palette.dart';
 import 'package:flutter/material.dart';
 
 import '../../core/network/mobile_api_client.dart';
@@ -184,7 +186,10 @@ class _AttendanceHistoryPageState extends State<AttendanceHistoryPage> {
 
     return Scaffold(
       appBar: AppBar(
-        title: const Text('Historial de asistencias'),
+        title: const Text(
+          'Historial de asistencias',
+          textAlign: TextAlign.center,
+        ),
         bottom: _loadingPage
             ? const PreferredSize(
                 preferredSize: Size.fromHeight(3),
@@ -248,6 +253,7 @@ class _AttendanceHistoryPageState extends State<AttendanceHistoryPage> {
                       style: Theme.of(context).textTheme.bodySmall?.copyWith(
                         color: cs.onSurfaceVariant,
                       ),
+                      textAlign: TextAlign.center,
                     ),
                   ),
                   const SizedBox(height: 4),
@@ -278,14 +284,18 @@ class _AttendanceHistoryPageState extends State<AttendanceHistoryPage> {
                   if (_total > _perPage) ...[
                     const SizedBox(height: 4),
                     Row(
+                      mainAxisAlignment: MainAxisAlignment.center,
                       children: [
                         Expanded(
                           child: OutlinedButton.icon(
                             onPressed: (!hasPrev || _loadingPage)
                                 ? null
                                 : () => _loadPage(page: _page - 1),
-                            icon: const Icon(Icons.chevron_left),
-                            label: const Text('Anterior'),
+                            icon: const Icon(Icons.chevron_left_rounded),
+                            label: const Text(
+                              'Anterior',
+                              textAlign: TextAlign.center,
+                            ),
                           ),
                         ),
                         const SizedBox(width: 10),
@@ -294,8 +304,11 @@ class _AttendanceHistoryPageState extends State<AttendanceHistoryPage> {
                             onPressed: (!hasNext || _loadingPage)
                                 ? null
                                 : () => _loadPage(page: _page + 1),
-                            icon: const Icon(Icons.chevron_right),
-                            label: const Text('Siguiente'),
+                            icon: const Icon(Icons.chevron_right_rounded),
+                            label: const Text(
+                              'Siguiente',
+                              textAlign: TextAlign.center,
+                            ),
                           ),
                         ),
                       ],
@@ -334,64 +347,81 @@ class _DateRangeFilterBar extends StatelessWidget {
   Widget build(BuildContext context) {
     final cs = Theme.of(context).colorScheme;
     final hasFilter = desde != null || hasta != null;
-    return Card(
+    return AppCard(
       child: Padding(
         padding: const EdgeInsets.fromLTRB(12, 10, 12, 12),
         child: Column(
-          crossAxisAlignment: CrossAxisAlignment.start,
+          crossAxisAlignment: CrossAxisAlignment.center,
           children: [
-            Row(
+            Wrap(
+              spacing: 8,
+              runSpacing: 8,
+              crossAxisAlignment: WrapCrossAlignment.center,
+              alignment: WrapAlignment.center,
               children: [
                 Icon(
-                  Icons.filter_list_outlined,
-                  size: 16,
+                  Icons.filter_list_rounded,
+                  size: 20,
                   color: cs.onSurfaceVariant,
                 ),
-                const SizedBox(width: 6),
                 Text(
                   'Filtrar por fecha',
                   style: Theme.of(context).textTheme.labelLarge,
+                  textAlign: TextAlign.center,
                 ),
-                if (hasFilter) ...[
-                  const Spacer(),
+                if (hasFilter)
                   TextButton.icon(
                     onPressed: loading ? null : onClear,
-                    icon: const Icon(Icons.clear, size: 14),
-                    label: const Text('Limpiar'),
-                    style: TextButton.styleFrom(
-                      visualDensity: VisualDensity.compact,
-                    ),
+                    icon: const Icon(Icons.clear_rounded),
+                    label: const Text('Limpiar', textAlign: TextAlign.center),
                   ),
-                ],
               ],
             ),
             const SizedBox(height: 10),
-            Row(
-              children: [
-                Expanded(
-                  child: _DateButton(
+            LayoutBuilder(
+              builder: (context, box) {
+                final narrow =
+                    box.maxWidth < 600 ||
+                    MediaQuery.textScalerOf(context).scale(1) > 1.3;
+                final fields = [
+                  _DateButton(
                     label: 'Desde',
                     value: desde,
                     onTap: loading ? null : onPickDesde,
                   ),
-                ),
-                const SizedBox(width: 8),
-                Expanded(
-                  child: _DateButton(
+                  _DateButton(
                     label: 'Hasta',
                     value: hasta,
                     onTap: loading ? null : onPickHasta,
                   ),
-                ),
-                const SizedBox(width: 8),
-                FilledButton(
-                  onPressed: loading ? null : onApply,
-                  style: FilledButton.styleFrom(
-                    visualDensity: VisualDensity.compact,
+                  FilledButton(
+                    onPressed: loading ? null : onApply,
+                    child: const Text('Buscar', textAlign: TextAlign.center),
                   ),
-                  child: const Text('Buscar'),
-                ),
-              ],
+                ];
+                if (narrow) {
+                  return Column(
+                    crossAxisAlignment: CrossAxisAlignment.stretch,
+                    children: [
+                      for (final field in fields)
+                        Padding(
+                          padding: const EdgeInsets.only(bottom: 8),
+                          child: field,
+                        ),
+                    ],
+                  );
+                }
+                return Row(
+                  mainAxisAlignment: MainAxisAlignment.center,
+                  children: [
+                    Expanded(child: fields[0]),
+                    const SizedBox(width: 8),
+                    Expanded(child: fields[1]),
+                    const SizedBox(width: 8),
+                    fields[2],
+                  ],
+                );
+              },
             ),
           ],
         ),
@@ -422,7 +452,7 @@ class _DateButton extends StatelessWidget {
           labelText: label,
           border: const OutlineInputBorder(),
           isDense: true,
-          suffixIcon: const Icon(Icons.calendar_month, size: 16),
+          suffixIcon: const Icon(Icons.calendar_month_rounded, size: 16),
           contentPadding: const EdgeInsets.symmetric(
             horizontal: 10,
             vertical: 10,
@@ -488,18 +518,19 @@ class _CalendarCard extends StatelessWidget {
     final leadingBlanks = DateTime(month.year, month.month, 1).weekday - 1;
     final totalCells = ((leadingBlanks + daysInMonth + 6) ~/ 7) * 7;
 
-    return Card(
+    return AppCard(
       child: Padding(
         padding: const EdgeInsets.all(12),
         child: Column(
-          crossAxisAlignment: CrossAxisAlignment.start,
+          crossAxisAlignment: CrossAxisAlignment.center,
           children: [
             // Header nav
             Row(
+              mainAxisAlignment: MainAxisAlignment.center,
               children: [
                 IconButton(
                   onPressed: onPrevMonth,
-                  icon: const Icon(Icons.chevron_left),
+                  icon: const Icon(Icons.chevron_left_rounded),
                   tooltip: 'Mes anterior',
                   visualDensity: VisualDensity.compact,
                 ),
@@ -514,7 +545,7 @@ class _CalendarCard extends StatelessWidget {
                 ),
                 IconButton(
                   onPressed: (!_canGoNext || loading) ? null : onNextMonth,
-                  icon: const Icon(Icons.chevron_right),
+                  icon: const Icon(Icons.chevron_right_rounded),
                   tooltip: 'Mes siguiente',
                   visualDensity: VisualDensity.compact,
                 ),
@@ -523,6 +554,7 @@ class _CalendarCard extends StatelessWidget {
             const SizedBox(height: 6),
             // Weekday headers
             const Row(
+              mainAxisAlignment: MainAxisAlignment.center,
               children: [
                 _WeekLabel('L'),
                 _WeekLabel('M'),
@@ -574,6 +606,7 @@ class _CalendarCard extends StatelessWidget {
                         fontWeight: FontWeight.w600,
                         color: colors.$3,
                       ),
+                      textAlign: TextAlign.center,
                     ),
                   );
                 },
@@ -586,16 +619,24 @@ class _CalendarCard extends StatelessWidget {
                   color: Theme.of(context).colorScheme.error,
                   fontSize: 13,
                 ),
+                textAlign: TextAlign.center,
               ),
             ],
             const SizedBox(height: 10),
             const Wrap(
               spacing: 12,
               runSpacing: 6,
+              alignment: WrapAlignment.center,
               children: [
                 _LegendDot(color: Color(0xFF81C995), label: 'OK'),
-                _LegendDot(color: Color(0xFFE57373), label: 'Con problema'),
-                _LegendDot(color: Color(0xFFDADCE0), label: 'Sin registro'),
+                _LegendDot(
+                  color: Color(0xFFE57373),
+                  label: 'Con problema',
+                ),
+                _LegendDot(
+                  color: Color(0xFFDADCE0),
+                  label: 'Sin registro',
+                ),
               ],
             ),
           ],
@@ -646,7 +687,7 @@ class _WeekLabel extends StatelessWidget {
         child: Text(
           label,
           style: Theme.of(context).textTheme.labelSmall?.copyWith(
-            color: const Color(0xFF5F6368),
+            color: AppColors.of(context).foreground(const Color(0xFF5F6368)),
             fontWeight: FontWeight.w700,
           ),
         ),
@@ -669,10 +710,15 @@ class _LegendDot extends StatelessWidget {
         Container(
           width: 10,
           height: 10,
-          decoration: BoxDecoration(color: color, shape: BoxShape.circle),
+          decoration: BoxDecoration(
+            color: AppColors.of(context).surface(color),
+            shape: BoxShape.circle,
+          ),
         ),
         const SizedBox(width: 5),
-        Text(label, style: Theme.of(context).textTheme.labelSmall),
+        Flexible(
+          child: Text(label, style: Theme.of(context).textTheme.labelSmall),
+        ),
       ],
     );
   }
@@ -689,30 +735,39 @@ class _AsistenciaCard extends StatelessWidget {
   Widget build(BuildContext context) {
     final cs = Theme.of(context).colorScheme;
     final isOk = (item.estado ?? '').trim().toLowerCase() == 'ok';
-    final borderColor = isOk ? Colors.green.shade700 : cs.error;
+    final borderColor = item.egresoAutomatico
+        ? Colors.orange.shade800
+        : isOk
+        ? Colors.green.shade700
+        : cs.error;
     final hasEntrada = (item.horaEntrada ?? '').isNotEmpty;
     final hasSalida = (item.horaSalida ?? '').isNotEmpty;
 
-    return Card(
+    return AppCard(
       clipBehavior: Clip.antiAlias,
       child: IntrinsicHeight(
         child: Row(
           crossAxisAlignment: CrossAxisAlignment.stretch,
+          mainAxisAlignment: MainAxisAlignment.center,
           children: [
-            Container(width: 5, color: borderColor),
+            Container(
+              width: 5,
+              color: AppColors.of(context).surface(borderColor),
+            ),
             Expanded(
               child: Padding(
                 padding: const EdgeInsets.fromLTRB(12, 10, 12, 10),
                 child: Column(
-                  crossAxisAlignment: CrossAxisAlignment.start,
+                  crossAxisAlignment: CrossAxisAlignment.center,
                   children: [
                     Row(
+                      mainAxisAlignment: MainAxisAlignment.center,
                       children: [
                         Icon(
                           isOk
-                              ? Icons.check_circle_outline
-                              : Icons.warning_amber_outlined,
-                          color: borderColor,
+                              ? Icons.check_circle_rounded
+                              : Icons.warning_amber_rounded,
+                          color: AppColors.of(context).foreground(borderColor),
                           size: 18,
                         ),
                         const SizedBox(width: 8),
@@ -721,6 +776,7 @@ class _AsistenciaCard extends StatelessWidget {
                             DateFormatter.formatApiDateForDisplay(item.fecha),
                             style: Theme.of(context).textTheme.titleSmall
                                 ?.copyWith(fontWeight: FontWeight.w700),
+                            textAlign: TextAlign.center,
                           ),
                         ),
                         Container(
@@ -729,7 +785,9 @@ class _AsistenciaCard extends StatelessWidget {
                             vertical: 3,
                           ),
                           decoration: BoxDecoration(
-                            color: borderColor.withValues(alpha: 0.12),
+                            color: AppColors.of(
+                              context,
+                            ).surface(borderColor.withValues(alpha: 0.12)),
                             borderRadius: BorderRadius.circular(20),
                           ),
                           child: Text(
@@ -737,48 +795,72 @@ class _AsistenciaCard extends StatelessWidget {
                             style: TextStyle(
                               fontSize: 13,
                               fontWeight: FontWeight.w700,
-                              color: borderColor,
+                              color: AppColors.of(
+                                context,
+                              ).foreground(borderColor),
                             ),
+                            textAlign: TextAlign.center,
                           ),
                         ),
                       ],
                     ),
+                    if (item.egresoAutomatico)
+                      Text(
+                        'Egreso automático por olvido de fichada',
+                        style: TextStyle(
+                          color: AppColors.of(
+                            context,
+                          ).foreground(const Color(0xFFC85F0F)),
+                        ),
+                        textAlign: TextAlign.center,
+                      ),
                     if (hasEntrada || hasSalida) ...[
                       const SizedBox(height: 6),
                       Row(
+                        mainAxisAlignment: MainAxisAlignment.center,
                         children: [
                           if (hasEntrada) ...[
                             Icon(
-                              Icons.login_outlined,
+                              Icons.login_rounded,
                               size: 13,
-                              color: const Color(0xFF1565C0),
+                              color: AppColors.of(
+                                context,
+                              ).foreground(const Color(0xFF1565C0)),
                             ),
                             const SizedBox(width: 3),
                             Text(
                               'Entrada',
                               style: Theme.of(context).textTheme.labelSmall
                                   ?.copyWith(
-                                    color: const Color(0xFF1565C0),
+                                    color: AppColors.of(
+                                      context,
+                                    ).foreground(const Color(0xFF1565C0)),
                                     fontWeight: FontWeight.w600,
                                   ),
+                              textAlign: TextAlign.center,
                             ),
                           ],
                           if (hasEntrada && hasSalida)
                             const SizedBox(width: 10),
                           if (hasSalida) ...[
                             Icon(
-                              Icons.logout_outlined,
+                              Icons.logout_rounded,
                               size: 13,
-                              color: Colors.orange.shade800,
+                              color: AppColors.of(
+                                context,
+                              ).foreground(Colors.orange.shade800),
                             ),
                             const SizedBox(width: 3),
                             Text(
                               'Salida',
                               style: Theme.of(context).textTheme.labelSmall
                                   ?.copyWith(
-                                    color: Colors.orange.shade800,
+                                    color: AppColors.of(
+                                      context,
+                                    ).foreground(Colors.orange.shade800),
                                     fontWeight: FontWeight.w600,
                                   ),
+                              textAlign: TextAlign.center,
                             ),
                           ],
                         ],
@@ -793,6 +875,7 @@ class _AsistenciaCard extends StatelessWidget {
                         ),
                         maxLines: 1,
                         overflow: TextOverflow.ellipsis,
+                        textAlign: TextAlign.center,
                       ),
                     ],
                   ],
@@ -852,14 +935,16 @@ class _AsistenciaDetailSheet extends StatelessWidget {
                       Container(
                         padding: const EdgeInsets.all(10),
                         decoration: BoxDecoration(
-                          color: color.withValues(alpha: 0.12),
+                          color: AppColors.of(
+                            context,
+                          ).surface(color.withValues(alpha: 0.12)),
                           shape: BoxShape.circle,
                         ),
                         child: Icon(
                           isOk
-                              ? Icons.check_circle_outline
-                              : Icons.warning_amber_outlined,
-                          color: color,
+                              ? Icons.check_circle_rounded
+                              : Icons.warning_amber_rounded,
+                          color: AppColors.of(context).foreground(color),
                           size: 24,
                         ),
                       ),
@@ -880,7 +965,9 @@ class _AsistenciaDetailSheet extends StatelessWidget {
                                 vertical: 3,
                               ),
                               decoration: BoxDecoration(
-                                color: color.withValues(alpha: 0.12),
+                                color: AppColors.of(
+                                  context,
+                                ).surface(color.withValues(alpha: 0.12)),
                                 borderRadius: BorderRadius.circular(20),
                               ),
                               child: Text(
@@ -888,8 +975,11 @@ class _AsistenciaDetailSheet extends StatelessWidget {
                                 style: TextStyle(
                                   fontSize: 13,
                                   fontWeight: FontWeight.w700,
-                                  color: color,
+                                  color: AppColors.of(
+                                    context,
+                                  ).foreground(color),
                                 ),
+                                textAlign: TextAlign.center,
                               ),
                             ),
                           ],
@@ -901,6 +991,18 @@ class _AsistenciaDetailSheet extends StatelessWidget {
                   const Divider(),
                   const SizedBox(height: 12),
 
+                  if (item.egresoAutomatico)
+                    Padding(
+                      padding: const EdgeInsets.only(bottom: 12),
+                      child: Text(
+                        'Egreso automático por olvido de fichada. Las correcciones se solicitan a RR. HH.',
+                        style: TextStyle(
+                          color: AppColors.of(
+                            context,
+                          ).foreground(const Color(0xFFC85F0F)),
+                        ),
+                      ),
+                    ),
                   // Detail cells
                   Wrap(
                     spacing: 10,
@@ -908,19 +1010,19 @@ class _AsistenciaDetailSheet extends StatelessWidget {
                     children: [
                       if ((item.metodoEntrada ?? '').isNotEmpty)
                         _DetailCell(
-                          icon: Icons.touch_app_outlined,
+                          icon: Icons.touch_app_rounded,
                           label: 'Método entrada',
                           value: _capitalize(item.metodoEntrada!),
                         ),
                       if ((item.metodoSalida ?? '').isNotEmpty)
                         _DetailCell(
-                          icon: Icons.touch_app_outlined,
+                          icon: Icons.touch_app_rounded,
                           label: 'Método salida',
                           value: _capitalize(item.metodoSalida!),
                         ),
                       if (item.gpsDistanciaEntradaM != null)
                         _DetailCell(
-                          icon: Icons.my_location_outlined,
+                          icon: Icons.my_location_rounded,
                           label: 'GPS entrada',
                           value:
                               '${item.gpsDistanciaEntradaM!.toStringAsFixed(1)} / '
@@ -928,7 +1030,7 @@ class _AsistenciaDetailSheet extends StatelessWidget {
                         ),
                       if (item.gpsDistanciaSalidaM != null)
                         _DetailCell(
-                          icon: Icons.my_location_outlined,
+                          icon: Icons.my_location_rounded,
                           label: 'GPS salida',
                           value:
                               '${item.gpsDistanciaSalidaM!.toStringAsFixed(1)} / '
@@ -958,6 +1060,7 @@ class _AsistenciaDetailSheet extends StatelessWidget {
                       child: Text(
                         item.observaciones!,
                         style: Theme.of(context).textTheme.bodyMedium,
+                        textAlign: TextAlign.center,
                       ),
                     ),
                   ],
@@ -1002,9 +1105,10 @@ class _DetailCell extends StatelessWidget {
               borderRadius: BorderRadius.circular(10),
             ),
             child: Column(
-              crossAxisAlignment: CrossAxisAlignment.start,
+              crossAxisAlignment: CrossAxisAlignment.center,
               children: [
                 Row(
+                  mainAxisAlignment: MainAxisAlignment.center,
                   children: [
                     Icon(icon, size: 13, color: cs.onSurfaceVariant),
                     const SizedBox(width: 4),
@@ -1015,6 +1119,7 @@ class _DetailCell extends StatelessWidget {
                       style: Theme.of(context).textTheme.labelSmall?.copyWith(
                         color: cs.onSurfaceVariant,
                       ),
+                      textAlign: TextAlign.center,
                     ),
                   ],
                 ),
@@ -1026,6 +1131,7 @@ class _DetailCell extends StatelessWidget {
                   style: Theme.of(
                     context,
                   ).textTheme.bodyMedium?.copyWith(fontWeight: FontWeight.w600),
+                  textAlign: TextAlign.center,
                 ),
               ],
             ),
@@ -1051,9 +1157,10 @@ class _EmptyCard extends StatelessWidget {
         padding: const EdgeInsets.symmetric(vertical: 48),
         child: Column(
           mainAxisSize: MainAxisSize.min,
+          crossAxisAlignment: CrossAxisAlignment.center,
           children: [
             Icon(
-              Icons.calendar_today_outlined,
+              Icons.calendar_today_rounded,
               size: 56,
               color: cs.outlineVariant,
             ),
@@ -1081,25 +1188,35 @@ class _ErrorBanner extends StatelessWidget {
   @override
   Widget build(BuildContext context) {
     final cs = Theme.of(context).colorScheme;
-    return Card(
+    return AppCard(
       color: cs.errorContainer,
       child: Padding(
         padding: const EdgeInsets.all(12),
-        child: Row(
+        child: Column(
+          crossAxisAlignment: CrossAxisAlignment.center,
           children: [
-            Icon(Icons.error_outline, color: cs.onErrorContainer),
-            const SizedBox(width: 10),
-            Expanded(
-              child: Text(
-                message,
-                style: TextStyle(color: cs.onErrorContainer),
-              ),
+            Row(
+              crossAxisAlignment: CrossAxisAlignment.start,
+              mainAxisAlignment: MainAxisAlignment.center,
+              children: [
+                Icon(Icons.error_rounded, color: cs.onErrorContainer),
+                const SizedBox(width: 10),
+                Expanded(
+                  child: Text(
+                    message,
+                    style: TextStyle(color: cs.onErrorContainer),
+                    textAlign: TextAlign.center,
+                  ),
+                ),
+              ],
             ),
+            const SizedBox(height: 8),
             TextButton(
               onPressed: onRetry,
               child: Text(
                 'Reintentar',
                 style: TextStyle(color: cs.onErrorContainer),
+                textAlign: TextAlign.center,
               ),
             ),
           ],
@@ -1204,7 +1321,7 @@ class _SkeletonBox extends StatelessWidget {
       child: Container(
         height: height,
         decoration: BoxDecoration(
-          color: color,
+          color: AppColors.of(context).surface(color),
           borderRadius: BorderRadius.circular(radius),
         ),
       ),

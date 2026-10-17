@@ -1,3 +1,4 @@
+import 'package:ficharqr/src/presentation/theme/app_theme.dart';
 import 'package:ficharqr/src/core/attendance/clock_metrics_tracker.dart';
 import 'package:ficharqr/src/core/attendance/clock_readiness_service.dart';
 import 'package:ficharqr/src/core/attendance/qr_clock_submission_service.dart';
@@ -77,7 +78,7 @@ Future<void> _pumpScenario(
   await tester.binding.setSurfaceSize(size);
   await tester.pumpWidget(
     MaterialApp(
-      theme: ThemeData(useMaterial3: true),
+      theme: buildAppTheme(),
       home: RepaintBoundary(
         key: _goldenKey,
         child: Scaffold(
@@ -103,7 +104,9 @@ Future<void> _pumpScenario(
                       failedCount: scenario.pendingQueue.failed,
                       lastSyncText: scenario.viewData.lastSyncText,
                       statusMessage: scenario.pendingQueue.lastMessage,
-                      primaryAction: _buttonData(scenario.actions.bannerPrimary),
+                      primaryAction: _buttonData(
+                        scenario.actions.bannerPrimary,
+                      ),
                       secondaryAction: _buttonData(
                         scenario.actions.bannerSecondary,
                       ),
@@ -132,7 +135,9 @@ Future<void> _pumpScenario(
                         scenario.viewData.nextStepPriorityForeground,
                     title: scenario.viewData.nextStepTitle,
                     body: scenario.viewData.nextStepBody,
-                    primaryAction: _buttonData(scenario.actions.nextStepPrimary),
+                    primaryAction: _buttonData(
+                      scenario.actions.nextStepPrimary,
+                    ),
                     secondaryAction: _buttonData(
                       scenario.actions.nextStepSecondary,
                     ),
@@ -143,7 +148,7 @@ Future<void> _pumpScenario(
                       AttendanceStatItem(
                         title: 'Pendientes',
                         value: '${scenario.pendingQueue.total}',
-                        icon: Icons.cloud_upload_outlined,
+                        icon: Icons.cloud_upload_rounded,
                         accent: const Color(0xFF2A789E),
                       ),
                       AttendanceStatItem(
@@ -155,13 +160,13 @@ Future<void> _pumpScenario(
                       AttendanceStatItem(
                         title: 'Ultima sync',
                         value: scenario.viewData.lastSyncStatText,
-                        icon: Icons.schedule,
+                        icon: Icons.schedule_rounded,
                         accent: const Color(0xFF3D4F6B),
                       ),
                       AttendanceStatItem(
                         title: 'Ultima fichada',
                         value: scenario.viewData.lastClockStatText,
-                        icon: Icons.punch_clock_outlined,
+                        icon: Icons.punch_clock_rounded,
                         accent: const Color(0xFF315D52),
                       ),
                     ],
@@ -175,7 +180,7 @@ Future<void> _pumpScenario(
                         children: [
                           Row(
                             children: [
-                              const Icon(Icons.qr_code_2_outlined),
+                              const Icon(Icons.qr_code_2_rounded),
                               const SizedBox(width: 8),
                               const Text('Fichar'),
                             ],
@@ -198,7 +203,8 @@ Future<void> _pumpScenario(
                               ),
                               AttendanceReadinessBadgeData(
                                 text: scenario.viewData.locationPrepText,
-                                ready: scenario.viewData.locationReady &&
+                                ready:
+                                    scenario.viewData.locationReady &&
                                     scenario.viewData.locationServiceReady,
                               ),
                               AttendanceReadinessBadgeData(
@@ -206,7 +212,8 @@ Future<void> _pumpScenario(
                                 ready: scenario.viewData.hasFreshGps,
                               ),
                             ],
-                            readinessSummary: scenario.viewData.readinessSummary,
+                            readinessSummary:
+                                scenario.viewData.readinessSummary,
                             readinessCheckText:
                                 scenario.viewData.readinessCheckText,
                             phaseText: scenario.phaseText,

@@ -135,6 +135,7 @@ class _ResponsiveCropDialogState extends State<ResponsiveCropDialog> {
     child: ConstrainedBox(
       constraints: const BoxConstraints(maxWidth: 600, maxHeight: 680),
       child: Column(
+        crossAxisAlignment: CrossAxisAlignment.center,
         children: [
           Padding(
             padding: const EdgeInsets.all(12),
@@ -143,17 +144,19 @@ class _ResponsiveCropDialogState extends State<ResponsiveCropDialog> {
               maxLines: 2,
               overflow: TextOverflow.ellipsis,
               style: Theme.of(context).textTheme.titleLarge,
+              textAlign: TextAlign.center,
             ),
           ),
           Expanded(child: ClipRect(child: widget.cropper)),
           Row(
+            mainAxisAlignment: MainAxisAlignment.center,
             children: [
               IconButton(
                 tooltip: 'Girar a la izquierda',
                 onPressed: _processing
                     ? null
                     : () => widget.rotate(RotationAngle.counterClockwise90),
-                icon: const Icon(Icons.rotate_left),
+                icon: const Icon(Icons.rotate_left_rounded),
               ),
               Expanded(
                 child: Slider(
@@ -173,7 +176,7 @@ class _ResponsiveCropDialogState extends State<ResponsiveCropDialog> {
                 onPressed: _processing
                     ? null
                     : () => widget.rotate(RotationAngle.clockwise90),
-                icon: const Icon(Icons.rotate_right),
+                icon: const Icon(Icons.rotate_right_rounded),
               ),
             ],
           ),
@@ -188,11 +191,14 @@ class _ResponsiveCropDialogState extends State<ResponsiveCropDialog> {
                   onPressed: _processing
                       ? null
                       : () => Navigator.of(context).pop(),
-                  child: const Text('Cancelar'),
+                  child: const Text('Cancelar', textAlign: TextAlign.center),
                 ),
                 FilledButton(
                   onPressed: _processing ? null : _crop,
-                  child: Text(_processing ? 'Procesando…' : 'Usar'),
+                  child: Text(
+                    _processing ? 'Procesando…' : 'Usar',
+                    textAlign: TextAlign.center,
+                  ),
                 ),
               ],
             ),

@@ -25,7 +25,9 @@ class _AboutPageState extends State<AboutPage> {
     final textTheme = Theme.of(context).textTheme;
 
     return Scaffold(
-      appBar: AppBar(title: const Text('Acerca de')),
+      appBar: AppBar(
+        title: const Text('Acerca de', textAlign: TextAlign.center),
+      ),
       body: SafeArea(
         child: Center(
           child: ConstrainedBox(
@@ -33,20 +35,14 @@ class _AboutPageState extends State<AboutPage> {
             child: ListView(
               padding: const EdgeInsets.symmetric(horizontal: 24, vertical: 40),
               children: [
-                // Ícono / logo
+                // Logo oficial de FichaYa.
                 Center(
-                  child: Container(
-                    width: 88,
-                    height: 88,
-                    decoration: BoxDecoration(
-                      color: cs.primaryContainer,
-                      borderRadius: BorderRadius.circular(22),
-                    ),
-                    child: Icon(
-                      Icons.qr_code_scanner,
-                      size: 48,
-                      color: cs.onPrimaryContainer,
-                    ),
+                  child: Image.asset(
+                    'assets/branding/fichaya-header.png',
+                    width: 96,
+                    height: 96,
+                    fit: BoxFit.contain,
+                    semanticLabel: 'Logo de FichaYa',
                   ),
                 ),
                 const SizedBox(height: 20),
@@ -58,6 +54,7 @@ class _AboutPageState extends State<AboutPage> {
                     style: textTheme.headlineMedium?.copyWith(
                       fontWeight: FontWeight.w800,
                     ),
+                    textAlign: TextAlign.center,
                   ),
                 ),
                 const SizedBox(height: 6),
@@ -67,6 +64,7 @@ class _AboutPageState extends State<AboutPage> {
                     style: textTheme.bodyMedium?.copyWith(
                       color: cs.onSurfaceVariant,
                     ),
+                    textAlign: TextAlign.center,
                   ),
                 ),
                 const SizedBox(height: 32),
@@ -74,14 +72,20 @@ class _AboutPageState extends State<AboutPage> {
                 const SizedBox(height: 24),
 
                 // Desarrollado por
-                _InfoTile(
-                  icon: Icons.business_outlined,
+                const _InfoTile(
+                  icon: Icons.business_rounded,
                   label: 'Desarrollado por',
-                  value: 'Área de Logística\ndel Palacio S.A.',
+                  value: 'Área de Operaciones\ndel Palacio S.A.',
                 ),
                 const SizedBox(height: 16),
-                _InfoTile(
-                  icon: Icons.phone_android_outlined,
+                const _InfoTile(
+                  icon: Icons.person_outline_rounded,
+                  label: 'Gerente de operaciones',
+                  value: 'Yeuchuk Horacio\ndel Palacio S.A.',
+                ),
+                const SizedBox(height: 16),
+                const _InfoTile(
+                  icon: Icons.phone_android_rounded,
                   label: 'Plataforma',
                   value: 'Android / iOS',
                 ),
@@ -123,6 +127,7 @@ class _InfoTile extends StatelessWidget {
     final cs = Theme.of(context).colorScheme;
     return Row(
       crossAxisAlignment: CrossAxisAlignment.start,
+      mainAxisAlignment: MainAxisAlignment.center,
       children: [
         Container(
           width: 36,
@@ -136,20 +141,22 @@ class _InfoTile extends StatelessWidget {
         const SizedBox(width: 14),
         Expanded(
           child: Column(
-            crossAxisAlignment: CrossAxisAlignment.start,
+            crossAxisAlignment: CrossAxisAlignment.center,
             children: [
               Text(
                 label,
-                style: Theme.of(context).textTheme.labelSmall?.copyWith(
-                      color: cs.onSurfaceVariant,
-                    ),
+                style: Theme.of(
+                  context,
+                ).textTheme.labelSmall?.copyWith(color: cs.onSurfaceVariant),
+                textAlign: TextAlign.center,
               ),
               const SizedBox(height: 2),
               Text(
                 value,
-                style: Theme.of(context).textTheme.bodyMedium?.copyWith(
-                      fontWeight: FontWeight.w600,
-                    ),
+                style: Theme.of(
+                  context,
+                ).textTheme.bodyMedium?.copyWith(fontWeight: FontWeight.w600),
+                textAlign: TextAlign.center,
               ),
             ],
           ),

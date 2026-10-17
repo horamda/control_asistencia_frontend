@@ -50,11 +50,18 @@ class _SkapMatricesTabState extends State<SkapMatricesTab> {
             return Center(
               child: Column(
                 mainAxisSize: MainAxisSize.min,
+                crossAxisAlignment: CrossAxisAlignment.center,
                 children: [
-                  const Text('No se pudieron cargar tus evaluaciones.'),
+                  const Text(
+                    'No se pudieron cargar tus evaluaciones.',
+                    textAlign: TextAlign.center,
+                  ),
                   TextButton(
                     onPressed: _refresh,
-                    child: const Text('Reintentar'),
+                    child: const Text(
+                      'Reintentar',
+                      textAlign: TextAlign.center,
+                    ),
                   ),
                 ],
               ),
@@ -102,7 +109,9 @@ class _MatrizDetailState extends State<_MatrizDetail> {
       widget.apiClient.getSkapMatriz(token: widget.token, id: widget.id);
   @override
   Widget build(BuildContext context) => Scaffold(
-    appBar: AppBar(title: const Text('Mi evaluación')),
+    appBar: AppBar(
+      title: const Text('Mi evaluación', textAlign: TextAlign.center),
+    ),
     body: FutureBuilder<Map<String, dynamic>>(
       future: _future,
       builder: (context, snapshot) {
@@ -113,13 +122,17 @@ class _MatrizDetailState extends State<_MatrizDetail> {
           return Center(
             child: Column(
               mainAxisSize: MainAxisSize.min,
+              crossAxisAlignment: CrossAxisAlignment.center,
               children: [
-                const Text('La evaluación no está disponible.'),
+                const Text(
+                  'La evaluación no está disponible.',
+                  textAlign: TextAlign.center,
+                ),
                 TextButton(
                   onPressed: () => setState(() {
                     _future = _load();
                   }),
-                  child: const Text('Reintentar'),
+                  child: const Text('Reintentar', textAlign: TextAlign.center),
                 ),
               ],
             ),

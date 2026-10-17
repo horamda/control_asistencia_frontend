@@ -1,6 +1,9 @@
+import 'package:ficharqr/src/presentation/widgets/app_card.dart';
+import 'package:ficharqr/src/presentation/theme/app_palette.dart';
 import 'package:flutter/material.dart';
 import '../../core/network/mobile_api_client.dart';
 import '../theme/app_theme.dart';
+import '../theme/card_typography.dart';
 
 const seguridadTipos = {
   'seguro': 'Comportamiento seguro',
@@ -16,9 +19,9 @@ const _typeColors = {
   'incidente': Color(0xFF356B9B),
 };
 const _typeIcons = {
-  'seguro': Icons.verified_user_outlined,
+  'seguro': Icons.verified_user_rounded,
   'inseguro': Icons.warning_amber_rounded,
-  'accidente': Icons.health_and_safety_outlined,
+  'accidente': Icons.health_and_safety_rounded,
   'incidente': Icons.info_outline_rounded,
 };
 
@@ -30,21 +33,23 @@ class _SecurityOverview extends StatelessWidget {
   final String period;
 
   @override
-  Widget build(BuildContext context) => Card(
+  Widget build(BuildContext context) => AppCard(
     child: ListTile(
       contentPadding: const EdgeInsets.all(16),
       leading: Icon(
-        Icons.shield_outlined,
+        Icons.shield_rounded,
         color: Theme.of(context).colorScheme.primary,
       ),
       title: Text(
         'Resumen personal',
         style: Theme.of(context).textTheme.titleLarge,
+        textAlign: TextAlign.center,
       ),
       subtitle: Padding(
         padding: const EdgeInsets.only(top: 8),
         child: Text(
           '$period${total == null ? '' : '\nEventos aprobados: $total'}',
+          textAlign: TextAlign.center,
         ),
       ),
     ),
@@ -286,51 +291,65 @@ class SeguridadDashboard extends StatelessWidget {
                 ResponsiveCards(
                   children: seguridadTipos.entries
                       .map(
-                        (entry) => Card(
+                        (entry) => AppCard(
+                          key: ValueKey('security-type-${entry.key}'),
                           color: Theme.of(context).colorScheme.surface,
                           shape: RoundedRectangleBorder(
                             borderRadius: BorderRadius.circular(18),
                             side: BorderSide(
-                              color: _typeColors[entry.key]!.withValues(
-                                alpha: .25,
+                              color: AppColors.of(context).border(
+                                _typeColors[entry.key]!.withValues(alpha: .25),
                               ),
                             ),
                           ),
-                          child: ListTile(
-                            contentPadding: const EdgeInsets.all(18),
-                            title: Text(entry.value),
-                            subtitle: Padding(
-                              padding: const EdgeInsets.only(top: 12),
-                              child: Wrap(
-                                crossAxisAlignment: WrapCrossAlignment.center,
-                                spacing: 10,
-                                children: [
-                                  Text(
-                                    '${(data['por_tipo'] as Map)[entry.key]}',
-                                    style: Theme.of(context)
-                                        .textTheme
-                                        .headlineLarge
-                                        ?.copyWith(
-                                          color: _typeColors[entry.key],
-                                        ),
-                                  ),
-                                  const Text('Ver historial'),
-                                ],
-                              ),
-                            ),
-                            leading: CircleAvatar(
-                              backgroundColor: _typeColors[entry.key]!
-                                  .withValues(alpha: .1),
-                              child: Icon(
-                                _typeIcons[entry.key],
-                                color: _typeColors[entry.key],
-                              ),
-                            ),
-                            trailing: const Icon(Icons.chevron_right),
+                          child: InkWell(
+                            borderRadius: BorderRadius.circular(18),
                             onTap: () => onHistory(
                               entry.key,
                               DateTime(year, month ?? 1),
                               DateTime(year, month == null ? 13 : month + 1, 0),
+                            ),
+                            child: Padding(
+                              padding: const EdgeInsets.all(20),
+                              child: Column(
+                                crossAxisAlignment: CrossAxisAlignment.stretch,
+                                children: [
+                                  Icon(
+                                    _typeIcons[entry.key],
+                                    color: AppColors.of(context)
+                                        .optionalForeground(
+                                          _typeColors[entry.key],
+                                        ),
+                                  ),
+                                  const SizedBox(height: 10),
+                                  Text(
+                                    entry.value,
+                                    textAlign: TextAlign.center,
+                                    style: Theme.of(
+                                      context,
+                                    ).textTheme.titleMedium,
+                                  ),
+                                  const SizedBox(height: 8),
+                                  Text(
+                                    '${(data['por_tipo'] as Map)[entry.key]}',
+                                    textAlign: TextAlign.center,
+                                    style: Theme.of(context)
+                                        .textTheme
+                                        .headlineLarge
+                                        ?.copyWith(
+                                          color: AppColors.of(context)
+                                              .optionalForeground(
+                                                _typeColors[entry.key],
+                                              ),
+                                        ),
+                                  ),
+                                  const SizedBox(height: 8),
+                                  const Text(
+                                    'Ver historial',
+                                    textAlign: TextAlign.center,
+                                  ),
+                                ],
+                              ),
                             ),
                           ),
                         ),
@@ -346,17 +365,19 @@ class SeguridadDashboard extends StatelessWidget {
                   'El año completo, mes a mes. El filtro de mes solo cambia las tarjetas.',
                 ),
                 ...seguridadTipos.entries.map(
-                  (entry) => Card(
+                  (entry) => AppCard(
                     color: Theme.of(context).colorScheme.surface,
                     child: ExpansionTile(
                       shape: const Border(),
                       collapsedShape: const Border(),
                       leading: Icon(
                         _typeIcons[entry.key],
-                        color: _typeColors[entry.key],
+                        color: AppColors.of(
+                          context,
+                        ).optionalForeground(_typeColors[entry.key]),
                       ),
                       initiallyExpanded: entry.key == 'seguro',
-                      title: Text(entry.value),
+                      title: Text(entry.value, textAlign: TextAlign.center),
                       children: [
                         SeguridadMonthlySeries(
                           color: _typeColors[entry.key],
@@ -380,25 +401,29 @@ class SeguridadDashboard extends StatelessWidget {
                   'Historial aprobado completo hasta la fecha de corte, independiente del período de las tarjetas.',
                 ),
                 ...seguridadTipos.entries.map(
-                  (entry) => Card(
+                  (entry) => AppCard(
                     color: Theme.of(context).colorScheme.surface,
                     child: ExpansionTile(
                       shape: const Border(),
                       collapsedShape: const Border(),
                       leading: Icon(
                         _typeIcons[entry.key],
-                        color: _typeColors[entry.key],
+                        color: AppColors.of(
+                          context,
+                        ).optionalForeground(_typeColors[entry.key]),
                       ),
-                      title: Text(entry.value),
+                      title: Text(entry.value, textAlign: TextAlign.center),
                       children: [
                         for (final series
                             in (data['comparativo_anual'] as Map)[entry.key]
                                 as List)
                           Column(
+                            crossAxisAlignment: CrossAxisAlignment.center,
                             children: [
                               Text(
                                 '${series['anio']}',
                                 style: Theme.of(context).textTheme.titleMedium,
+                                textAlign: TextAlign.center,
                               ),
                               SeguridadMonthlySeries(
                                 color: _typeColors[entry.key],
@@ -476,7 +501,15 @@ class SeguridadMonthlySeries extends StatelessWidget {
       child: LayoutBuilder(
         builder: (context, box) {
           final scale = MediaQuery.textScalerOf(context).scale(14) / 14;
-          final width = (box.maxWidth / 12).clamp(52.0 * scale, 100.0 * scale);
+          final columns = box.maxWidth >= 12 * 52 * scale
+              ? 12
+              : box.maxWidth >= 6 * 52 * scale
+              ? 6
+              : box.maxWidth >= 3 * 52 * scale
+              ? 3
+              : 2;
+          final width = box.maxWidth / columns;
+          final barHeight = columns == 12 ? 140.0 : 76.0;
           final barColor = color ?? Theme.of(context).colorScheme.primary;
           return Column(
             crossAxisAlignment: CrossAxisAlignment.start,
@@ -486,80 +519,73 @@ class SeguridadMonthlySeries extends StatelessWidget {
                 style: Theme.of(context).textTheme.labelMedium,
               ),
               const SizedBox(height: 12),
-              SingleChildScrollView(
-                scrollDirection: Axis.horizontal,
-                child: Row(
-                  crossAxisAlignment: CrossAxisAlignment.end,
-                  children: [
-                    for (var i = 0; i < 12; i++)
-                      SizedBox(
-                        width: width,
-                        child: Tooltip(
-                          triggerMode: TooltipTriggerMode.tap,
-                          message:
-                              '${_months[i]} $year: ${values[i] == null ? 'mes futuro' : '${values[i]} reportes'}${year == cutoff.year && i + 1 == cutoff.month ? ' · mes parcial' : ''}',
-                          child: Semantics(
-                            label:
-                                '${_months[i]} $year: ${values[i] == null ? 'mes futuro' : '${values[i]} reportes'}',
-                            child: Column(
-                              children: [
-                                Text(
-                                  values[i]?.toString() ?? '—',
-                                  style: Theme.of(
+              Wrap(
+                alignment: WrapAlignment.center,
+                runSpacing: 20,
+                children: [
+                  for (var i = 0; i < 12; i++)
+                    SizedBox(
+                      width: width,
+                      child: Tooltip(
+                        triggerMode: TooltipTriggerMode.tap,
+                        message:
+                            '${_months[i]} $year: ${values[i] == null ? 'mes futuro' : '${values[i]} reportes'}${year == cutoff.year && i + 1 == cutoff.month ? ' · mes parcial' : ''}',
+                        child: Semantics(
+                          label:
+                              '${_months[i]} $year: ${values[i] == null ? 'mes futuro' : '${values[i]} reportes'}',
+                          child: Column(
+                            children: [
+                              Text(
+                                values[i]?.toString() ?? '—',
+                                style: Theme.of(context).textTheme.labelMedium,
+                              ),
+                              const SizedBox(height: 6),
+                              Container(
+                                height: barHeight,
+                                width: 28,
+                                decoration: BoxDecoration(
+                                  color: Theme.of(
                                     context,
-                                  ).textTheme.labelMedium,
+                                  ).colorScheme.surfaceContainerLow,
+                                  borderRadius: BorderRadius.circular(6),
                                 ),
-                                const SizedBox(height: 6),
-                                Container(
-                                  height: 140,
-                                  width: 28,
-                                  decoration: BoxDecoration(
-                                    color: Theme.of(
-                                      context,
-                                    ).colorScheme.surfaceContainerLow,
-                                    borderRadius: BorderRadius.circular(6),
-                                  ),
-                                  alignment: Alignment.bottomCenter,
-                                  child: values[i] == null
-                                      ? const Center(child: Text('—'))
-                                      : Container(
-                                          height: 140 * values[i]! / limit,
-                                          decoration: BoxDecoration(
-                                            color: barColor,
-                                            borderRadius: BorderRadius.circular(
-                                              6,
-                                            ),
+                                alignment: Alignment.bottomCenter,
+                                child: values[i] == null
+                                    ? const Center(
+                                        child: Text(
+                                          '—',
+                                          textAlign: TextAlign.center,
+                                        ),
+                                      )
+                                    : Container(
+                                        height: barHeight * values[i]! / limit,
+                                        decoration: BoxDecoration(
+                                          color: AppColors.of(
+                                            context,
+                                          ).surface(barColor),
+                                          borderRadius: BorderRadius.circular(
+                                            6,
                                           ),
                                         ),
-                                ),
-                                const SizedBox(height: 8),
-                                Text(
-                                  '${_months[i]}${year == cutoff.year && i + 1 == cutoff.month ? '*' : ''}',
-                                  style: Theme.of(
-                                    context,
-                                  ).textTheme.labelMedium,
-                                ),
-                              ],
-                            ),
+                                      ),
+                              ),
+                              const SizedBox(height: 8),
+                              Text(
+                                '${_months[i]}${year == cutoff.year && i + 1 == cutoff.month ? '*' : ''}',
+                                style: Theme.of(context).textTheme.labelMedium,
+                              ),
+                            ],
                           ),
                         ),
                       ),
-                  ],
-                ),
+                    ),
+                ],
               ),
               const SizedBox(height: 8),
               Text(
                 '0: sin reportes · —: mes futuro · * Mes parcial',
                 style: Theme.of(context).textTheme.bodySmall,
               ),
-              if (width * 12 > box.maxWidth)
-                Padding(
-                  padding: const EdgeInsets.only(top: 6),
-                  child: Text(
-                    'Deslizá para ver todos los meses →',
-                    style: Theme.of(context).textTheme.bodySmall,
-                  ),
-                ),
             ],
           );
         },
@@ -625,9 +651,11 @@ class _SeguridadIndicatorsState extends State<SeguridadIndicators> {
       Text(
         'Días sin accidentes',
         style: Theme.of(context).textTheme.titleLarge,
+        textAlign: TextAlign.center,
       ),
       Wrap(
         spacing: 8,
+        alignment: WrapAlignment.center,
         children: [
           OutlinedButton(
             onPressed: () async {
@@ -639,7 +667,10 @@ class _SeguridadIndicatorsState extends State<SeguridadIndicators> {
               );
               if (date != null && mounted) await load(date);
             },
-            child: Text('Corte: ${seguridadFecha(cutoff)}'),
+            child: Text(
+              'Corte: ${seguridadFecha(cutoff)}',
+              textAlign: TextAlign.center,
+            ),
           ),
           IconButton(
             tooltip: 'Actualizar indicadores',
@@ -655,10 +686,11 @@ class _SeguridadIndicatorsState extends State<SeguridadIndicators> {
           error is ApiException
               ? (error as ApiException).message
               : 'No se pudieron cargar los indicadores.',
+          textAlign: TextAlign.center,
         ),
         TextButton(
           onPressed: () => load(cutoff),
-          child: const Text('Reintentar'),
+          child: const Text('Reintentar', textAlign: TextAlign.center),
         ),
       ] else
         ResponsiveCards(
@@ -679,12 +711,13 @@ class _SeguridadIndicatorsState extends State<SeguridadIndicators> {
           ],
         ),
       const ExpansionTile(
-        title: Text('Cómo se calcula'),
+        title: Text('Cómo se calcula', textAlign: TextAlign.center),
         children: [
           Padding(
             padding: EdgeInsets.all(16),
             child: Text(
               'Días calendario desde el último accidente pendiente o aprobado hasta la fecha de corte. Se usa la fecha del accidente, no la de carga. Los rechazados y anulados no cuentan. Sin accidentes, se usa el inicio confiable del registro; sin ambos, no hay datos suficientes. El récord requiere un inicio confiable. Una consulta pasada utiliza el estado actual de los reportes. Los totales, gráficos y rankings siguen contando solo eventos aprobados.',
+              textAlign: TextAlign.center,
             ),
           ),
         ],
@@ -704,54 +737,75 @@ class _SeguridadIndicatorsState extends State<SeguridadIndicators> {
       'corte_anterior_al_inicio':
           'La fecha de corte es anterior al inicio del registro.',
     };
-    return Card(
+    return AppCard(
       color: Theme.of(context).colorScheme.surface,
       child: Padding(
         padding: const EdgeInsets.all(16),
         child: Column(
-          crossAxisAlignment: CrossAxisAlignment.start,
+          crossAxisAlignment: CrossAxisAlignment.center,
           children: [
-            Text(title, style: Theme.of(context).textTheme.titleMedium),
+            Text(
+              title,
+              style: Theme.of(context).textTheme.titleMedium,
+              textAlign: TextAlign.center,
+            ),
             const SizedBox(height: 12),
             if (value['disponible'] != true)
               Column(
-                crossAxisAlignment: CrossAxisAlignment.start,
+                crossAxisAlignment: CrossAxisAlignment.center,
                 children: [
-                  const Icon(Icons.info_outline, color: Color(0xFF627383)),
+                  Icon(
+                    Icons.info_outline,
+                    color: AppColors.of(
+                      context,
+                    ).foreground(const Color(0xFF627383)),
+                  ),
                   const SizedBox(height: 8),
-                  Text(reasons[value['motivo']] ?? 'Indicador no disponible.'),
+                  Text(
+                    reasons[value['motivo']] ?? 'Indicador no disponible.',
+                    textAlign: TextAlign.center,
+                  ),
                 ],
               )
             else ...[
               Text(
                 '${value['dias_sin_accidentes'] ?? '—'} días sin accidentes',
-                style: Theme.of(context).textTheme.headlineSmall?.copyWith(
-                  color: const Color(0xFF177563),
+                style: CardTypography.indicator(context).copyWith(
+                  color: AppColors.of(
+                    context,
+                  ).foreground(const Color(0xFF177563)),
                 ),
+                textAlign: TextAlign.center,
               ),
               const Divider(height: 28),
               Text(
                 value['record_dias_sin_accidentes'] == null
                     ? 'Récord: no disponible'
                     : 'Récord: ${value['record_dias_sin_accidentes']} días',
+                textAlign: TextAlign.center,
               ),
               if (value['record_dias_sin_accidentes'] == null)
                 const Text(
                   'El récord requiere un inicio confiable anterior a la fecha de corte.',
+                  textAlign: TextAlign.center,
                 ),
               Text(
                 'Último accidente: ${value['ultimo_accidente'] ?? 'Sin accidentes registrados'}',
+                textAlign: TextAlign.center,
               ),
-              Text('Hasta: ${data['hasta']}'),
+              Text('Hasta: ${data['hasta']}', textAlign: TextAlign.center),
               if (value['ultimo_accidente'] == null)
                 const Text(
                   'Sin accidentes pendientes o aprobados, la racha comienza en el inicio confiable del registro.',
+                  textAlign: TextAlign.center,
                 ),
               Text(
                 'Accidentes registrados: ${value['accidentes_registrados'] ?? '—'}',
+                textAlign: TextAlign.center,
               ),
               Text(
                 'Inicio del registro: ${value['inicio'] ?? 'Sin configurar'}',
+                textAlign: TextAlign.center,
               ),
             ],
           ],

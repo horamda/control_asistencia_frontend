@@ -1,3 +1,5 @@
+import 'package:ficharqr/src/presentation/widgets/app_card.dart';
+import 'package:ficharqr/src/presentation/theme/app_palette.dart';
 import 'dart:async';
 
 import 'package:flutter/material.dart';
@@ -20,7 +22,7 @@ class SkapPage extends StatelessWidget {
       actions: [
         IconButton(
           tooltip: 'Histórico SKAP (escala 1–5)',
-          icon: const Icon(Icons.history),
+          icon: const Icon(Icons.history_rounded),
           onPressed: () => Navigator.of(context).push(
             MaterialPageRoute<void>(
               builder: (_) =>
@@ -163,12 +165,15 @@ class _SkapPageState extends State<_SkapLegacyPage> {
       length: 4,
       child: Scaffold(
         appBar: AppBar(
-          title: const Text('Histórico SKAP · 1–5'),
+          title: const Text(
+            'Histórico SKAP · 1–5',
+            textAlign: TextAlign.center,
+          ),
           actions: [
             IconButton(
               tooltip: 'Actualizar',
               onPressed: _loading ? null : _refresh,
-              icon: const Icon(Icons.refresh),
+              icon: const Icon(Icons.refresh_rounded),
             ),
           ],
           bottom: const TabBar(
@@ -182,6 +187,7 @@ class _SkapPageState extends State<_SkapLegacyPage> {
           ),
         ),
         body: Column(
+          crossAxisAlignment: CrossAxisAlignment.center,
           children: [
             _YearSelector(
               anio: _anio,
@@ -224,7 +230,7 @@ class _SkapPageState extends State<_SkapLegacyPage> {
               const SizedBox(height: 12),
             ],
             _EmptyCard(
-              icon: Icons.history_edu_outlined,
+              icon: Icons.history_edu_rounded,
               title: 'Sin evaluación histórica en $_anio',
               subtitle:
                   'Esta sección corresponde a la escala anterior, de 1 a 5. Las matrices operativas de 0 a 4 se consultan en Mis evaluaciones. Podés elegir otro año para revisar el histórico.',
@@ -233,13 +239,16 @@ class _SkapPageState extends State<_SkapLegacyPage> {
             FilledButton.icon(
               onPressed: () => Navigator.of(context).pop(),
               icon: const Icon(Icons.grid_view_rounded),
-              label: const Text('Ver mis matrices operativas'),
+              label: const Text(
+                'Ver mis matrices operativas',
+                textAlign: TextAlign.center,
+              ),
             ),
             if (currentPlan != null) ...[
               const SizedBox(height: 16),
               _SectionCard(
                 title: 'Plan del histórico',
-                icon: Icons.route_outlined,
+                icon: Icons.route_rounded,
                 child: _PlanSummaryCard(plan: currentPlan),
               ),
             ],
@@ -260,7 +269,7 @@ class _SkapPageState extends State<_SkapLegacyPage> {
           ],
           if (desarrollo == null)
             const _EmptyCard(
-              icon: Icons.psychology_outlined,
+              icon: Icons.psychology_rounded,
               title: 'Sin informacion de SKAP',
               subtitle: 'Todavia no hay datos para mostrar en este anio.',
             )
@@ -269,7 +278,7 @@ class _SkapPageState extends State<_SkapLegacyPage> {
             const SizedBox(height: 12),
             _SectionCard(
               title: 'Evaluacion actual',
-              icon: Icons.assessment_outlined,
+              icon: Icons.assessment_rounded,
               child: Column(
                 crossAxisAlignment: CrossAxisAlignment.stretch,
                 children: [
@@ -324,7 +333,7 @@ class _SkapPageState extends State<_SkapLegacyPage> {
             const SizedBox(height: 12),
             _SectionCard(
               title: 'Promedios',
-              icon: Icons.multiline_chart_outlined,
+              icon: Icons.multiline_chart_rounded,
               child: _PromediosWrap(
                 promedios: desarrollo.evaluacion?.promedios,
               ),
@@ -332,12 +341,13 @@ class _SkapPageState extends State<_SkapLegacyPage> {
             const SizedBox(height: 12),
             _SectionCard(
               title: 'Categorias',
-              icon: Icons.category_outlined,
+              icon: Icons.category_rounded,
               child: desarrollo.categoriaCards.isEmpty
                   ? const _EmptyInline(text: 'No hay categorias para mostrar.')
                   : Wrap(
                       spacing: 10,
                       runSpacing: 10,
+                      alignment: WrapAlignment.center,
                       children: [
                         for (final card in desarrollo.categoriaCards)
                           _CategoriaCard(card: card),
@@ -348,12 +358,13 @@ class _SkapPageState extends State<_SkapLegacyPage> {
               const SizedBox(height: 12),
               _SectionCard(
                 title: 'Detalle de respuestas',
-                icon: Icons.fact_check_outlined,
+                icon: Icons.fact_check_rounded,
                 child: desarrollo.evaluacion!.detalles.isEmpty
                     ? const _EmptyInline(
                         text: 'Aun no hay respuestas detalladas.',
                       )
                     : Column(
+                        crossAxisAlignment: CrossAxisAlignment.center,
                         children: [
                           for (final detalle in desarrollo.evaluacion!.detalles)
                             Padding(
@@ -368,7 +379,7 @@ class _SkapPageState extends State<_SkapLegacyPage> {
               const SizedBox(height: 12),
               _SectionCard(
                 title: 'Plan actual',
-                icon: Icons.route_outlined,
+                icon: Icons.route_rounded,
                 child: _PlanSummaryCard(plan: currentPlan),
               ),
             ],
@@ -399,12 +410,13 @@ class _SkapPageState extends State<_SkapLegacyPage> {
                 : Text(
                     '${historial.length} items',
                     style: Theme.of(context).textTheme.labelLarge,
+                    textAlign: TextAlign.center,
                   ),
           ),
           const SizedBox(height: 12),
           if (historial.isEmpty)
             const _EmptyCard(
-              icon: Icons.history_outlined,
+              icon: Icons.history_rounded,
               title: 'Sin historial',
               subtitle: 'Las evaluaciones anteriores van a aparecer aca.',
             )
@@ -446,25 +458,26 @@ class _SkapPageState extends State<_SkapLegacyPage> {
           const SizedBox(height: 12),
           if (currentPlan == null)
             const _EmptyCard(
-              icon: Icons.route_outlined,
+              icon: Icons.route_rounded,
               title: 'Sin plan activo',
               subtitle: 'No hay plan cargado para el anio seleccionado.',
             )
           else ...[
             _SectionCard(
               title: 'Resumen del plan',
-              icon: Icons.flag_outlined,
+              icon: Icons.flag_rounded,
               child: _PlanSummaryCard(plan: currentPlan),
             ),
             const SizedBox(height: 12),
             _SectionCard(
               title: 'Acciones',
-              icon: Icons.checklist_outlined,
+              icon: Icons.checklist_rounded,
               child: currentPlan.acciones.isEmpty
                   ? const _EmptyInline(
                       text: 'No hay acciones cargadas en este plan.',
                     )
                   : Column(
+                      crossAxisAlignment: CrossAxisAlignment.center,
                       children: [
                         for (final action in currentPlan.acciones)
                           Padding(
@@ -479,8 +492,9 @@ class _SkapPageState extends State<_SkapLegacyPage> {
             const SizedBox(height: 12),
             _SectionCard(
               title: 'Planes del anio',
-              icon: Icons.library_books_outlined,
+              icon: Icons.library_books_rounded,
               child: Column(
+                crossAxisAlignment: CrossAxisAlignment.center,
                 children: [
                   for (final plan in planes.items.take(5))
                     Padding(
@@ -518,7 +532,7 @@ class _SkapPageState extends State<_SkapLegacyPage> {
           const SizedBox(height: 12),
           if (preguntas.isEmpty)
             const _EmptyCard(
-              icon: Icons.quiz_outlined,
+              icon: Icons.quiz_rounded,
               title: 'Sin preguntas',
               subtitle: 'No hay preguntas activas para mostrar.',
             )
@@ -636,6 +650,7 @@ class _SkapEvaluationDetailSheetState extends State<SkapEvaluationDetailSheet> {
           return Material(
             color: Theme.of(context).colorScheme.surface,
             child: Column(
+              crossAxisAlignment: CrossAxisAlignment.center,
               children: [
                 const SizedBox(height: 10),
                 Container(
@@ -654,6 +669,7 @@ class _SkapEvaluationDetailSheetState extends State<SkapEvaluationDetailSheet> {
                           padding: const EdgeInsets.fromLTRB(16, 14, 16, 24),
                           children: [
                             Row(
+                              mainAxisAlignment: MainAxisAlignment.center,
                               children: [
                                 Container(
                                   padding: const EdgeInsets.all(10),
@@ -662,13 +678,13 @@ class _SkapEvaluationDetailSheetState extends State<SkapEvaluationDetailSheet> {
                                         .withValues(alpha: 0.1),
                                     shape: BoxShape.circle,
                                   ),
-                                  child: const Icon(Icons.psychology_outlined),
+                                  child: const Icon(Icons.psychology_rounded),
                                 ),
                                 const SizedBox(width: 12),
                                 Expanded(
                                   child: Column(
                                     crossAxisAlignment:
-                                        CrossAxisAlignment.start,
+                                        CrossAxisAlignment.center,
                                     children: [
                                       Text(
                                         'Evaluacion #${item.id ?? widget.evaluationId}',
@@ -678,11 +694,13 @@ class _SkapEvaluationDetailSheetState extends State<SkapEvaluationDetailSheet> {
                                             ?.copyWith(
                                               fontWeight: FontWeight.w700,
                                             ),
+                                        textAlign: TextAlign.center,
                                       ),
                                       const SizedBox(height: 4),
                                       Wrap(
                                         spacing: 8,
                                         runSpacing: 8,
+                                        alignment: WrapAlignment.center,
                                         children: [
                                           _StatusChip(label: statusLabel),
                                           if (item.promedios?.general != null)
@@ -703,7 +721,7 @@ class _SkapEvaluationDetailSheetState extends State<SkapEvaluationDetailSheet> {
                                 ),
                                 IconButton(
                                   onPressed: () => Navigator.of(context).pop(),
-                                  icon: const Icon(Icons.close),
+                                  icon: const Icon(Icons.close_rounded),
                                 ),
                               ],
                             ),
@@ -714,8 +732,9 @@ class _SkapEvaluationDetailSheetState extends State<SkapEvaluationDetailSheet> {
                             const SizedBox(height: 16),
                             _SectionCard(
                               title: 'Datos generales',
-                              icon: Icons.info_outline,
+                              icon: Icons.info_rounded,
                               child: Column(
+                                crossAxisAlignment: CrossAxisAlignment.center,
                                 children: [
                                   _InfoRow(
                                     label: 'Empleado',
@@ -759,7 +778,7 @@ class _SkapEvaluationDetailSheetState extends State<SkapEvaluationDetailSheet> {
                             const SizedBox(height: 12),
                             _SectionCard(
                               title: 'Promedios',
-                              icon: Icons.query_stats_outlined,
+                              icon: Icons.query_stats_rounded,
                               child: _PromediosWrap(promedios: item.promedios),
                             ),
                             if (item.observacionesGenerales
@@ -769,9 +788,10 @@ class _SkapEvaluationDetailSheetState extends State<SkapEvaluationDetailSheet> {
                               const SizedBox(height: 12),
                               _SectionCard(
                                 title: 'Observaciones',
-                                icon: Icons.description_outlined,
+                                icon: Icons.description_rounded,
                                 child: Text(
                                   item.observacionesGenerales!.trim(),
+                                  textAlign: TextAlign.center,
                                 ),
                               ),
                             ],
@@ -779,10 +799,11 @@ class _SkapEvaluationDetailSheetState extends State<SkapEvaluationDetailSheet> {
                               const SizedBox(height: 12),
                               _SectionCard(
                                 title: 'Categorias',
-                                icon: Icons.category_outlined,
+                                icon: Icons.category_rounded,
                                 child: Wrap(
                                   spacing: 10,
                                   runSpacing: 10,
+                                  alignment: WrapAlignment.center,
                                   children: [
                                     for (final card in item.categoriaCards)
                                       _CategoriaCard(card: card),
@@ -794,8 +815,9 @@ class _SkapEvaluationDetailSheetState extends State<SkapEvaluationDetailSheet> {
                               const SizedBox(height: 12),
                               _SectionCard(
                                 title: 'Respuestas',
-                                icon: Icons.fact_check_outlined,
+                                icon: Icons.fact_check_rounded,
                                 child: Column(
+                                  crossAxisAlignment: CrossAxisAlignment.center,
                                   children: [
                                     for (final detalle in item.detalles)
                                       Padding(
@@ -812,7 +834,7 @@ class _SkapEvaluationDetailSheetState extends State<SkapEvaluationDetailSheet> {
                               const SizedBox(height: 12),
                               _SectionCard(
                                 title: 'Plan asociado',
-                                icon: Icons.route_outlined,
+                                icon: Icons.route_rounded,
                                 child: _PlanSummaryCard(plan: _plan!),
                               ),
                             ],
@@ -841,14 +863,13 @@ class _HeroCard extends StatelessWidget {
 
   @override
   Widget build(BuildContext context) {
-    final cs = Theme.of(context).colorScheme;
     final promedio =
         desarrollo.evaluacion?.promedios?.general ?? plan?.promedioGeneral;
     final title = desarrollo.badge ?? desarrollo.evaluacion?.badge ?? 'SKAP';
     return Container(
       decoration: BoxDecoration(
         gradient: LinearGradient(
-          colors: [cs.primary, cs.tertiary],
+          colors: AppColors.of(context).brandGradient,
           begin: Alignment.topLeft,
           end: Alignment.bottomRight,
         ),
@@ -856,7 +877,7 @@ class _HeroCard extends StatelessWidget {
       ),
       padding: const EdgeInsets.all(18),
       child: Column(
-        crossAxisAlignment: CrossAxisAlignment.start,
+        crossAxisAlignment: CrossAxisAlignment.center,
         children: [
           Text(
             desarrollo.empleado.displayName,
@@ -865,16 +886,23 @@ class _HeroCard extends StatelessWidget {
               fontSize: 20,
               fontWeight: FontWeight.w800,
             ),
+            textAlign: TextAlign.center,
           ),
           const SizedBox(height: 6),
           Text(
             'Anio $anio - ${title.trim().isEmpty ? 'Sin badge' : title}',
-            style: TextStyle(color: Colors.white.withValues(alpha: 0.88)),
+            style: TextStyle(
+              color: AppColors.of(
+                context,
+              ).foreground(Colors.white.withValues(alpha: 0.88)),
+            ),
+            textAlign: TextAlign.center,
           ),
           const SizedBox(height: 14),
           Wrap(
             spacing: 8,
             runSpacing: 8,
+            alignment: WrapAlignment.center,
             children: [
               _MiniStatChip(
                 label: 'Promedio',
@@ -911,7 +939,7 @@ class _YearSelector extends StatelessWidget {
         mainAxisAlignment: MainAxisAlignment.center,
         children: [
           IconButton(
-            icon: const Icon(Icons.chevron_left),
+            icon: const Icon(Icons.chevron_left_rounded),
             onPressed: onPrev,
             tooltip: 'Anio anterior',
           ),
@@ -924,7 +952,7 @@ class _YearSelector extends StatelessWidget {
           ),
           const SizedBox(width: 8),
           IconButton(
-            icon: const Icon(Icons.chevron_right),
+            icon: const Icon(Icons.chevron_right_rounded),
             onPressed: onNext,
             tooltip: 'Anio siguiente',
             color: onNext != null ? null : cs.onSurface.withValues(alpha: 0.3),
@@ -948,13 +976,14 @@ class _SectionCard extends StatelessWidget {
 
   @override
   Widget build(BuildContext context) {
-    return Card(
+    return AppCard(
       child: Padding(
         padding: const EdgeInsets.all(14),
         child: Column(
-          crossAxisAlignment: CrossAxisAlignment.start,
+          crossAxisAlignment: CrossAxisAlignment.center,
           children: [
             Row(
+              mainAxisAlignment: MainAxisAlignment.center,
               children: [
                 Icon(icon, size: 18),
                 const SizedBox(width: 8),
@@ -964,6 +993,7 @@ class _SectionCard extends StatelessWidget {
                     style: Theme.of(context).textTheme.titleMedium?.copyWith(
                       fontWeight: FontWeight.w700,
                     ),
+                    textAlign: TextAlign.center,
                   ),
                 ),
               ],
@@ -985,19 +1015,19 @@ class _ErrorCard extends StatelessWidget {
 
   @override
   Widget build(BuildContext context) {
-    return Card(
+    return AppCard(
       color: Theme.of(context).colorScheme.errorContainer,
       child: Padding(
         padding: const EdgeInsets.all(12),
         child: Column(
-          crossAxisAlignment: CrossAxisAlignment.start,
+          crossAxisAlignment: CrossAxisAlignment.center,
           children: [
-            Text(message),
+            Text(message, textAlign: TextAlign.center),
             const SizedBox(height: 8),
             OutlinedButton.icon(
               onPressed: () => unawaited(onRetry()),
-              icon: const Icon(Icons.refresh, size: 16),
-              label: const Text('Reintentar'),
+              icon: const Icon(Icons.refresh_rounded, size: 16),
+              label: const Text('Reintentar', textAlign: TextAlign.center),
             ),
           ],
         ),
@@ -1020,10 +1050,11 @@ class _EmptyCard extends StatelessWidget {
   @override
   Widget build(BuildContext context) {
     final cs = Theme.of(context).colorScheme;
-    return Card(
+    return AppCard(
       child: Padding(
         padding: const EdgeInsets.all(18),
         child: Column(
+          crossAxisAlignment: CrossAxisAlignment.center,
           children: [
             Icon(icon, size: 36, color: cs.primary),
             const SizedBox(height: 10),
@@ -1032,6 +1063,7 @@ class _EmptyCard extends StatelessWidget {
               style: Theme.of(
                 context,
               ).textTheme.titleMedium?.copyWith(fontWeight: FontWeight.w700),
+              textAlign: TextAlign.center,
             ),
             const SizedBox(height: 6),
             Text(subtitle, textAlign: TextAlign.center),
@@ -1105,20 +1137,29 @@ class _MiniStatChip extends StatelessWidget {
     return Container(
       padding: const EdgeInsets.symmetric(horizontal: 12, vertical: 8),
       decoration: BoxDecoration(
-        color: Colors.white.withValues(alpha: 0.12),
+        color: AppColors.of(
+          context,
+        ).surface(Colors.white.withValues(alpha: 0.12)),
         borderRadius: BorderRadius.circular(14),
-        border: Border.all(color: Colors.white.withValues(alpha: 0.15)),
+        border: Border.all(
+          color: AppColors.of(
+            context,
+          ).border(Colors.white.withValues(alpha: 0.15)),
+        ),
       ),
       child: Column(
         mainAxisSize: MainAxisSize.min,
-        crossAxisAlignment: CrossAxisAlignment.start,
+        crossAxisAlignment: CrossAxisAlignment.center,
         children: [
           Text(
             label,
             style: TextStyle(
-              color: Colors.white.withValues(alpha: 0.8),
+              color: AppColors.of(
+                context,
+              ).foreground(Colors.white.withValues(alpha: 0.8)),
               fontSize: 13,
             ),
+            textAlign: TextAlign.center,
           ),
           const SizedBox(height: 2),
           Text(
@@ -1128,6 +1169,7 @@ class _MiniStatChip extends StatelessWidget {
               fontSize: 15,
               fontWeight: FontWeight.w700,
             ),
+            textAlign: TextAlign.center,
           ),
         ],
       ),
@@ -1213,10 +1255,14 @@ class _PromedioChipTile extends StatelessWidget {
         borderRadius: BorderRadius.circular(14),
       ),
       child: Column(
-        crossAxisAlignment: CrossAxisAlignment.start,
+        crossAxisAlignment: CrossAxisAlignment.center,
         mainAxisSize: MainAxisSize.min,
         children: [
-          Text(item.label, style: Theme.of(context).textTheme.labelMedium),
+          Text(
+            item.label,
+            style: Theme.of(context).textTheme.labelMedium,
+            textAlign: TextAlign.center,
+          ),
           const SizedBox(height: 4),
           Text(
             value == null ? '--' : value.toStringAsFixed(1),
@@ -1224,6 +1270,7 @@ class _PromedioChipTile extends StatelessWidget {
               fontWeight: FontWeight.w800,
               color: cs.onPrimaryContainer,
             ),
+            textAlign: TextAlign.center,
           ),
         ],
       ),
@@ -1248,23 +1295,26 @@ class _CategoriaCard extends StatelessWidget {
         border: Border.all(color: cs.outlineVariant),
       ),
       child: Column(
-        crossAxisAlignment: CrossAxisAlignment.start,
+        crossAxisAlignment: CrossAxisAlignment.center,
         children: [
           Text(
             card.displayLabel,
             style: Theme.of(
               context,
             ).textTheme.titleSmall?.copyWith(fontWeight: FontWeight.w700),
+            textAlign: TextAlign.center,
           ),
           const SizedBox(height: 6),
           Text(
             card.categoria ?? '-',
             style: Theme.of(context).textTheme.bodySmall,
+            textAlign: TextAlign.center,
           ),
           const SizedBox(height: 10),
           Wrap(
             spacing: 6,
             runSpacing: 6,
+            alignment: WrapAlignment.center,
             children: [
               if (card.promedio != null)
                 _StatusChip(label: 'Prom ${card.promedio!.toStringAsFixed(1)}'),
@@ -1293,23 +1343,25 @@ class _DetalleTile extends StatelessWidget {
   Widget build(BuildContext context) {
     final obtenido = detalle.puntajeObtenido;
     final esperado = detalle.puntajeEsperado;
-    return Card(
+    return AppCard(
       margin: EdgeInsets.zero,
       child: Padding(
         padding: const EdgeInsets.all(12),
         child: Column(
-          crossAxisAlignment: CrossAxisAlignment.start,
+          crossAxisAlignment: CrossAxisAlignment.center,
           children: [
             Text(
               detalle.descripcion ?? 'Sin descripcion',
               style: Theme.of(
                 context,
               ).textTheme.titleSmall?.copyWith(fontWeight: FontWeight.w700),
+              textAlign: TextAlign.center,
             ),
             const SizedBox(height: 6),
             Wrap(
               spacing: 8,
               runSpacing: 8,
+              alignment: WrapAlignment.center,
               children: [
                 if ((detalle.categoriaLabel ?? detalle.categoria ?? '')
                         .trim()
@@ -1329,13 +1381,14 @@ class _DetalleTile extends StatelessWidget {
             ),
             if (detalle.observacion?.trim().isNotEmpty == true) ...[
               const SizedBox(height: 8),
-              Text(detalle.observacion!.trim()),
+              Text(detalle.observacion!.trim(), textAlign: TextAlign.center),
             ],
             if (detalle.evidencia?.trim().isNotEmpty == true) ...[
               const SizedBox(height: 8),
               Text(
                 'Evidencia: ${detalle.evidencia!.trim()}',
                 style: Theme.of(context).textTheme.bodySmall,
+                textAlign: TextAlign.center,
               ),
             ],
           ],
@@ -1354,7 +1407,7 @@ class _PlanSummaryCard extends StatelessWidget {
   Widget build(BuildContext context) {
     final avance = plan.avancePct;
     return Column(
-      crossAxisAlignment: CrossAxisAlignment.start,
+      crossAxisAlignment: CrossAxisAlignment.center,
       children: [
         _InfoRow(label: 'Empleado', value: plan.empleado?.displayName ?? '-'),
         _InfoRow(label: 'Sector', value: plan.sector?.displayName ?? '-'),
@@ -1364,18 +1417,22 @@ class _PlanSummaryCard extends StatelessWidget {
         _InfoRow(label: 'Periodo', value: plan.anio?.toString() ?? '-'),
         if (plan.observaciones?.trim().isNotEmpty == true) ...[
           const SizedBox(height: 8),
-          Text(plan.observaciones!.trim()),
+          Text(plan.observaciones!.trim(), textAlign: TextAlign.center),
         ],
         if (avance != null) ...[
           const SizedBox(height: 12),
           LinearProgressIndicator(value: (avance / 100).clamp(0, 1)),
           const SizedBox(height: 6),
-          Text('${avance.toStringAsFixed(0)}% completado'),
+          Text(
+            '${avance.toStringAsFixed(0)}% completado',
+            textAlign: TextAlign.center,
+          ),
         ],
         const SizedBox(height: 12),
         Wrap(
           spacing: 8,
           runSpacing: 8,
+          alignment: WrapAlignment.center,
           children: [
             if (plan.accionesTotal != null)
               _StatusChip(label: 'Acciones ${plan.accionesTotal}'),
@@ -1399,14 +1456,14 @@ class _PlanActionTile extends StatelessWidget {
   Widget build(BuildContext context) {
     final isCompleted = action.isCompleted;
     final statusColor = isCompleted ? Colors.green : Colors.orange;
-    return Card(
+    return AppCard(
       margin: EdgeInsets.zero,
       child: ListTile(
         leading: Icon(
-          isCompleted ? Icons.check_circle_outline : Icons.pending_outlined,
-          color: statusColor,
+          isCompleted ? Icons.check_circle_rounded : Icons.pending_rounded,
+          color: AppColors.of(context).foreground(statusColor),
         ),
-        title: Text(action.accion ?? 'Accion'),
+        title: Text(action.accion ?? 'Accion', textAlign: TextAlign.center),
         subtitle: Text(
           [
             if ((action.categoriaLabel ?? action.categoria ?? '')
@@ -1420,13 +1477,15 @@ class _PlanActionTile extends StatelessWidget {
             if (action.comentarios?.trim().isNotEmpty == true)
               action.comentarios!.trim(),
           ].join('\n'),
+          textAlign: TextAlign.center,
         ),
         trailing: Text(
           action.estado ?? '-',
           style: Theme.of(context).textTheme.labelMedium?.copyWith(
-            color: statusColor,
+            color: AppColors.of(context).foreground(statusColor),
             fontWeight: FontWeight.w700,
           ),
+          textAlign: TextAlign.center,
         ),
         isThreeLine: true,
       ),
@@ -1442,11 +1501,14 @@ class _PlanListTile extends StatelessWidget {
   @override
   Widget build(BuildContext context) {
     final avance = plan.avancePct;
-    return Card(
+    return AppCard(
       margin: EdgeInsets.zero,
       child: ListTile(
-        leading: const Icon(Icons.folder_copy_outlined),
-        title: Text(plan.empleado?.displayName ?? 'Plan SKAP'),
+        leading: const Icon(Icons.folder_copy_rounded),
+        title: Text(
+          plan.empleado?.displayName ?? 'Plan SKAP',
+          textAlign: TextAlign.center,
+        ),
         subtitle: Text(
           [
             if (plan.nivel != null) 'Nivel: ${plan.nivel}',
@@ -1454,10 +1516,12 @@ class _PlanListTile extends StatelessWidget {
             if (plan.createdAt != null)
               'Creado: ${DateFormatter.formatApiDateForDisplay(plan.createdAt)}',
           ].join(' - '),
+          textAlign: TextAlign.center,
         ),
         trailing: Text(
           plan.anio?.toString() ?? '-',
           style: Theme.of(context).textTheme.labelLarge,
+          textAlign: TextAlign.center,
         ),
       ),
     );
@@ -1474,11 +1538,16 @@ class _HistoryTile extends StatelessWidget {
   Widget build(BuildContext context) {
     final general = item.promedios?.general;
     final initials = _firstChar(item.badge ?? item.nivel ?? 'SK');
-    return Card(
+    return AppCard(
       margin: EdgeInsets.zero,
       child: ListTile(
-        leading: CircleAvatar(child: Text(initials)),
-        title: Text(item.badge ?? item.nivel ?? 'Evaluacion SKAP'),
+        leading: CircleAvatar(
+          child: Text(initials, textAlign: TextAlign.center),
+        ),
+        title: Text(
+          item.badge ?? item.nivel ?? 'Evaluacion SKAP',
+          textAlign: TextAlign.center,
+        ),
         subtitle: Text(
           [
             if (item.fechaEvaluacion != null)
@@ -1487,8 +1556,9 @@ class _HistoryTile extends StatelessWidget {
             if (item.sector?.displayName != null) item.sector!.displayName,
             if (item.puesto?.displayName != null) item.puesto!.displayName,
           ].where((value) => value.trim().isNotEmpty).join(' - '),
+          textAlign: TextAlign.center,
         ),
-        trailing: const Icon(Icons.chevron_right),
+        trailing: const Icon(Icons.chevron_right_rounded),
         onTap: onTap,
       ),
     );
@@ -1517,23 +1587,25 @@ class _QuestionCard extends StatelessWidget {
       if (item.requiereObservacion == true) 'Observacion',
       if (item.requiereEvidencia == true) 'Evidencia',
     ];
-    return Card(
+    return AppCard(
       margin: EdgeInsets.zero,
       child: Padding(
         padding: const EdgeInsets.all(12),
         child: Column(
-          crossAxisAlignment: CrossAxisAlignment.start,
+          crossAxisAlignment: CrossAxisAlignment.center,
           children: [
             Text(
               item.descripcion ?? 'Pregunta SKAP',
               style: Theme.of(
                 context,
               ).textTheme.titleSmall?.copyWith(fontWeight: FontWeight.w700),
+              textAlign: TextAlign.center,
             ),
             const SizedBox(height: 8),
             Wrap(
               spacing: 8,
               runSpacing: 8,
+              alignment: WrapAlignment.center,
               children: [for (final tag in tags) _StatusChip(label: tag)],
             ),
           ],
@@ -1564,6 +1636,7 @@ class _StatusChip extends StatelessWidget {
           fontSize: 13,
           fontWeight: FontWeight.w600,
         ),
+        textAlign: TextAlign.center,
       ),
     );
   }

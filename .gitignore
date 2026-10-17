@@ -60,6 +60,7 @@ coverage/
 test/failures/
 *.apk
 *.aab
+/artifacts/
 *.ipa
 node_modules/
 

@@ -1,8 +1,12 @@
+import 'package:ficharqr/src/presentation/widgets/app_card.dart';
+import 'package:ficharqr/src/presentation/theme/app_palette.dart';
+import '../widgets/scrollable_error_state.dart';
 import 'dart:async';
 
 import 'package:file_picker/file_picker.dart';
 import 'package:flutter/foundation.dart';
 import 'package:flutter/material.dart';
+import '../widgets/app_page_layout.dart';
 import 'package:image_picker/image_picker.dart';
 import 'package:url_launcher/url_launcher.dart';
 
@@ -242,15 +246,23 @@ class _JustificacionesPageState extends State<JustificacionesPage> {
         id: item.id,
       );
       if (!mounted) return;
-      ScaffoldMessenger.of(
-        context,
-      ).showSnackBar(const SnackBar(content: Text('Justificación eliminada.')));
+      ScaffoldMessenger.of(context).showSnackBar(
+        const SnackBar(
+          content: Text(
+            'Justificación eliminada.',
+            textAlign: TextAlign.center,
+          ),
+        ),
+      );
       await _load(reset: true);
       unawaited(_loadCounts());
     } on ApiException catch (e) {
       if (!mounted) return;
       ScaffoldMessenger.of(context).showSnackBar(
-        SnackBar(content: Text(e.message), backgroundColor: Colors.red),
+        SnackBar(
+          content: Text(e.message, textAlign: TextAlign.center),
+          backgroundColor: AppColors.of(context).surface(Colors.red),
+        ),
       );
       // If delete failed after swipe, re-load to restore the item in list
       await _load(reset: true);
@@ -261,7 +273,7 @@ class _JustificacionesPageState extends State<JustificacionesPage> {
   Widget build(BuildContext context) {
     return Scaffold(
       appBar: AppBar(
-        title: const Text('Mis justificaciones'),
+        title: const Text('Mis justificaciones', textAlign: TextAlign.center),
         bottom: _loading
             ? const PreferredSize(
                 preferredSize: Size.fromHeight(3),
@@ -270,13 +282,19 @@ class _JustificacionesPageState extends State<JustificacionesPage> {
             : null,
         actions: [
           IconButton(
-            icon: const Icon(Icons.add),
-            tooltip: 'Nueva justificación',
-            onPressed: _showCreateSheet,
+            icon: const Icon(Icons.refresh_rounded),
+            tooltip: 'Actualizar',
+            onPressed: _loading
+                ? null
+                : () {
+                    _load(reset: true);
+                    unawaited(_loadCounts());
+                  },
           ),
         ],
       ),
       body: Column(
+        crossAxisAlignment: CrossAxisAlignment.center,
         children: [
           if (_counts.isNotEmpty) _SummaryHeader(counts: _counts),
           _FilterRow(
@@ -315,7 +333,12 @@ class _JustificacionesPageState extends State<JustificacionesPage> {
                         return false;
                       },
                       child: ListView.separated(
-                        padding: const EdgeInsets.all(12),
+                        padding: EdgeInsets.fromLTRB(
+                          16,
+                          12,
+                          16,
+                          AppFloatingActionButton.bottomPadding(context),
+                        ),
                         itemCount: _items.length + (_loadingMore ? 1 : 0),
                         separatorBuilder: (_, __) => const SizedBox(height: 8),
                         itemBuilder: (context, i) {
@@ -352,10 +375,10 @@ class _JustificacionesPageState extends State<JustificacionesPage> {
           ),
         ],
       ),
-      floatingActionButton: FloatingActionButton.extended(
+      floatingActionButton: AppFloatingActionButton(
         onPressed: _showCreateSheet,
-        icon: const Icon(Icons.add),
-        label: const Text('Nueva'),
+        icon: const Icon(Icons.add_rounded),
+        label: const Text('Nueva', textAlign: TextAlign.center),
       ),
     );
   }
@@ -402,16 +425,22 @@ class _JustificacionesPageState extends State<JustificacionesPage> {
     final confirmed = await showDialog<bool>(
       context: context,
       builder: (ctx) => AlertDialog(
-        title: const Text('Eliminar justificación'),
-        content: const Text('¿Eliminar esta justificación pendiente?'),
+        title: const Text(
+          'Eliminar justificación',
+          textAlign: TextAlign.center,
+        ),
+        content: const Text(
+          '¿Eliminar esta justificación pendiente?',
+          textAlign: TextAlign.center,
+        ),
         actions: [
           TextButton(
             onPressed: () => Navigator.pop(ctx, false),
-            child: const Text('Cancelar'),
+            child: const Text('Cancelar', textAlign: TextAlign.center),
           ),
           FilledButton(
             onPressed: () => Navigator.pop(ctx, true),
-            child: const Text('Eliminar'),
+            child: const Text('Eliminar', textAlign: TextAlign.center),
           ),
         ],
       ),
@@ -475,20 +504,24 @@ class _StatePill extends StatelessWidget {
     return Container(
       padding: const EdgeInsets.symmetric(horizontal: 10, vertical: 4),
       decoration: BoxDecoration(
-        color: color.withValues(alpha: 0.12),
+        color: AppColors.of(context).surface(color.withValues(alpha: 0.12)),
         borderRadius: BorderRadius.circular(20),
-        border: Border.all(color: color.withValues(alpha: 0.3)),
+        border: Border.all(
+          color: AppColors.of(context).border(color.withValues(alpha: 0.3)),
+        ),
       ),
       child: Row(
         mainAxisSize: MainAxisSize.min,
+        mainAxisAlignment: MainAxisAlignment.center,
         children: [
           Text(
             '$count',
             style: TextStyle(
               fontSize: 13,
               fontWeight: FontWeight.w800,
-              color: color,
+              color: AppColors.of(context).foreground(color),
             ),
+            textAlign: TextAlign.center,
           ),
           const SizedBox(width: 4),
           Text(
@@ -496,8 +529,9 @@ class _StatePill extends StatelessWidget {
             style: TextStyle(
               fontSize: 13,
               fontWeight: FontWeight.w500,
-              color: color,
+              color: AppColors.of(context).foreground(color),
             ),
+            textAlign: TextAlign.center,
           ),
         ],
       ),
@@ -539,7 +573,7 @@ class _FilterRow extends StatelessWidget {
           Padding(
             padding: const EdgeInsets.only(right: 8),
             child: ActionChip(
-              avatar: const Icon(Icons.date_range, size: 18),
+              avatar: const Icon(Icons.date_range_rounded, size: 18),
               label: Text(
                 desde == null || hasta == null
                     ? 'Fechas'
@@ -552,7 +586,7 @@ class _FilterRow extends StatelessWidget {
             Padding(
               padding: const EdgeInsets.only(right: 8),
               child: ActionChip(
-                avatar: const Icon(Icons.clear, size: 18),
+                avatar: const Icon(Icons.clear_rounded, size: 18),
                 label: const Text('Limpiar fechas'),
                 onPressed: onDateRangeClear,
               ),
@@ -603,7 +637,7 @@ class _SwipeDeleteBackground extends StatelessWidget {
         borderRadius: BorderRadius.circular(12),
       ),
       child: Icon(
-        Icons.delete_outline,
+        Icons.delete_rounded,
         color: Theme.of(context).colorScheme.onErrorContainer,
       ),
     );
@@ -628,9 +662,9 @@ class _JustificacionCard extends StatelessWidget {
 
   IconData _estadoIcon(String? estado) {
     return switch (estado) {
-      'aprobada' => Icons.check_circle_outline,
-      'rechazada' => Icons.cancel_outlined,
-      _ => Icons.hourglass_empty_outlined,
+      'aprobada' => Icons.check_circle_rounded,
+      'rechazada' => Icons.cancel_rounded,
+      _ => Icons.hourglass_empty_rounded,
     };
   }
 
@@ -640,28 +674,35 @@ class _JustificacionCard extends StatelessWidget {
     final color = _estadoColor(context, item.estado);
     final fechaDisplay = _justificacionPeriodoDisplay(item);
 
-    return Card(
+    return AppCard(
       clipBehavior: Clip.antiAlias,
       child: IntrinsicHeight(
         child: Row(
           crossAxisAlignment: CrossAxisAlignment.stretch,
+          mainAxisAlignment: MainAxisAlignment.center,
           children: [
-            Container(width: 5, color: color),
+            Container(width: 5, color: AppColors.of(context).surface(color)),
             Expanded(
               child: Padding(
                 padding: const EdgeInsets.fromLTRB(12, 12, 12, 12),
                 child: Column(
-                  crossAxisAlignment: CrossAxisAlignment.start,
+                  crossAxisAlignment: CrossAxisAlignment.center,
                   children: [
                     Row(
+                      mainAxisAlignment: MainAxisAlignment.center,
                       children: [
-                        Icon(_estadoIcon(item.estado), color: color, size: 18),
+                        Icon(
+                          _estadoIcon(item.estado),
+                          color: AppColors.of(context).foreground(color),
+                          size: 18,
+                        ),
                         const SizedBox(width: 6),
                         Expanded(
                           child: Text(
                             'Justificación #${item.id}',
                             style: Theme.of(context).textTheme.titleSmall
                                 ?.copyWith(fontWeight: FontWeight.w700),
+                            textAlign: TextAlign.center,
                           ),
                         ),
                         Container(
@@ -670,7 +711,9 @@ class _JustificacionCard extends StatelessWidget {
                             vertical: 3,
                           ),
                           decoration: BoxDecoration(
-                            color: color.withValues(alpha: 0.12),
+                            color: AppColors.of(
+                              context,
+                            ).surface(color.withValues(alpha: 0.12)),
                             borderRadius: BorderRadius.circular(20),
                           ),
                           child: Text(
@@ -678,17 +721,19 @@ class _JustificacionCard extends StatelessWidget {
                             style: TextStyle(
                               fontSize: 13,
                               fontWeight: FontWeight.w700,
-                              color: color,
+                              color: AppColors.of(context).foreground(color),
                             ),
+                            textAlign: TextAlign.center,
                           ),
                         ),
                       ],
                     ),
                     const SizedBox(height: 6),
                     Row(
+                      mainAxisAlignment: MainAxisAlignment.center,
                       children: [
                         Icon(
-                          Icons.calendar_today_outlined,
+                          Icons.calendar_today_rounded,
                           size: 13,
                           color: cs.onSurfaceVariant,
                         ),
@@ -696,11 +741,12 @@ class _JustificacionCard extends StatelessWidget {
                         Text(
                           fechaDisplay,
                           style: Theme.of(context).textTheme.bodySmall,
+                          textAlign: TextAlign.center,
                         ),
                         if (item.estado == 'pendiente') ...[
                           const Spacer(),
                           Icon(
-                            Icons.swipe_left_outlined,
+                            Icons.swipe_left_rounded,
                             size: 13,
                             color: cs.outlineVariant,
                           ),
@@ -709,6 +755,7 @@ class _JustificacionCard extends StatelessWidget {
                             'deslizar para eliminar',
                             style: Theme.of(context).textTheme.labelSmall
                                 ?.copyWith(color: cs.outlineVariant),
+                            textAlign: TextAlign.center,
                           ),
                         ],
                       ],
@@ -722,19 +769,26 @@ class _JustificacionCard extends StatelessWidget {
                         ),
                         maxLines: 2,
                         overflow: TextOverflow.ellipsis,
+                        textAlign: TextAlign.center,
                       ),
                     ],
                     if (item.hasAdjuntos) ...[
                       const SizedBox(height: 4),
                       Row(
+                        mainAxisAlignment: MainAxisAlignment.center,
                         children: [
-                          Icon(Icons.attach_file, size: 13, color: cs.primary),
+                          Icon(
+                            Icons.attach_file_rounded,
+                            size: 13,
+                            color: cs.primary,
+                          ),
                           const SizedBox(width: 3),
                           Text(
                             item.hasAdjuntos
                                 ? '${item.effectiveAdjuntosCount} adjunto${item.effectiveAdjuntosCount == 1 ? '' : 's'}'
                                 : 'Adjunto',
                             style: TextStyle(fontSize: 13, color: cs.primary),
+                            textAlign: TextAlign.center,
                           ),
                         ],
                       ),
@@ -746,7 +800,7 @@ class _JustificacionCard extends StatelessWidget {
             Padding(
               padding: const EdgeInsets.only(right: 8),
               child: Icon(
-                Icons.chevron_right,
+                Icons.chevron_right_rounded,
                 color: cs.outlineVariant,
                 size: 18,
               ),
@@ -805,9 +859,9 @@ class _DetailSheetState extends State<_DetailSheet> {
 
   IconData _estadoIcon(String? estado) {
     return switch (estado) {
-      'aprobada' => Icons.check_circle_outline,
-      'rechazada' => Icons.cancel_outlined,
-      _ => Icons.hourglass_empty_outlined,
+      'aprobada' => Icons.check_circle_rounded,
+      'rechazada' => Icons.cancel_rounded,
+      _ => Icons.hourglass_empty_rounded,
     };
   }
 
@@ -820,7 +874,12 @@ class _DetailSheetState extends State<_DetailSheet> {
     if (uri == null) {
       if (context.mounted) {
         ScaffoldMessenger.of(context).showSnackBar(
-          const SnackBar(content: Text('No se pudo abrir el adjunto.')),
+          const SnackBar(
+            content: Text(
+              'No se pudo abrir el adjunto.',
+              textAlign: TextAlign.center,
+            ),
+          ),
         );
       }
       return;
@@ -828,7 +887,12 @@ class _DetailSheetState extends State<_DetailSheet> {
     final launched = await launchUrl(uri, mode: LaunchMode.externalApplication);
     if (!launched && context.mounted) {
       ScaffoldMessenger.of(context).showSnackBar(
-        const SnackBar(content: Text('No se pudo abrir el adjunto.')),
+        const SnackBar(
+          content: Text(
+            'No se pudo abrir el adjunto.',
+            textAlign: TextAlign.center,
+          ),
+        ),
       );
     }
   }
@@ -838,16 +902,19 @@ class _DetailSheetState extends State<_DetailSheet> {
     final confirmed = await showDialog<bool>(
       context: context,
       builder: (ctx) => AlertDialog(
-        title: const Text('Eliminar adjunto'),
-        content: Text('Â¿Eliminar ${adjunto.displayName}?'),
+        title: const Text('Eliminar adjunto', textAlign: TextAlign.center),
+        content: Text(
+          'Â¿Eliminar ${adjunto.displayName}?',
+          textAlign: TextAlign.center,
+        ),
         actions: [
           TextButton(
             onPressed: () => Navigator.pop(ctx, false),
-            child: const Text('Cancelar'),
+            child: const Text('Cancelar', textAlign: TextAlign.center),
           ),
           FilledButton(
             onPressed: () => Navigator.pop(ctx, true),
-            child: const Text('Eliminar'),
+            child: const Text('Eliminar', textAlign: TextAlign.center),
           ),
         ],
       ),
@@ -868,13 +935,18 @@ class _DetailSheetState extends State<_DetailSheet> {
             .toList(growable: false);
       });
       widget.onChanged();
-      ScaffoldMessenger.of(
-        context,
-      ).showSnackBar(const SnackBar(content: Text('Adjunto eliminado.')));
+      ScaffoldMessenger.of(context).showSnackBar(
+        const SnackBar(
+          content: Text('Adjunto eliminado.', textAlign: TextAlign.center),
+        ),
+      );
     } on ApiException catch (e) {
       if (!mounted) return;
       ScaffoldMessenger.of(context).showSnackBar(
-        SnackBar(content: Text(e.message), backgroundColor: Colors.red),
+        SnackBar(
+          content: Text(e.message, textAlign: TextAlign.center),
+          backgroundColor: AppColors.of(context).surface(Colors.red),
+        ),
       );
     } finally {
       if (mounted) setState(() => _deletingAdjunto = false);
@@ -903,6 +975,7 @@ class _DetailSheetState extends State<_DetailSheet> {
       maxChildSize: 0.85,
       builder: (context, scrollController) {
         return Column(
+          crossAxisAlignment: CrossAxisAlignment.center,
           children: [
             Padding(
               padding: const EdgeInsets.symmetric(vertical: 10),
@@ -921,28 +994,32 @@ class _DetailSheetState extends State<_DetailSheet> {
                 padding: const EdgeInsets.fromLTRB(20, 0, 20, 24),
                 children: [
                   Row(
+                    mainAxisAlignment: MainAxisAlignment.center,
                     children: [
                       Container(
                         padding: const EdgeInsets.all(10),
                         decoration: BoxDecoration(
-                          color: color.withValues(alpha: 0.12),
+                          color: AppColors.of(
+                            context,
+                          ).surface(color.withValues(alpha: 0.12)),
                           shape: BoxShape.circle,
                         ),
                         child: Icon(
                           _estadoIcon(item.estado),
-                          color: color,
+                          color: AppColors.of(context).foreground(color),
                           size: 24,
                         ),
                       ),
                       const SizedBox(width: 12),
                       Expanded(
                         child: Column(
-                          crossAxisAlignment: CrossAxisAlignment.start,
+                          crossAxisAlignment: CrossAxisAlignment.center,
                           children: [
                             Text(
                               'Justificación #${item.id}',
                               style: Theme.of(context).textTheme.titleMedium
                                   ?.copyWith(fontWeight: FontWeight.w700),
+                              textAlign: TextAlign.center,
                             ),
                             const SizedBox(height: 2),
                             Container(
@@ -951,7 +1028,9 @@ class _DetailSheetState extends State<_DetailSheet> {
                                 vertical: 3,
                               ),
                               decoration: BoxDecoration(
-                                color: color.withValues(alpha: 0.12),
+                                color: AppColors.of(
+                                  context,
+                                ).surface(color.withValues(alpha: 0.12)),
                                 borderRadius: BorderRadius.circular(20),
                               ),
                               child: Text(
@@ -959,8 +1038,11 @@ class _DetailSheetState extends State<_DetailSheet> {
                                 style: TextStyle(
                                   fontSize: 13,
                                   fontWeight: FontWeight.w700,
-                                  color: color,
+                                  color: AppColors.of(
+                                    context,
+                                  ).foreground(color),
                                 ),
+                                textAlign: TextAlign.center,
                               ),
                             ),
                           ],
@@ -972,7 +1054,7 @@ class _DetailSheetState extends State<_DetailSheet> {
                   const Divider(),
                   const SizedBox(height: 16),
                   _DetailRow(
-                    icon: Icons.calendar_today_outlined,
+                    icon: Icons.calendar_today_rounded,
                     label: item.hasFechaRange
                         ? 'Periodo justificado'
                         : (item.asistenciaFecha != null
@@ -982,7 +1064,7 @@ class _DetailSheetState extends State<_DetailSheet> {
                   ),
                   const SizedBox(height: 12),
                   _DetailRow(
-                    icon: Icons.history_outlined,
+                    icon: Icons.history_rounded,
                     label: 'Fecha de creación',
                     value: creacion,
                   ),
@@ -994,6 +1076,7 @@ class _DetailSheetState extends State<_DetailSheet> {
                         color: cs.onSurfaceVariant,
                         fontWeight: FontWeight.w600,
                       ),
+                      textAlign: TextAlign.center,
                     ),
                     const SizedBox(height: 6),
                     Container(
@@ -1007,6 +1090,7 @@ class _DetailSheetState extends State<_DetailSheet> {
                       child: Text(
                         item.motivo!,
                         style: Theme.of(context).textTheme.bodyMedium,
+                        textAlign: TextAlign.center,
                       ),
                     ),
                   ],
@@ -1018,6 +1102,7 @@ class _DetailSheetState extends State<_DetailSheet> {
                         color: cs.onSurfaceVariant,
                         fontWeight: FontWeight.w600,
                       ),
+                      textAlign: TextAlign.center,
                     ),
                     const SizedBox(height: 8),
                     if (hasServerAdjuntos)
@@ -1047,7 +1132,7 @@ class _DetailSheetState extends State<_DetailSheet> {
                       _JustificacionAttachmentCard(
                         title: 'Archivo legado',
                         subtitle: item.archivo!.trim(),
-                        icon: Icons.link_outlined,
+                        icon: Icons.link_rounded,
                         onTap: () {
                           unawaited(_openAttachment(context, item.archivo));
                         },
@@ -1056,7 +1141,7 @@ class _DetailSheetState extends State<_DetailSheet> {
                       const _JustificacionAttachmentCard(
                         title: 'Adjuntos registrados',
                         subtitle: 'No se pudieron listar para descarga.',
-                        icon: Icons.attach_file,
+                        icon: Icons.attach_file_rounded,
                       ),
                   ],
                   if (widget.onEdit != null || widget.onDelete != null) ...[
@@ -1064,8 +1149,11 @@ class _DetailSheetState extends State<_DetailSheet> {
                     if (widget.onEdit != null)
                       FilledButton.icon(
                         onPressed: widget.onEdit,
-                        icon: const Icon(Icons.edit_outlined),
-                        label: const Text('Editar motivo'),
+                        icon: const Icon(Icons.edit_rounded),
+                        label: const Text(
+                          'Editar motivo',
+                          textAlign: TextAlign.center,
+                        ),
                         style: FilledButton.styleFrom(
                           padding: const EdgeInsets.symmetric(vertical: 14),
                           minimumSize: const Size(double.infinity, 0),
@@ -1076,10 +1164,11 @@ class _DetailSheetState extends State<_DetailSheet> {
                     if (widget.onDelete != null)
                       OutlinedButton.icon(
                         onPressed: widget.onDelete,
-                        icon: Icon(Icons.delete_outline, color: cs.error),
+                        icon: Icon(Icons.delete_rounded, color: cs.error),
                         label: Text(
                           'Eliminar justificación',
                           style: TextStyle(color: cs.error),
+                          textAlign: TextAlign.center,
                         ),
                         style: OutlinedButton.styleFrom(
                           side: BorderSide(color: cs.error),
@@ -1436,6 +1525,7 @@ class _CreateJustificacionSheetState extends State<_CreateJustificacionSheet> {
       padding: EdgeInsets.only(bottom: bottomPadding),
       child: Column(
         mainAxisSize: MainAxisSize.max,
+        crossAxisAlignment: CrossAxisAlignment.center,
         children: [
           Padding(
             padding: const EdgeInsets.symmetric(vertical: 10),
@@ -1451,17 +1541,19 @@ class _CreateJustificacionSheetState extends State<_CreateJustificacionSheet> {
           Padding(
             padding: const EdgeInsets.fromLTRB(20, 0, 20, 4),
             child: Row(
+              mainAxisAlignment: MainAxisAlignment.center,
               children: [
                 Text(
                   'Nueva justificación',
                   style: Theme.of(context).textTheme.titleMedium?.copyWith(
                     fontWeight: FontWeight.w700,
                   ),
+                  textAlign: TextAlign.center,
                 ),
                 const Spacer(),
                 IconButton(
                   onPressed: () => Navigator.pop(context, false),
-                  icon: const Icon(Icons.close),
+                  icon: const Icon(Icons.close_rounded),
                 ),
               ],
             ),
@@ -1490,6 +1582,7 @@ class _CreateJustificacionSheetState extends State<_CreateJustificacionSheet> {
                       color: cs.onSurfaceVariant,
                       fontWeight: FontWeight.w600,
                     ),
+                    textAlign: TextAlign.center,
                   ),
                   const SizedBox(height: 8),
                   OutlinedButton.icon(
@@ -1503,12 +1596,13 @@ class _CreateJustificacionSheetState extends State<_CreateJustificacionSheet> {
                             height: 16,
                             child: CircularProgressIndicator(strokeWidth: 2),
                           )
-                        : const Icon(Icons.event_outlined),
+                        : const Icon(Icons.event_rounded),
                     label: Text(
                       _formatSelectedRange(
                         _selectedFechaDesde,
                         _selectedFechaHasta,
                       ),
+                      textAlign: TextAlign.center,
                     ),
                   ),
                   const SizedBox(height: 8),
@@ -1517,6 +1611,7 @@ class _CreateJustificacionSheetState extends State<_CreateJustificacionSheet> {
                     style: Theme.of(
                       context,
                     ).textTheme.bodySmall?.copyWith(color: cs.onSurfaceVariant),
+                    textAlign: TextAlign.center,
                   ),
                   if (_selectedFechaDesde != null &&
                       _selectedFechaHasta != null &&
@@ -1528,6 +1623,7 @@ class _CreateJustificacionSheetState extends State<_CreateJustificacionSheet> {
                       style: Theme.of(context).textTheme.bodySmall?.copyWith(
                         color: cs.onSurfaceVariant,
                       ),
+                      textAlign: TextAlign.center,
                     ),
                   ],
                   if (_selectedFechaDesde != null &&
@@ -1539,6 +1635,7 @@ class _CreateJustificacionSheetState extends State<_CreateJustificacionSheet> {
                       style: Theme.of(context).textTheme.bodySmall?.copyWith(
                         color: cs.onSurfaceVariant,
                       ),
+                      textAlign: TextAlign.center,
                     ),
                   ],
                   if (_selectedAsistencia != null) ...[
@@ -1547,7 +1644,7 @@ class _CreateJustificacionSheetState extends State<_CreateJustificacionSheet> {
                       title:
                           'Asistencia vinculada ${DateFormatter.formatApiDateForDisplay(_selectedAsistencia!.fecha)}',
                       subtitle: _asistenciaSubtitle(_selectedAsistencia!),
-                      icon: Icons.event_available_outlined,
+                      icon: Icons.event_available_rounded,
                       onRemove: _saving ? null : _clearAsistencia,
                     ),
                   ],
@@ -1556,6 +1653,7 @@ class _CreateJustificacionSheetState extends State<_CreateJustificacionSheet> {
                     Text(
                       _asistenciaError!,
                       style: TextStyle(color: cs.error, fontSize: 13),
+                      textAlign: TextAlign.center,
                     ),
                   ],
                   const SizedBox(height: 14),
@@ -1565,11 +1663,12 @@ class _CreateJustificacionSheetState extends State<_CreateJustificacionSheet> {
                       onPressed: _saving || _pickingAttachment
                           ? null
                           : _addAttachment,
-                      icon: const Icon(Icons.add_photo_alternate_outlined),
+                      icon: const Icon(Icons.add_photo_alternate_rounded),
                       label: Text(
                         _pickingAttachment
                             ? 'Procesando...'
                             : 'Adjuntar evidencia',
+                        textAlign: TextAlign.center,
                       ),
                     ),
                   ),
@@ -1579,6 +1678,7 @@ class _CreateJustificacionSheetState extends State<_CreateJustificacionSheet> {
                     style: Theme.of(
                       context,
                     ).textTheme.bodySmall?.copyWith(color: cs.onSurfaceVariant),
+                    textAlign: TextAlign.center,
                   ),
                   if (_adjuntos.isNotEmpty) ...[
                     const SizedBox(height: 14),
@@ -1588,6 +1688,7 @@ class _CreateJustificacionSheetState extends State<_CreateJustificacionSheet> {
                         color: cs.onSurfaceVariant,
                         fontWeight: FontWeight.w600,
                       ),
+                      textAlign: TextAlign.center,
                     ),
                     const SizedBox(height: 8),
                     for (var i = 0; i < _adjuntos.length; i++)
@@ -1605,6 +1706,7 @@ class _CreateJustificacionSheetState extends State<_CreateJustificacionSheet> {
                     Text(
                       _error!,
                       style: TextStyle(color: cs.error, fontSize: 13),
+                      textAlign: TextAlign.center,
                     ),
                   ],
                   const SizedBox(height: 16),
@@ -1622,7 +1724,10 @@ class _CreateJustificacionSheetState extends State<_CreateJustificacionSheet> {
                               valueColor: AlwaysStoppedAnimation(Colors.white),
                             ),
                           )
-                        : const Text('Guardar justificación'),
+                        : const Text(
+                            'Guardar justificación',
+                            textAlign: TextAlign.center,
+                          ),
                   ),
                 ],
               ),
@@ -1863,6 +1968,7 @@ class _EditJustificacionSheetState extends State<_EditJustificacionSheet> {
       padding: EdgeInsets.only(bottom: bottomPadding),
       child: Column(
         mainAxisSize: MainAxisSize.max,
+        crossAxisAlignment: CrossAxisAlignment.center,
         children: [
           Padding(
             padding: const EdgeInsets.symmetric(vertical: 10),
@@ -1878,17 +1984,19 @@ class _EditJustificacionSheetState extends State<_EditJustificacionSheet> {
           Padding(
             padding: const EdgeInsets.fromLTRB(20, 0, 20, 4),
             child: Row(
+              mainAxisAlignment: MainAxisAlignment.center,
               children: [
                 Text(
                   'Editar justificación #${widget.item.id}',
                   style: Theme.of(context).textTheme.titleMedium?.copyWith(
                     fontWeight: FontWeight.w700,
                   ),
+                  textAlign: TextAlign.center,
                 ),
                 const Spacer(),
                 IconButton(
                   onPressed: () => Navigator.pop(context, false),
-                  icon: const Icon(Icons.close),
+                  icon: const Icon(Icons.close_rounded),
                 ),
               ],
             ),
@@ -1919,6 +2027,7 @@ class _EditJustificacionSheetState extends State<_EditJustificacionSheet> {
                         color: cs.onSurfaceVariant,
                         fontWeight: FontWeight.w600,
                       ),
+                      textAlign: TextAlign.center,
                     ),
                     const SizedBox(height: 8),
                     OutlinedButton.icon(
@@ -1932,12 +2041,13 @@ class _EditJustificacionSheetState extends State<_EditJustificacionSheet> {
                               height: 16,
                               child: CircularProgressIndicator(strokeWidth: 2),
                             )
-                          : const Icon(Icons.event_outlined),
+                          : const Icon(Icons.event_rounded),
                       label: Text(
                         _formatSelectedRange(
                           _selectedFechaDesde,
                           _selectedFechaHasta,
                         ),
+                        textAlign: TextAlign.center,
                       ),
                     ),
                     const SizedBox(height: 8),
@@ -1946,11 +2056,12 @@ class _EditJustificacionSheetState extends State<_EditJustificacionSheet> {
                       style: Theme.of(context).textTheme.bodySmall?.copyWith(
                         color: cs.onSurfaceVariant,
                       ),
+                      textAlign: TextAlign.center,
                     ),
                     if (widget.item.asistenciaFecha != null) ...[
                       const SizedBox(height: 10),
                       _DetailRow(
-                        icon: Icons.event_available_outlined,
+                        icon: Icons.event_available_rounded,
                         label: 'Asistencia vinculada',
                         value: DateFormatter.formatApiDateForDisplay(
                           widget.item.asistenciaFecha,
@@ -1966,6 +2077,7 @@ class _EditJustificacionSheetState extends State<_EditJustificacionSheet> {
                         color: cs.onSurfaceVariant,
                         fontWeight: FontWeight.w600,
                       ),
+                      textAlign: TextAlign.center,
                     ),
                     const SizedBox(height: 8),
                     if (widget.item.adjuntos.isNotEmpty)
@@ -1991,7 +2103,7 @@ class _EditJustificacionSheetState extends State<_EditJustificacionSheet> {
                       _JustificacionAttachmentCard(
                         title: 'Archivo legado',
                         subtitle: widget.item.archivo!.trim(),
-                        icon: Icons.link_outlined,
+                        icon: Icons.link_rounded,
                         onTap: () {
                           unawaited(
                             _openJustificacionAttachment(
@@ -2010,11 +2122,12 @@ class _EditJustificacionSheetState extends State<_EditJustificacionSheet> {
                       onPressed: _saving || _pickingAttachment
                           ? null
                           : _addAttachment,
-                      icon: const Icon(Icons.add_photo_alternate_outlined),
+                      icon: const Icon(Icons.add_photo_alternate_rounded),
                       label: Text(
                         _pickingAttachment
                             ? 'Procesando...'
                             : 'Agregar evidencia',
+                        textAlign: TextAlign.center,
                       ),
                     ),
                   ),
@@ -2024,6 +2137,7 @@ class _EditJustificacionSheetState extends State<_EditJustificacionSheet> {
                     style: Theme.of(
                       context,
                     ).textTheme.bodySmall?.copyWith(color: cs.onSurfaceVariant),
+                    textAlign: TextAlign.center,
                   ),
                   if (_adjuntos.isNotEmpty) ...[
                     const SizedBox(height: 14),
@@ -2033,6 +2147,7 @@ class _EditJustificacionSheetState extends State<_EditJustificacionSheet> {
                         color: cs.onSurfaceVariant,
                         fontWeight: FontWeight.w600,
                       ),
+                      textAlign: TextAlign.center,
                     ),
                     const SizedBox(height: 8),
                     for (var i = 0; i < _adjuntos.length; i++)
@@ -2050,6 +2165,7 @@ class _EditJustificacionSheetState extends State<_EditJustificacionSheet> {
                     Text(
                       _error!,
                       style: TextStyle(color: cs.error, fontSize: 13),
+                      textAlign: TextAlign.center,
                     ),
                   ],
                   const SizedBox(height: 16),
@@ -2067,7 +2183,10 @@ class _EditJustificacionSheetState extends State<_EditJustificacionSheet> {
                               valueColor: AlwaysStoppedAnimation(Colors.white),
                             ),
                           )
-                        : const Text('Guardar cambios'),
+                        : const Text(
+                            'Guardar cambios',
+                            textAlign: TextAlign.center,
+                          ),
                   ),
                 ],
               ),
@@ -2077,7 +2196,7 @@ class _EditJustificacionSheetState extends State<_EditJustificacionSheet> {
             const _JustificacionAttachmentCard(
               title: 'Adjuntos actuales',
               subtitle: 'No se pudieron listar para descarga.',
-              icon: Icons.attach_file,
+              icon: Icons.attach_file_rounded,
             ),
         ],
       ),
@@ -2118,9 +2237,9 @@ class _JustificacionAttachmentCard extends StatelessWidget {
   Widget build(BuildContext context) {
     final cs = Theme.of(context).colorScheme;
     final actionIcon = onRemove != null
-        ? Icons.close
+        ? Icons.close_rounded
         : onTap != null
-        ? Icons.open_in_new_outlined
+        ? Icons.open_in_new_rounded
         : null;
     final actionTooltip = onRemove != null
         ? 'Quitar'
@@ -2128,7 +2247,7 @@ class _JustificacionAttachmentCard extends StatelessWidget {
         ? 'Abrir'
         : null;
 
-    return Card(
+    return AppCard(
       margin: const EdgeInsets.only(bottom: 8),
       elevation: 0,
       color: cs.surfaceContainerLow,
@@ -2144,10 +2263,20 @@ class _JustificacionAttachmentCard extends StatelessWidget {
           ),
           child: Icon(icon, size: 18, color: cs.primary),
         ),
-        title: Text(title, maxLines: 1, overflow: TextOverflow.ellipsis),
+        title: Text(
+          title,
+          maxLines: 1,
+          overflow: TextOverflow.ellipsis,
+          textAlign: TextAlign.center,
+        ),
         subtitle: subtitle == null
             ? null
-            : Text(subtitle!, maxLines: 2, overflow: TextOverflow.ellipsis),
+            : Text(
+                subtitle!,
+                maxLines: 2,
+                overflow: TextOverflow.ellipsis,
+                textAlign: TextAlign.center,
+              ),
         trailing: actionIcon == null
             ? null
             : IconButton(
@@ -2193,7 +2322,7 @@ Future<_AttachmentSourceChoice?> _showAttachmentSourceSheet(
               FilledButton.tonalIcon(
                 onPressed: () =>
                     Navigator.pop(sheetContext, _AttachmentSourceChoice.camera),
-                icon: const Icon(Icons.photo_camera_outlined),
+                icon: const Icon(Icons.photo_camera_rounded),
                 label: const Text('Tomar foto'),
               ),
               const SizedBox(height: 10),
@@ -2202,14 +2331,14 @@ Future<_AttachmentSourceChoice?> _showAttachmentSourceSheet(
                   sheetContext,
                   _AttachmentSourceChoice.gallery,
                 ),
-                icon: const Icon(Icons.photo_library_outlined),
+                icon: const Icon(Icons.photo_library_rounded),
                 label: const Text('Elegir de la galeria'),
               ),
               const SizedBox(height: 10),
               OutlinedButton.icon(
                 onPressed: () =>
                     Navigator.pop(sheetContext, _AttachmentSourceChoice.file),
-                icon: const Icon(Icons.attach_file),
+                icon: const Icon(Icons.attach_file_rounded),
                 label: const Text('Elegir archivo'),
               ),
             ],
@@ -2266,7 +2395,7 @@ Future<AsistenciaItem?> _showAsistenciaSelectionSheet(
                       title:
                           'Asistencia ${DateFormatter.formatApiDateForDisplay(item.fecha)}',
                       subtitle: _asistenciaSubtitle(item),
-                      icon: Icons.event_available_outlined,
+                      icon: Icons.event_available_rounded,
                       onTap: () => Navigator.pop(sheetContext, item),
                     );
                   },
@@ -2358,23 +2487,23 @@ IconData _attachmentIconForServerAttachment(JustificacionAdjuntoItem adjunto) {
   final extension = adjunto.extension?.trim().toLowerCase() ?? '';
   if (mime.startsWith('image/') ||
       ['jpg', 'jpeg', 'png', 'webp', 'gif', 'bmp'].contains(extension)) {
-    return Icons.image_outlined;
+    return Icons.image_rounded;
   }
   if (mime == 'application/pdf' || extension == 'pdf') {
-    return Icons.picture_as_pdf_outlined;
+    return Icons.picture_as_pdf_rounded;
   }
-  return Icons.attach_file;
+  return Icons.attach_file_rounded;
 }
 
 IconData _attachmentIconForDraft(String name) {
   final extension = name.split('.').last.trim().toLowerCase();
   if (['jpg', 'jpeg', 'png', 'webp', 'gif', 'bmp'].contains(extension)) {
-    return Icons.image_outlined;
+    return Icons.image_rounded;
   }
   if (extension == 'pdf') {
-    return Icons.picture_as_pdf_outlined;
+    return Icons.picture_as_pdf_rounded;
   }
-  return Icons.attach_file;
+  return Icons.attach_file_rounded;
 }
 
 Future<List<_DraftJustificacionAdjunto>> _pickCameraAttachments(
@@ -2585,7 +2714,7 @@ class _EmptyView extends StatelessWidget {
         child: Column(
           mainAxisSize: MainAxisSize.min,
           children: [
-            Icon(Icons.fact_check_outlined, size: 64, color: cs.outlineVariant),
+            Icon(Icons.fact_check_rounded, size: 64, color: cs.outlineVariant),
             const SizedBox(height: 16),
             Text(
               'Sin justificaciones',
@@ -2612,30 +2741,7 @@ class _ErrorView extends StatelessWidget {
 
   @override
   Widget build(BuildContext context) {
-    final cs = Theme.of(context).colorScheme;
-    return Center(
-      child: Padding(
-        padding: const EdgeInsets.all(32),
-        child: Column(
-          mainAxisSize: MainAxisSize.min,
-          children: [
-            Icon(Icons.error_outline, size: 48, color: cs.error),
-            const SizedBox(height: 12),
-            Text(
-              message,
-              textAlign: TextAlign.center,
-              style: TextStyle(color: cs.onSurface),
-            ),
-            const SizedBox(height: 16),
-            OutlinedButton.icon(
-              onPressed: onRetry,
-              icon: const Icon(Icons.refresh),
-              label: const Text('Reintentar'),
-            ),
-          ],
-        ),
-      ),
-    );
+    return ScrollableErrorState(message: message, onRetry: onRetry);
   }
 }
 
@@ -2718,7 +2824,7 @@ class _SkeletonBox extends StatelessWidget {
       child: Container(
         height: height,
         decoration: BoxDecoration(
-          color: color,
+          color: AppColors.of(context).surface(color),
           borderRadius: BorderRadius.circular(radius),
         ),
       ),

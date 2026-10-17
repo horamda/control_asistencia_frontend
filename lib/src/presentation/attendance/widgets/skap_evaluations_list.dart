@@ -1,8 +1,9 @@
+import '../../theme/app_palette.dart';
 import 'package:flutter/material.dart';
 
-const _ink = Color(0xFF123B53);
-const _teal = Color(0xFF14745C);
-const _red = Color(0xFFB33138);
+const _ink = AppPalette.navy;
+const _teal = AppPalette.success;
+const _red = AppPalette.danger;
 
 /// Overview of personal evaluations; never combines scores across roles.
 class SkapEvaluationsList extends StatefulWidget {
@@ -56,32 +57,38 @@ class _SkapEvaluationsListState extends State<SkapEvaluationsList> {
                       Container(
                         padding: const EdgeInsets.all(24),
                         decoration: BoxDecoration(
-                          gradient: const LinearGradient(
-                            colors: [_ink, Color(0xFF1A5967)],
+                          gradient: LinearGradient(
+                            colors: AppColors.of(context).brandGradient,
                             begin: Alignment.topLeft,
                             end: Alignment.bottomRight,
                           ),
                           borderRadius: BorderRadius.circular(24),
                         ),
                         child: Column(
-                          crossAxisAlignment: CrossAxisAlignment.start,
+                          crossAxisAlignment: CrossAxisAlignment.center,
                           children: [
-                            const Row(
+                            Row(
+                              mainAxisAlignment: MainAxisAlignment.center,
                               children: [
                                 Icon(
                                   Icons.insights_rounded,
-                                  color: Color(0xFF81E0C4),
+                                  color: AppColors.of(
+                                    context,
+                                  ).foreground(const Color(0xFF81E0C4)),
                                 ),
-                                SizedBox(width: 10),
+                                const SizedBox(width: 10),
                                 Expanded(
                                   child: Text(
                                     'MI DESARROLLO · SKAP',
                                     style: TextStyle(
-                                      color: Color(0xFFD7EAF0),
+                                      color: AppColors.of(
+                                        context,
+                                      ).foreground(const Color(0xFFD7EAF0)),
                                       fontSize: 13,
                                       fontWeight: FontWeight.w700,
                                       letterSpacing: 1.4,
                                     ),
+                                    textAlign: TextAlign.center,
                                   ),
                                 ),
                               ],
@@ -95,19 +102,24 @@ class _SkapEvaluationsListState extends State<SkapEvaluationsList> {
                                     fontWeight: FontWeight.w800,
                                     height: 1.15,
                                   ),
+                              textAlign: TextAlign.center,
                             ),
                             const SizedBox(height: 12),
-                            const Text(
+                            Text(
                               'Descubrí tus fortalezas y qué podés mejorar en cada rol.',
                               style: TextStyle(
-                                color: Color(0xFFD7EAF0),
+                                color: AppColors.of(
+                                  context,
+                                ).foreground(const Color(0xFFD7EAF0)),
                                 height: 1.5,
                               ),
+                              textAlign: TextAlign.center,
                             ),
                             const SizedBox(height: 20),
                             Wrap(
                               spacing: 8,
                               runSpacing: 8,
+                              alignment: WrapAlignment.center,
                               children: [
                                 _Pill(
                                   text:
@@ -136,14 +148,18 @@ class _SkapEvaluationsListState extends State<SkapEvaluationsList> {
                             'Mis evaluaciones por rol',
                             style: Theme.of(context).textTheme.titleLarge
                                 ?.copyWith(
-                                  color: _ink,
+                                  color: AppColors.of(context).foreground(_ink),
                                   fontWeight: FontWeight.w700,
                                 ),
+                            textAlign: TextAlign.center,
                           ),
                           TextButton.icon(
                             onPressed: widget.onRefresh,
-                            icon: const Icon(Icons.refresh, size: 18),
-                            label: const Text('Actualizar'),
+                            icon: const Icon(Icons.refresh_rounded, size: 18),
+                            label: const Text(
+                              'Actualizar',
+                              textAlign: TextAlign.center,
+                            ),
                           ),
                         ],
                       ),
@@ -152,15 +168,19 @@ class _SkapEvaluationsListState extends State<SkapEvaluationsList> {
                         Wrap(
                           spacing: 8,
                           runSpacing: 8,
+                          alignment: WrapAlignment.center,
                           children: [
                             ChoiceChip(
-                              label: const Text('Todos los años'),
+                              label: const Text(
+                                'Todos los años',
+                                textAlign: TextAlign.center,
+                              ),
                               selected: selectedYear == null,
                               onSelected: (_) => setState(() => _year = null),
                             ),
                             for (final year in years)
                               ChoiceChip(
-                                label: Text(year),
+                                label: Text(year, textAlign: TextAlign.center),
                                 selected: selectedYear == year,
                                 onSelected: (_) => setState(() => _year = year),
                               ),
@@ -172,24 +192,27 @@ class _SkapEvaluationsListState extends State<SkapEvaluationsList> {
                         Container(
                           padding: const EdgeInsets.all(28),
                           decoration: BoxDecoration(
-                            color: Colors.white,
+                            color: AppColors.of(context).surface(Colors.white),
                             borderRadius: BorderRadius.circular(20),
                           ),
-                          child: const Column(
+                          child: Column(
+                            crossAxisAlignment: CrossAxisAlignment.center,
                             children: [
                               Icon(
-                                Icons.assignment_outlined,
+                                Icons.assignment_rounded,
                                 size: 42,
-                                color: _ink,
+                                color: AppColors.of(context).foreground(_ink),
                               ),
-                              SizedBox(height: 16),
-                              Text(
+                              const SizedBox(height: 16),
+                              const Text(
                                 'Todavía no tenés evaluaciones cargadas.',
                                 textAlign: TextAlign.center,
-                                style: TextStyle(fontWeight: FontWeight.w700),
+                                style: TextStyle(
+                                  fontWeight: FontWeight.w700,
+                                ),
                               ),
-                              SizedBox(height: 8),
-                              Text(
+                              const SizedBox(height: 8),
+                              const Text(
                                 'Cuando estén disponibles, vas a poder consultar acá tus resultados y próximos pasos.',
                                 textAlign: TextAlign.center,
                               ),
@@ -209,6 +232,7 @@ class _SkapEvaluationsListState extends State<SkapEvaluationsList> {
                           return Wrap(
                             spacing: 16,
                             runSpacing: 16,
+                            alignment: WrapAlignment.center,
                             children: [
                               for (final row in visible)
                                 SizedBox(
@@ -223,23 +247,29 @@ class _SkapEvaluationsListState extends State<SkapEvaluationsList> {
                         },
                       ),
                       const SizedBox(height: 24),
-                      const Row(
+                      Row(
                         crossAxisAlignment: CrossAxisAlignment.start,
+                        mainAxisAlignment: MainAxisAlignment.center,
                         children: [
                           Icon(
                             Icons.lock_outline_rounded,
                             size: 18,
-                            color: Color(0xFF58717C),
+                            color: AppColors.of(
+                              context,
+                            ).foreground(const Color(0xFF58717C)),
                           ),
-                          SizedBox(width: 8),
+                          const SizedBox(width: 8),
                           Expanded(
                             child: Text(
                               'Tus resultados son personales. Solo vos y los responsables autorizados pueden consultarlos.',
                               style: TextStyle(
-                                color: Color(0xFF58717C),
+                                color: AppColors.of(
+                                  context,
+                                ).foreground(const Color(0xFF58717C)),
                                 fontSize: 13,
                                 height: 1.5,
                               ),
+                              textAlign: TextAlign.center,
                             ),
                           ),
                         ],
@@ -286,11 +316,13 @@ class _EvaluationCard extends StatelessWidget {
         ? 'Resultado incompleto · Parcial: ${value.toStringAsFixed(2)} %'
         : 'Cumplimiento: ${value.toStringAsFixed(2)} %';
     return Material(
-      color: Colors.white,
+      color: AppColors.of(context).surface(Colors.white),
       clipBehavior: Clip.antiAlias,
       shape: RoundedRectangleBorder(
         borderRadius: BorderRadius.circular(22),
-        side: const BorderSide(color: Color(0xFFDCE5EB)),
+        side: BorderSide(
+          color: AppColors.of(context).border(AppPalette.border),
+        ),
       ),
       child: InkWell(
         onTap: onTap,
@@ -303,14 +335,20 @@ class _EvaluationCard extends StatelessWidget {
                 spacing: 10,
                 runSpacing: 10,
                 crossAxisAlignment: WrapCrossAlignment.center,
+                alignment: WrapAlignment.center,
                 children: [
                   Container(
                     padding: const EdgeInsets.all(10),
                     decoration: BoxDecoration(
-                      color: const Color(0xFFEAF2F6),
+                      color: AppColors.of(
+                        context,
+                      ).surface(const Color(0xFFEAF2F6)),
                       borderRadius: BorderRadius.circular(12),
                     ),
-                    child: const Icon(Icons.badge_outlined, color: _ink),
+                    child: Icon(
+                      Icons.badge_rounded,
+                      color: AppColors.of(context).foreground(_ink),
+                    ),
                   ),
                   _Pill(
                     text: status,
@@ -326,30 +364,44 @@ class _EvaluationCard extends StatelessWidget {
                 '${row['rol']} · ${row['anio']}',
                 style: Theme.of(context).textTheme.titleLarge?.copyWith(
                   fontWeight: FontWeight.w800,
-                  color: _ink,
+                  color: AppColors.of(context).foreground(_ink),
                 ),
+                textAlign: TextAlign.center,
               ),
               const SizedBox(height: 8),
               Row(
                 crossAxisAlignment: CrossAxisAlignment.start,
+                mainAxisAlignment: MainAxisAlignment.center,
                 children: [
-                  const Icon(
-                    Icons.location_on_outlined,
+                  Icon(
+                    Icons.location_on_rounded,
                     size: 17,
-                    color: Color(0xFF58717C),
+                    color: AppColors.of(
+                      context,
+                    ).foreground(const Color(0xFF58717C)),
                   ),
                   const SizedBox(width: 6),
                   Expanded(
                     child: Text(
                       '${row['sucursal_nombre'] ?? 'Sucursal sin informar'}',
-                      style: const TextStyle(color: Color(0xFF58717C)),
+                      style: TextStyle(
+                        color: AppColors.of(
+                          context,
+                        ).foreground(const Color(0xFF58717C)),
+                      ),
+                      textAlign: TextAlign.center,
                     ),
                   ),
                 ],
               ),
-              const Padding(
-                padding: EdgeInsets.symmetric(vertical: 18),
-                child: Divider(height: 1, color: Color(0xFFE8EEF2)),
+              Padding(
+                padding: const EdgeInsets.symmetric(vertical: 18),
+                child: Divider(
+                  height: 1,
+                  color: AppColors.of(
+                    context,
+                  ).foreground(const Color(0xFFE8EEF2)),
+                ),
               ),
               LayoutBuilder(
                 builder: (context, box) {
@@ -363,8 +415,10 @@ class _EvaluationCard extends StatelessWidget {
                           child: CircularProgressIndicator(
                             value: valid ? value / 100 : 0,
                             strokeWidth: 7,
-                            color: color,
-                            backgroundColor: const Color(0xFFEAF0F3),
+                            color: AppColors.of(context).foreground(color),
+                            backgroundColor: AppColors.of(
+                              context,
+                            ).surface(const Color(0xFFEAF0F3)),
                           ),
                         ),
                         Padding(
@@ -375,8 +429,9 @@ class _EvaluationCard extends StatelessWidget {
                               style: TextStyle(
                                 fontSize: 20,
                                 fontWeight: FontWeight.w800,
-                                color: color,
+                                color: AppColors.of(context).foreground(color),
                               ),
+                              textAlign: TextAlign.center,
                             ),
                           ),
                         ),
@@ -384,30 +439,34 @@ class _EvaluationCard extends StatelessWidget {
                     ),
                   );
                   final explanation = Column(
-                    crossAxisAlignment: CrossAxisAlignment.start,
+                    crossAxisAlignment: CrossAxisAlignment.center,
                     children: [
                       Text(
                         label,
-                        style: const TextStyle(
+                        style: TextStyle(
                           fontWeight: FontWeight.w700,
-                          color: _ink,
+                          color: AppColors.of(context).foreground(_ink),
                         ),
+                        textAlign: TextAlign.center,
                       ),
                       const SizedBox(height: 6),
-                      const Text(
+                      Text(
                         'Objetivo: 100 % del estándar de tu rol.',
                         style: TextStyle(
                           fontSize: 13,
-                          color: Color(0xFF58717C),
+                          color: AppColors.of(
+                            context,
+                          ).foreground(const Color(0xFF58717C)),
                           height: 1.4,
                         ),
+                        textAlign: TextAlign.center,
                       ),
                     ],
                   );
                   if (box.maxWidth < 260 ||
                       MediaQuery.textScalerOf(context).scale(16) >= 24) {
                     return Column(
-                      crossAxisAlignment: CrossAxisAlignment.start,
+                      crossAxisAlignment: CrossAxisAlignment.center,
                       children: [
                         indicator,
                         const SizedBox(height: 16),
@@ -416,6 +475,7 @@ class _EvaluationCard extends StatelessWidget {
                     );
                   }
                   return Row(
+                    mainAxisAlignment: MainAxisAlignment.center,
                     children: [
                       indicator,
                       const SizedBox(width: 20),
@@ -431,6 +491,7 @@ class _EvaluationCard extends StatelessWidget {
                 Wrap(
                   spacing: 8,
                   runSpacing: 8,
+                  alignment: WrapAlignment.center,
                   children: [
                     if (summary['evaluadas'] != null)
                       _Pill(
@@ -450,7 +511,7 @@ class _EvaluationCard extends StatelessWidget {
                       _Pill(
                         text: '$pending sin evaluar',
                         color: const Color(0xFFFFF0D5),
-                        foreground: const Color(0xFF895C12),
+                        foreground: AppPalette.warning,
                       ),
                   ],
                 ),
@@ -462,10 +523,11 @@ class _EvaluationCard extends StatelessWidget {
                   vertical: 12,
                 ),
                 decoration: BoxDecoration(
-                  color: _ink,
+                  color: AppColors.of(context).surface(_ink),
                   borderRadius: BorderRadius.circular(12),
                 ),
                 child: const Row(
+                  mainAxisAlignment: MainAxisAlignment.center,
                   children: [
                     Expanded(
                       child: Text(
@@ -474,6 +536,7 @@ class _EvaluationCard extends StatelessWidget {
                           color: Colors.white,
                           fontWeight: FontWeight.w700,
                         ),
+                        textAlign: TextAlign.center,
                       ),
                     ),
                     SizedBox(width: 10),
@@ -506,16 +569,17 @@ class _Pill extends StatelessWidget {
   Widget build(BuildContext context) => Container(
     padding: const EdgeInsets.symmetric(horizontal: 10, vertical: 7),
     decoration: BoxDecoration(
-      color: color,
+      color: AppColors.of(context).surface(color),
       borderRadius: BorderRadius.circular(9),
     ),
     child: Text(
       text,
       style: TextStyle(
-        color: foreground,
+        color: AppColors.of(context).foreground(foreground),
         fontSize: 13,
         fontWeight: FontWeight.w600,
       ),
+      textAlign: TextAlign.center,
     ),
   );
 }

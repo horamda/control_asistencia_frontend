@@ -12,6 +12,8 @@ import 'about_page.dart';
 import 'attendance_history_page.dart';
 import 'employee_stats_page.dart';
 import 'adelantos_page.dart';
+import 'reintegros_page.dart';
+import 'epp_page.dart';
 import 'historial_adelantos_page.dart';
 import 'vacaciones_page.dart';
 import 'francos_page.dart';
@@ -35,6 +37,17 @@ import 'widgets/pending_queue_sheet.dart';
 
 class AttendanceHomeCoordinator {
   const AttendanceHomeCoordinator();
+
+  Future<void> openEpp(
+    BuildContext context, {
+    required MobileApiClient apiClient,
+    required String token,
+  }) => Navigator.push(
+    context,
+    MaterialPageRoute<void>(
+      builder: (_) => EppPage(api: apiClient, token: token),
+    ),
+  );
 
   Future<void> openTrivia(
     BuildContext context, {
@@ -83,10 +96,15 @@ class AttendanceHomeCoordinator {
     BuildContext context, {
     required MobileApiClient apiClient,
     required String token,
+    int? employeeId,
   }) {
     return Navigator.of(context).push(
       MaterialPageRoute(
-        builder: (_) => EmployeeAlertsPage(apiClient: apiClient, token: token),
+        builder: (_) => EmployeeAlertsPage(
+          apiClient: apiClient,
+          token: token,
+          employeeId: employeeId,
+        ),
       ),
     );
   }
@@ -111,6 +129,19 @@ class AttendanceHomeCoordinator {
     return Navigator.of(context).push(
       MaterialPageRoute(
         builder: (_) => CargasPage(apiClient: apiClient, token: token),
+      ),
+    );
+  }
+
+  Future<void> openReintegros(
+    BuildContext context, {
+    required MobileApiClient apiClient,
+    required String token,
+  }) async {
+    await Navigator.push(
+      context,
+      MaterialPageRoute<void>(
+        builder: (_) => ReintegrosPage(api: apiClient, token: token),
       ),
     );
   }
@@ -342,10 +373,8 @@ class AttendanceHomeCoordinator {
   Future<String?> scanQr(BuildContext context, {bool requiresPhoto = false}) {
     return Navigator.of(context).push<String>(
       MaterialPageRoute(
-        builder: (_) => QrScanPage(
-          title: 'Escanear QR para fichar',
-          requiresPhoto: requiresPhoto,
-        ),
+        builder: (_) =>
+            QrScanPage(title: 'Escanear QR', requiresPhoto: requiresPhoto),
       ),
     );
   }
@@ -413,7 +442,7 @@ class AttendanceHomeCoordinator {
               mainAxisSize: MainAxisSize.min,
               children: [
                 ListTile(
-                  leading: const Icon(Icons.lock_outline),
+                  leading: const Icon(Icons.lock_rounded),
                   title: const Text('Bloquear con huella'),
                   subtitle: const Text(
                     'Protege la pantalla. Al volver, desbloqueas con tu huella sin volver a ingresar.',
@@ -423,7 +452,7 @@ class AttendanceHomeCoordinator {
                   ).pop(AttendanceSessionExitAction.lock),
                 ),
                 ListTile(
-                  leading: const Icon(Icons.logout),
+                  leading: const Icon(Icons.logout_rounded),
                   title: const Text('Salir de la cuenta'),
                   subtitle: const Text(
                     'Cierra la sesión completamente. Necesitarás ingresar DNI y contraseña la próxima vez.',
@@ -433,7 +462,7 @@ class AttendanceHomeCoordinator {
                   ).pop(AttendanceSessionExitAction.logout),
                 ),
                 ListTile(
-                  leading: const Icon(Icons.close),
+                  leading: const Icon(Icons.close_rounded),
                   title: const Text('Cancelar'),
                   onTap: () => Navigator.of(sheetContext).pop(),
                 ),

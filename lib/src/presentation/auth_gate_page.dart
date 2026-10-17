@@ -1,3 +1,4 @@
+import 'package:ficharqr/src/presentation/widgets/app_card.dart';
 import 'package:flutter/foundation.dart';
 import 'dart:async';
 
@@ -8,12 +9,15 @@ import '../core/auth/biometric_credential_cache.dart';
 import '../core/auth/offline_credentials_cache.dart';
 import '../core/auth/session_manager.dart';
 import '../core/network/mobile_api_client.dart';
+import '../core/reuniones/reunion_reminders.dart';
+import '../core/reuniones/push_service.dart';
 import '../core/utils/device_telemetry.dart';
 import '../core/network/pinned_http_client.dart';
 import '../core/permissions/device_permission_bootstrap.dart';
 import 'attendance/attendance_home_page.dart';
 import 'auth/login_page.dart';
 import 'widgets/centered_snackbar.dart';
+import 'widgets/app_startup_screen.dart';
 
 class AuthGatePage extends StatefulWidget {
   const AuthGatePage({super.key});
@@ -36,10 +40,32 @@ class _AuthGatePageState extends State<AuthGatePage> {
   bool _devicePermissionBootstrapDoneForSession = false;
   bool _permissionBootstrapMessageShownForSession = false;
   String? _permissionBootstrapSessionKey;
+  bool _pushHadSession = false;
 
   void _onSessionChanged() {
     if (!mounted) {
       return;
+    }
+    if (!_sessionManager.isBootstrapping) {
+      final session = _sessionManager.session;
+      if (session != null && !session.token.startsWith('offline_')) {
+        _pushHadSession = true;
+        unawaited(
+          PushService.instance.bind(
+            _apiClient,
+            session.token,
+            session.empleado.id,
+          ),
+        );
+      } else if (_pushHadSession) {
+        _pushHadSession = false;
+        unawaited(PushService.instance.disconnect());
+      }
+      unawaited(
+        ReunionReminders.instance
+            .setOwner(_sessionManager.session?.empleado.id)
+            .catchError((Object _) {}),
+      );
     }
     _scheduleDevicePermissionBootstrap();
     _maybeTriggerBiometricAutoReauth();
@@ -219,6 +245,8 @@ class _AuthGatePageState extends State<AuthGatePage> {
   }
 
   Future<void> _logoutDevice() async {
+    await PushService.instance.disconnect();
+    _pushHadSession = false;
     // Reset so biometric auto-trigger fires again on the login screen.
     _autoTriggeredReauth = false;
     await Future.wait([
@@ -305,7 +333,7 @@ class _AuthGatePageState extends State<AuthGatePage> {
   Widget build(BuildContext context) {
     final session = _sessionManager.session;
     if (_sessionManager.isBootstrapping && session == null) {
-      return const Scaffold(body: Center(child: CircularProgressIndicator()));
+      return const AppStartupScreen(animate: false);
     }
 
     if (_sessionManager.isLocked && session != null) {
@@ -397,7 +425,7 @@ class _SessionLockedView extends StatelessWidget {
                 child: Center(
                   child: ConstrainedBox(
                     constraints: const BoxConstraints(maxWidth: 420),
-                    child: Card(
+                    child: AppCard(
                       margin: EdgeInsets.zero,
                       child: Padding(
                         padding: const EdgeInsets.all(20),
@@ -408,14 +436,15 @@ class _SessionLockedView extends StatelessWidget {
                             Text(
                               'Sesion bloqueada',
                               style: Theme.of(context).textTheme.headlineSmall,
+                              textAlign: TextAlign.center,
                             ),
                             const SizedBox(height: 10),
-                            Text(message),
+                            Text(message, textAlign: TextAlign.center),
                             if (loading) ...[
                               const SizedBox(height: 16),
-                              Row(
+                              const Row(
                                 mainAxisAlignment: MainAxisAlignment.center,
-                                children: const [
+                                children: [
                                   SizedBox(
                                     width: 16,
                                     height: 16,
@@ -424,7 +453,10 @@ class _SessionLockedView extends StatelessWidget {
                                     ),
                                   ),
                                   SizedBox(width: 10),
-                                  Text('Verificando huella digital...'),
+                                  Text(
+                                    'Verificando huella digital...',
+                                    textAlign: TextAlign.center,
+                                  ),
                                 ],
                               ),
                             ],
@@ -441,11 +473,12 @@ class _SessionLockedView extends StatelessWidget {
                                           strokeWidth: 2,
                                         ),
                                       )
-                                    : const Icon(Icons.fingerprint),
+                                    : const Icon(Icons.fingerprint_rounded),
                                 label: Text(
                                   loading
                                       ? 'Validando...'
                                       : 'Desbloquear con huella',
+                                  textAlign: TextAlign.center,
                                 ),
                               ),
                             ),
@@ -454,8 +487,11 @@ class _SessionLockedView extends StatelessWidget {
                               height: 44,
                               child: OutlinedButton.icon(
                                 onPressed: loading ? null : onLogout,
-                                icon: const Icon(Icons.logout),
-                                label: const Text('Cerrar sesión'),
+                                icon: const Icon(Icons.logout_rounded),
+                                label: const Text(
+                                  'Cerrar sesión',
+                                  textAlign: TextAlign.center,
+                                ),
                               ),
                             ),
                           ],

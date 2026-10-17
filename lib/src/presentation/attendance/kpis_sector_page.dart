@@ -1,3 +1,5 @@
+import 'package:ficharqr/src/presentation/widgets/app_card.dart';
+import 'package:ficharqr/src/presentation/theme/app_palette.dart';
 import 'dart:math' as math;
 
 import 'package:flutter/material.dart';
@@ -190,7 +192,7 @@ class _KpisSectorPageState extends State<KpisSectorPage>
   Widget build(BuildContext context) {
     return Scaffold(
       appBar: AppBar(
-        title: const Text('KPIs del Sector'),
+        title: const Text('KPIs del Sector', textAlign: TextAlign.center),
         bottom: TabBar(
           controller: _tabCtrl,
           tabs: const [
@@ -210,7 +212,7 @@ class _KpisSectorPageState extends State<KpisSectorPage>
             )
           else
             IconButton(
-              icon: const Icon(Icons.refresh),
+              icon: const Icon(Icons.refresh_rounded),
               tooltip: 'Actualizar',
               onPressed: _load,
             ),
@@ -250,10 +252,10 @@ class _KpisSectorPageState extends State<KpisSectorPage>
     if (_loading) {
       return ListView(
         physics: const AlwaysScrollableScrollPhysics(),
-        children: [
+        children: const [
           SizedBox(
             height: 300,
-            child: const Center(child: CircularProgressIndicator()),
+            child: Center(child: CircularProgressIndicator()),
           ),
         ],
       );
@@ -436,15 +438,20 @@ class _KpisSectorPageState extends State<KpisSectorPage>
         padding: const EdgeInsets.all(32),
         child: Column(
           mainAxisSize: MainAxisSize.min,
+          crossAxisAlignment: CrossAxisAlignment.center,
           children: [
-            Icon(Icons.error_outline, size: 48, color: Colors.red[300]),
+            Icon(
+              Icons.error_outline,
+              size: 48,
+              color: AppColors.of(context).optionalForeground(Colors.red[300]),
+            ),
             const SizedBox(height: 12),
             Text(_error!, textAlign: TextAlign.center),
             const SizedBox(height: 16),
             FilledButton.icon(
               onPressed: _load,
               icon: const Icon(Icons.refresh),
-              label: const Text('Reintentar'),
+              label: const Text('Reintentar', textAlign: TextAlign.center),
             ),
           ],
         ),
@@ -458,17 +465,24 @@ class _KpisSectorPageState extends State<KpisSectorPage>
         padding: const EdgeInsets.all(32),
         child: Column(
           mainAxisSize: MainAxisSize.min,
+          crossAxisAlignment: CrossAxisAlignment.center,
           children: [
-            Icon(Icons.bar_chart_outlined, size: 56, color: Colors.grey[400]),
+            Icon(
+              Icons.bar_chart_outlined,
+              size: 56,
+              color: AppColors.of(context).optionalForeground(Colors.grey[400]),
+            ),
             const SizedBox(height: 16),
             Text(
               _sector?.id == null
                   ? 'No tenés sector asignado.'
                   : 'Sin KPIs configurados para $_anio.',
               textAlign: TextAlign.center,
-              style: Theme.of(
-                context,
-              ).textTheme.bodyMedium?.copyWith(color: Colors.grey[600]),
+              style: Theme.of(context).textTheme.bodyMedium?.copyWith(
+                color: AppColors.of(
+                  context,
+                ).optionalForeground(Colors.grey[600]),
+              ),
             ),
           ],
         ),
@@ -540,6 +554,7 @@ class _KpisSectorPageState extends State<KpisSectorPage>
                 Padding(
                   padding: const EdgeInsets.only(bottom: 12),
                   child: Row(
+                    mainAxisAlignment: MainAxisAlignment.center,
                     children: [
                       Icon(
                         Icons.calendar_month_outlined,
@@ -551,23 +566,28 @@ class _KpisSectorPageState extends State<KpisSectorPage>
                         '${_fullMonthName(month)} $year',
                         style: Theme.of(context).textTheme.titleMedium
                             ?.copyWith(fontWeight: FontWeight.w700),
+                        textAlign: TextAlign.center,
                       ),
                     ],
                   ),
                 ),
                 // Etiquetas de día de semana
                 Row(
+                  mainAxisAlignment: MainAxisAlignment.center,
                   children: ['L', 'M', 'X', 'J', 'V', 'S', 'D']
                       .map(
                         (d) => Expanded(
                           child: Center(
                             child: Text(
                               d,
-                              style: const TextStyle(
+                              style: TextStyle(
                                 fontSize: 13,
                                 fontWeight: FontWeight.w600,
-                                color: Color(0xFF9E9E9E),
+                                color: AppColors.of(
+                                  context,
+                                ).foreground(const Color(0xFF9E9E9E)),
                               ),
+                              textAlign: TextAlign.center,
                             ),
                           ),
                         ),
@@ -598,7 +618,7 @@ class _KpisSectorPageState extends State<KpisSectorPage>
                   const SizedBox(height: 8),
                   if (selDia == null ||
                       !selDia.kpis.any((k) => k.tieneResultado))
-                    Card(
+                    AppCard(
                       margin: EdgeInsets.zero,
                       child: Padding(
                         padding: const EdgeInsets.symmetric(
@@ -606,6 +626,7 @@ class _KpisSectorPageState extends State<KpisSectorPage>
                           vertical: 20,
                         ),
                         child: Row(
+                          mainAxisAlignment: MainAxisAlignment.center,
                           children: [
                             Icon(
                               Icons.inbox_outlined,
@@ -622,6 +643,7 @@ class _KpisSectorPageState extends State<KpisSectorPage>
                                       context,
                                     ).colorScheme.onSurfaceVariant,
                                   ),
+                              textAlign: TextAlign.center,
                             ),
                           ],
                         ),
@@ -635,6 +657,7 @@ class _KpisSectorPageState extends State<KpisSectorPage>
                       padding: const EdgeInsets.symmetric(vertical: 32),
                       child: Column(
                         mainAxisSize: MainAxisSize.min,
+                        crossAxisAlignment: CrossAxisAlignment.center,
                         children: [
                           Icon(
                             Icons.touch_app_outlined,
@@ -653,6 +676,7 @@ class _KpisSectorPageState extends State<KpisSectorPage>
                                     context,
                                   ).colorScheme.onSurfaceVariant,
                                 ),
+                            textAlign: TextAlign.center,
                           ),
                         ],
                       ),
@@ -682,8 +706,10 @@ class _KpisSectorPageState extends State<KpisSectorPage>
     final today = DateTime(now.year, now.month, now.day);
 
     return Column(
+      crossAxisAlignment: CrossAxisAlignment.center,
       children: List.generate(rows, (row) {
         return Row(
+          mainAxisAlignment: MainAxisAlignment.center,
           children: List.generate(7, (col) {
             final cellIdx = row * 7 + col;
             final day = cellIdx - leadingEmpty + 1;
@@ -715,6 +741,7 @@ class _KpisSectorPageState extends State<KpisSectorPage>
                   ),
                   child: Column(
                     mainAxisAlignment: MainAxisAlignment.center,
+                    crossAxisAlignment: CrossAxisAlignment.center,
                     children: [
                       Text(
                         '$day',
@@ -731,6 +758,7 @@ class _KpisSectorPageState extends State<KpisSectorPage>
                               ? cs.primary
                               : cs.onSurface,
                         ),
+                        textAlign: TextAlign.center,
                       ),
                       if (hasData && !isFuture)
                         Container(
@@ -770,12 +798,14 @@ class _KpisSectorPageState extends State<KpisSectorPage>
     return Row(
       crossAxisAlignment: CrossAxisAlignment.baseline,
       textBaseline: TextBaseline.alphabetic,
+      mainAxisAlignment: MainAxisAlignment.center,
       children: [
         Text(
           '$day $monthName',
           style: Theme.of(
             context,
           ).textTheme.titleSmall?.copyWith(fontWeight: FontWeight.w700),
+          textAlign: TextAlign.center,
         ),
         const SizedBox(width: 8),
         if (diaResp != null)
@@ -784,6 +814,7 @@ class _KpisSectorPageState extends State<KpisSectorPage>
             style: Theme.of(
               context,
             ).textTheme.labelSmall?.copyWith(color: cs.onSurfaceVariant),
+            textAlign: TextAlign.center,
           ),
       ],
     );
@@ -977,7 +1008,7 @@ class _MesChip extends StatelessWidget {
         duration: const Duration(milliseconds: 180),
         padding: const EdgeInsets.symmetric(horizontal: 12, vertical: 5),
         decoration: BoxDecoration(
-          color: bg,
+          color: AppColors.of(context).surface(bg),
           borderRadius: BorderRadius.circular(20),
           border: selected
               ? Border.all(color: cs.primary.withValues(alpha: 0.4))
@@ -994,7 +1025,7 @@ class _MesChip extends StatelessWidget {
                 width: 7,
                 height: 7,
                 decoration: BoxDecoration(
-                  color: dotColor,
+                  color: AppColors.of(context).surface(dotColor),
                   shape: BoxShape.circle,
                 ),
               ),
@@ -1005,7 +1036,7 @@ class _MesChip extends StatelessWidget {
               style: TextStyle(
                 fontSize: 13,
                 fontWeight: selected ? FontWeight.w700 : FontWeight.w500,
-                color: fg,
+                color: AppColors.of(context).foreground(fg),
                 height: 1,
               ),
             ),
@@ -1202,19 +1233,23 @@ class _CircularGaugeCard extends StatelessWidget {
         ? '${progresoSuma.toStringAsFixed(0)}%'
         : _fmt(resultado) + unidad;
 
-    return Card(
+    return AppCard(
       elevation: isSelected ? 4 : 1,
       color: isSelected ? cs.surface : cs.surfaceContainerLow,
       shape: RoundedRectangleBorder(
         borderRadius: BorderRadius.circular(16),
         side: isSelected
-            ? BorderSide(color: fg.withValues(alpha: 0.45), width: 1.5)
+            ? BorderSide(
+                color: AppColors.of(context).border(fg.withValues(alpha: 0.45)),
+                width: 1.5,
+              )
             : BorderSide.none,
       ),
       child: Padding(
         padding: const EdgeInsets.fromLTRB(12, 12, 12, 10),
         child: Column(
           mainAxisAlignment: MainAxisAlignment.center,
+          crossAxisAlignment: CrossAxisAlignment.center,
           children: [
             Text(
               kpi.nombre,
@@ -1237,7 +1272,9 @@ class _CircularGaugeCard extends StatelessWidget {
                     value: gaugeValue,
                     strokeWidth: 7,
                     strokeCap: StrokeCap.round,
-                    backgroundColor: fg.withValues(alpha: 0.12),
+                    backgroundColor: AppColors.of(
+                      context,
+                    ).surface(fg.withValues(alpha: 0.12)),
                     valueColor: AlwaysStoppedAnimation(fg),
                   ),
                 ),
@@ -1247,7 +1284,7 @@ class _CircularGaugeCard extends StatelessWidget {
                   style: TextStyle(
                     fontSize: isSuma ? 17 : 13,
                     fontWeight: FontWeight.w800,
-                    color: fg,
+                    color: AppColors.of(context).foreground(fg),
                     height: 1.1,
                   ),
                 ),
@@ -1289,19 +1326,23 @@ class _RangeGaugeCard extends StatelessWidget {
         ? (mesItem!.resultadoMes ?? kpi.resultadoAcumulado)
         : kpi.resultadoAcumulado;
 
-    return Card(
+    return AppCard(
       elevation: isSelected ? 4 : 1,
       color: isSelected ? cs.surface : cs.surfaceContainerLow,
       shape: RoundedRectangleBorder(
         borderRadius: BorderRadius.circular(16),
         side: isSelected
-            ? BorderSide(color: fg.withValues(alpha: 0.45), width: 1.5)
+            ? BorderSide(
+                color: AppColors.of(context).border(fg.withValues(alpha: 0.45)),
+                width: 1.5,
+              )
             : BorderSide.none,
       ),
       child: Padding(
         padding: const EdgeInsets.fromLTRB(12, 12, 12, 10),
         child: Column(
           mainAxisAlignment: MainAxisAlignment.center,
+          crossAxisAlignment: CrossAxisAlignment.center,
           children: [
             Text(
               kpi.nombre,
@@ -1321,9 +1362,10 @@ class _RangeGaugeCard extends StatelessWidget {
                 maxLines: 1,
                 style: Theme.of(context).textTheme.titleLarge?.copyWith(
                   fontWeight: FontWeight.w800,
-                  color: fg,
+                  color: AppColors.of(context).foreground(fg),
                   height: 1,
                 ),
+                textAlign: TextAlign.center,
               ),
             ),
             const SizedBox(height: 8),
@@ -1334,6 +1376,7 @@ class _RangeGaugeCard extends StatelessWidget {
               style: Theme.of(
                 context,
               ).textTheme.labelSmall?.copyWith(color: cs.onSurfaceVariant),
+              textAlign: TextAlign.center,
             ),
             const SizedBox(height: 6),
             _SemaforoChip(semaforo: semaforo, fg: fg, bg: bg),
@@ -1365,17 +1408,18 @@ class _KpiDetailPanel extends StatelessWidget {
     final cs = Theme.of(context).colorScheme;
     final unidad = kpi.unidad != null ? ' ${kpi.unidad}' : '';
 
-    return Card(
+    return AppCard(
       margin: const EdgeInsets.only(bottom: 8),
       shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(12)),
       child: Padding(
         padding: const EdgeInsets.all(16),
         child: Column(
-          crossAxisAlignment: CrossAxisAlignment.start,
+          crossAxisAlignment: CrossAxisAlignment.center,
           children: [
             // Encabezado
             Row(
               crossAxisAlignment: CrossAxisAlignment.start,
+              mainAxisAlignment: MainAxisAlignment.center,
               children: [
                 Expanded(
                   child: Text(
@@ -1385,6 +1429,7 @@ class _KpiDetailPanel extends StatelessWidget {
                     style: Theme.of(context).textTheme.titleSmall?.copyWith(
                       fontWeight: FontWeight.w700,
                     ),
+                    textAlign: TextAlign.center,
                   ),
                 ),
                 const SizedBox(width: 8),
@@ -1399,9 +1444,10 @@ class _KpiDetailPanel extends StatelessWidget {
               Text(
                 kpi.recomendacion!,
                 style: Theme.of(context).textTheme.bodySmall?.copyWith(
-                  color: _fg,
+                  color: AppColors.of(context).foreground(_fg),
                   fontStyle: FontStyle.italic,
                 ),
+                textAlign: TextAlign.center,
               ),
             ],
             const SizedBox(height: 16),
@@ -1426,6 +1472,7 @@ class _KpiDetailPanel extends StatelessWidget {
                   color: cs.onSurfaceVariant,
                   fontWeight: FontWeight.w600,
                 ),
+                textAlign: TextAlign.center,
               ),
               const SizedBox(height: 8),
               (kpi.isBetween ||
@@ -1502,6 +1549,7 @@ class _KpiDetailPanel extends StatelessWidget {
     ];
 
     return Column(
+      crossAxisAlignment: CrossAxisAlignment.center,
       children: [
         // Gauge centrado
         Center(
@@ -1515,12 +1563,15 @@ class _KpiDetailPanel extends StatelessWidget {
                   value: gaugeValue,
                   strokeWidth: 9,
                   strokeCap: StrokeCap.round,
-                  backgroundColor: _fg.withValues(alpha: 0.12),
+                  backgroundColor: AppColors.of(
+                    context,
+                  ).surface(_fg.withValues(alpha: 0.12)),
                   valueColor: AlwaysStoppedAnimation(_fg),
                 ),
               ),
               Column(
                 mainAxisSize: MainAxisSize.min,
+                crossAxisAlignment: CrossAxisAlignment.center,
                 children: [
                   FittedBox(
                     fit: BoxFit.scaleDown,
@@ -1534,7 +1585,7 @@ class _KpiDetailPanel extends StatelessWidget {
                                   : Theme.of(context).textTheme.titleSmall)
                               ?.copyWith(
                                 fontWeight: FontWeight.w800,
-                                color: _fg,
+                                color: AppColors.of(context).foreground(_fg),
                                 height: 1,
                               ),
                     ),
@@ -1545,8 +1596,11 @@ class _KpiDetailPanel extends StatelessWidget {
                       'del objetivo',
                       style: TextStyle(
                         fontSize: 13,
-                        color: _fg.withValues(alpha: 0.7),
+                        color: AppColors.of(
+                          context,
+                        ).foreground(_fg.withValues(alpha: 0.7)),
                       ),
+                      textAlign: TextAlign.center,
                     ),
                   ],
                 ],
@@ -1569,14 +1623,15 @@ class _KpiDetailPanel extends StatelessWidget {
     return LayoutBuilder(
       builder: (context, constraints) {
         return Column(
-          crossAxisAlignment: CrossAxisAlignment.start,
+          crossAxisAlignment: CrossAxisAlignment.center,
           children: [
             Row(
               crossAxisAlignment: CrossAxisAlignment.end,
+              mainAxisAlignment: MainAxisAlignment.center,
               children: [
                 Flexible(
                   child: Column(
-                    crossAxisAlignment: CrossAxisAlignment.start,
+                    crossAxisAlignment: CrossAxisAlignment.center,
                     children: [
                       FittedBox(
                         fit: BoxFit.scaleDown,
@@ -1586,9 +1641,10 @@ class _KpiDetailPanel extends StatelessWidget {
                           style: Theme.of(context).textTheme.headlineSmall
                               ?.copyWith(
                                 fontWeight: FontWeight.w800,
-                                color: _fg,
+                                color: AppColors.of(context).foreground(_fg),
                                 height: 1,
                               ),
+                          textAlign: TextAlign.center,
                         ),
                       ),
                       Text(
@@ -1596,6 +1652,7 @@ class _KpiDetailPanel extends StatelessWidget {
                         style: Theme.of(context).textTheme.labelSmall?.copyWith(
                           color: cs.onSurfaceVariant,
                         ),
+                        textAlign: TextAlign.center,
                       ),
                     ],
                   ),
@@ -1632,18 +1689,21 @@ class _KpiDetailPanel extends StatelessWidget {
                   style: Theme.of(
                     context,
                   ).textTheme.labelSmall?.copyWith(color: cs.onSurfaceVariant),
+                  textAlign: TextAlign.center,
                 ),
                 Text(
                   'Rango objetivo',
                   style: Theme.of(
                     context,
                   ).textTheme.labelSmall?.copyWith(color: cs.onSurfaceVariant),
+                  textAlign: TextAlign.center,
                 ),
                 Text(
                   _fmt(max),
                   style: Theme.of(
                     context,
                   ).textTheme.labelSmall?.copyWith(color: cs.onSurfaceVariant),
+                  textAlign: TextAlign.center,
                 ),
               ],
             ),
@@ -1709,7 +1769,7 @@ class _StatCell extends StatelessWidget {
           style: TextStyle(
             fontWeight: FontWeight.w700,
             fontSize: large ? 16 : 13,
-            color: color,
+            color: AppColors.of(context).foreground(color),
             height: 1.1,
           ),
         ),
@@ -1734,33 +1794,47 @@ class _DeviationBanner extends StatelessWidget {
     return Container(
       padding: const EdgeInsets.symmetric(horizontal: 12, vertical: 10),
       decoration: BoxDecoration(
-        color: info.color.withValues(alpha: 0.08),
+        color: AppColors.of(
+          context,
+        ).surface(info.color.withValues(alpha: 0.08)),
         borderRadius: BorderRadius.circular(10),
-        border: Border.all(color: info.color.withValues(alpha: 0.22)),
+        border: Border.all(
+          color: AppColors.of(
+            context,
+          ).border(info.color.withValues(alpha: 0.22)),
+        ),
       ),
       child: Row(
+        mainAxisAlignment: MainAxisAlignment.center,
         children: [
           Container(
             width: 34,
             height: 34,
             decoration: BoxDecoration(
-              color: info.color.withValues(alpha: 0.14),
+              color: AppColors.of(
+                context,
+              ).surface(info.color.withValues(alpha: 0.14)),
               shape: BoxShape.circle,
             ),
-            child: Icon(info.icon, size: 18, color: info.color),
+            child: Icon(
+              info.icon,
+              size: 18,
+              color: AppColors.of(context).foreground(info.color),
+            ),
           ),
           const SizedBox(width: 10),
           Expanded(
             child: Column(
-              crossAxisAlignment: CrossAxisAlignment.start,
+              crossAxisAlignment: CrossAxisAlignment.center,
               children: [
                 Text(
                   info.title,
                   style: TextStyle(
                     fontWeight: FontWeight.w700,
                     fontSize: 13,
-                    color: info.color,
+                    color: AppColors.of(context).foreground(info.color),
                   ),
+                  textAlign: TextAlign.center,
                 ),
                 const SizedBox(height: 1),
                 Text(
@@ -1768,6 +1842,7 @@ class _DeviationBanner extends StatelessWidget {
                   style: Theme.of(context).textTheme.bodySmall?.copyWith(
                     color: Theme.of(context).colorScheme.onSurfaceVariant,
                   ),
+                  textAlign: TextAlign.center,
                 ),
               ],
             ),
@@ -1778,8 +1853,9 @@ class _DeviationBanner extends StatelessWidget {
             style: TextStyle(
               fontSize: 13,
               fontWeight: FontWeight.w800,
-              color: info.color,
+              color: AppColors.of(context).foreground(info.color),
             ),
+            textAlign: TextAlign.center,
           ),
         ],
       ),
@@ -1917,15 +1993,16 @@ class _KpiHistorySection extends StatelessWidget {
     final cs = Theme.of(context).colorScheme;
     final unidad = kpi.unidad != null ? ' ${kpi.unidad}' : '';
 
-    return Card(
+    return AppCard(
       margin: const EdgeInsets.only(bottom: 8),
       shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(12)),
       child: Padding(
         padding: const EdgeInsets.all(16),
         child: Column(
-          crossAxisAlignment: CrossAxisAlignment.start,
+          crossAxisAlignment: CrossAxisAlignment.center,
           children: [
             Row(
+              mainAxisAlignment: MainAxisAlignment.center,
               children: [
                 Icon(
                   Icons.calendar_month_outlined,
@@ -1938,6 +2015,7 @@ class _KpiHistorySection extends StatelessWidget {
                   style: Theme.of(
                     context,
                   ).textTheme.titleSmall?.copyWith(fontWeight: FontWeight.w600),
+                  textAlign: TextAlign.center,
                 ),
               ],
             ),
@@ -2003,10 +2081,14 @@ class _MonthRow extends StatelessWidget {
                     child: LinearProgressIndicator(
                       value: barValue,
                       minHeight: 8,
-                      color: hasData ? rowFg : Colors.grey.shade300,
-                      backgroundColor: hasData
-                          ? rowFg.withValues(alpha: 0.12)
-                          : Colors.grey.shade100,
+                      color: AppColors.of(
+                        context,
+                      ).foreground(hasData ? rowFg : Colors.grey.shade300),
+                      backgroundColor: AppColors.of(context).surface(
+                        hasData
+                            ? rowFg.withValues(alpha: 0.12)
+                            : Colors.grey.shade100,
+                      ),
                     ),
                   ),
           ),
@@ -2036,7 +2118,9 @@ class _MonthRow extends StatelessWidget {
             width: 8,
             height: 8,
             decoration: BoxDecoration(
-              color: hasData ? rowFg : Colors.grey.shade300,
+              color: AppColors.of(
+                context,
+              ).surface(hasData ? rowFg : Colors.grey.shade300),
               shape: BoxShape.circle,
             ),
           ),
@@ -2071,38 +2155,47 @@ class _UltimoCargadoCard extends StatelessWidget {
     final fg = _semaforoFg(item.semaforo);
     final unidad = item.unidad != null ? ' ${item.unidad}' : '';
 
-    return Card(
+    return AppCard(
       margin: const EdgeInsets.only(bottom: 8),
       shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(12)),
       child: Padding(
         padding: const EdgeInsets.all(12),
         child: Row(
+          mainAxisAlignment: MainAxisAlignment.center,
           children: [
             Container(
               width: 36,
               height: 36,
               decoration: BoxDecoration(
-                color: _semaforoBg(item.semaforo),
+                color: AppColors.of(
+                  context,
+                ).surface(_semaforoBg(item.semaforo)),
                 borderRadius: BorderRadius.circular(8),
               ),
-              child: Icon(Icons.bolt_outlined, color: fg, size: 20),
+              child: Icon(
+                Icons.bolt_outlined,
+                color: AppColors.of(context).foreground(fg),
+                size: 20,
+              ),
             ),
             const SizedBox(width: 10),
             Expanded(
               child: Column(
-                crossAxisAlignment: CrossAxisAlignment.start,
+                crossAxisAlignment: CrossAxisAlignment.center,
                 children: [
                   Text(
                     'Última carga',
                     style: Theme.of(context).textTheme.labelSmall?.copyWith(
                       color: cs.onSurfaceVariant,
                     ),
+                    textAlign: TextAlign.center,
                   ),
                   Text(
                     item.nombre,
                     maxLines: 1,
                     overflow: TextOverflow.ellipsis,
                     style: const TextStyle(fontWeight: FontWeight.w600),
+                    textAlign: TextAlign.center,
                   ),
                   if (item.fechaResultado != null)
                     Text(
@@ -2110,6 +2203,7 @@ class _UltimoCargadoCard extends StatelessWidget {
                       style: Theme.of(context).textTheme.bodySmall?.copyWith(
                         color: cs.onSurfaceVariant,
                       ),
+                      textAlign: TextAlign.center,
                     ),
                 ],
               ),
@@ -2118,9 +2212,10 @@ class _UltimoCargadoCard extends StatelessWidget {
             Text(
               '${_fmt(item.resultado)}$unidad',
               style: Theme.of(context).textTheme.titleMedium?.copyWith(
-                color: fg,
+                color: AppColors.of(context).foreground(fg),
                 fontWeight: FontWeight.w700,
               ),
+              textAlign: TextAlign.center,
             ),
           ],
         ),
@@ -2183,7 +2278,9 @@ class _MonthlyBarsChart extends StatelessWidget {
                                   width: 24,
                                   height: 100 * _barH(e.item),
                                   decoration: BoxDecoration(
-                                    color: _barColor(e.item),
+                                    color: AppColors.of(
+                                      context,
+                                    ).surface(_barColor(e.item)),
                                     borderRadius: BorderRadius.circular(6),
                                   ),
                                 ),
@@ -2392,7 +2489,9 @@ class _MiniRangeBar extends StatelessWidget {
                 child: Container(
                   height: 8,
                   decoration: BoxDecoration(
-                    color: Colors.grey[200],
+                    color: AppColors.of(
+                      context,
+                    ).optionalSurface(Colors.grey[200]),
                     borderRadius: BorderRadius.circular(4),
                   ),
                 ),
@@ -2404,7 +2503,7 @@ class _MiniRangeBar extends StatelessWidget {
                   height: 8,
                   width: (w * (maxPct - minPct)).clamp(0.0, w),
                   decoration: BoxDecoration(
-                    color: Colors.green.shade200,
+                    color: AppColors.of(context).surface(Colors.green.shade200),
                     borderRadius: BorderRadius.circular(4),
                   ),
                 ),
@@ -2416,7 +2515,7 @@ class _MiniRangeBar extends StatelessWidget {
                   width: 4,
                   height: 16,
                   decoration: BoxDecoration(
-                    color: fg,
+                    color: AppColors.of(context).surface(fg),
                     borderRadius: BorderRadius.circular(2),
                   ),
                 ),
@@ -2447,21 +2546,27 @@ class _SemaforoChip extends StatelessWidget {
     return Container(
       padding: const EdgeInsets.symmetric(horizontal: 8, vertical: 3),
       decoration: BoxDecoration(
-        color: bg,
+        color: AppColors.of(context).surface(bg),
         borderRadius: BorderRadius.circular(20),
       ),
       child: Row(
         mainAxisSize: MainAxisSize.min,
+        mainAxisAlignment: MainAxisAlignment.center,
         children: [
-          Icon(_semaforoIcon(semaforo), color: fg, size: 11),
+          Icon(
+            _semaforoIcon(semaforo),
+            color: AppColors.of(context).foreground(fg),
+            size: 11,
+          ),
           const SizedBox(width: 3),
           Text(
             _statusLabel(semaforo),
             style: TextStyle(
-              color: fg,
+              color: AppColors.of(context).foreground(fg),
               fontSize: 13,
               fontWeight: FontWeight.w700,
             ),
+            textAlign: TextAlign.center,
           ),
         ],
       ),
@@ -2547,6 +2652,7 @@ class _StatsRow extends StatelessWidget {
         return Wrap(
           spacing: 8,
           runSpacing: 16,
+          alignment: WrapAlignment.center,
           children: [
             for (final cell in cells)
               SizedBox(
@@ -2590,13 +2696,14 @@ class _NoMonthDataPanel extends StatelessWidget {
   @override
   Widget build(BuildContext context) {
     final cs = Theme.of(context).colorScheme;
-    return Card(
+    return AppCard(
       margin: const EdgeInsets.only(bottom: 8),
       shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(12)),
       child: Padding(
         padding: const EdgeInsets.symmetric(vertical: 32, horizontal: 24),
         child: Column(
           mainAxisSize: MainAxisSize.min,
+          crossAxisAlignment: CrossAxisAlignment.center,
           children: [
             Icon(
               Icons.calendar_today_outlined,
@@ -2609,6 +2716,7 @@ class _NoMonthDataPanel extends StatelessWidget {
               style: Theme.of(
                 context,
               ).textTheme.titleSmall?.copyWith(color: cs.onSurfaceVariant),
+              textAlign: TextAlign.center,
             ),
             const SizedBox(height: 6),
             Text(
@@ -2648,20 +2756,21 @@ class _KpiMonthDetailPanel extends StatelessWidget {
     final mesNombre = mes.mesNombre ?? mes.periodo;
     final hasData = item.resultadoMes != null && item.registros > 0;
 
-    return Card(
+    return AppCard(
       margin: const EdgeInsets.only(bottom: 8),
       shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(12)),
       child: Padding(
         padding: const EdgeInsets.all(16),
         child: Column(
-          crossAxisAlignment: CrossAxisAlignment.start,
+          crossAxisAlignment: CrossAxisAlignment.center,
           children: [
             Row(
               crossAxisAlignment: CrossAxisAlignment.start,
+              mainAxisAlignment: MainAxisAlignment.center,
               children: [
                 Expanded(
                   child: Column(
-                    crossAxisAlignment: CrossAxisAlignment.start,
+                    crossAxisAlignment: CrossAxisAlignment.center,
                     children: [
                       Text(
                         kpi.nombre,
@@ -2669,11 +2778,13 @@ class _KpiMonthDetailPanel extends StatelessWidget {
                           fontWeight: FontWeight.w700,
                           fontSize: 15,
                         ),
+                        textAlign: TextAlign.center,
                       ),
                       Text(
                         mesNombre,
                         style: Theme.of(context).textTheme.labelMedium
                             ?.copyWith(color: cs.onSurfaceVariant),
+                        textAlign: TextAlign.center,
                       ),
                     ],
                   ),
@@ -2692,6 +2803,7 @@ class _KpiMonthDetailPanel extends StatelessWidget {
                     style: Theme.of(context).textTheme.bodyMedium?.copyWith(
                       color: cs.onSurfaceVariant,
                     ),
+                    textAlign: TextAlign.center,
                   ),
                 ),
               )
@@ -2719,6 +2831,7 @@ class _KpiMonthDetailPanel extends StatelessWidget {
         : '${_fmt(result)}$unidad';
 
     return Column(
+      crossAxisAlignment: CrossAxisAlignment.center,
       children: [
         Center(
           child: Stack(
@@ -2731,12 +2844,15 @@ class _KpiMonthDetailPanel extends StatelessWidget {
                   value: gaugeValue,
                   strokeWidth: 9,
                   strokeCap: StrokeCap.round,
-                  backgroundColor: _fg.withValues(alpha: 0.12),
+                  backgroundColor: AppColors.of(
+                    context,
+                  ).surface(_fg.withValues(alpha: 0.12)),
                   valueColor: AlwaysStoppedAnimation(_fg),
                 ),
               ),
               Column(
                 mainAxisSize: MainAxisSize.min,
+                crossAxisAlignment: CrossAxisAlignment.center,
                 children: [
                   Text(
                     centerLabel,
@@ -2744,7 +2860,7 @@ class _KpiMonthDetailPanel extends StatelessWidget {
                     style: TextStyle(
                       fontSize: isSuma ? 24 : 16,
                       fontWeight: FontWeight.w800,
-                      color: _fg,
+                      color: AppColors.of(context).foreground(_fg),
                       height: 1,
                     ),
                   ),
@@ -2754,8 +2870,11 @@ class _KpiMonthDetailPanel extends StatelessWidget {
                       'del objetivo',
                       style: TextStyle(
                         fontSize: 13,
-                        color: _fg.withValues(alpha: 0.7),
+                        color: AppColors.of(
+                          context,
+                        ).foreground(_fg.withValues(alpha: 0.7)),
                       ),
+                      textAlign: TextAlign.center,
                     ),
                   ],
                 ],
@@ -2800,14 +2919,15 @@ class _KpiMonthDetailPanel extends StatelessWidget {
     final result = item.resultadoMes!;
 
     return Column(
-      crossAxisAlignment: CrossAxisAlignment.start,
+      crossAxisAlignment: CrossAxisAlignment.center,
       children: [
         Row(
           crossAxisAlignment: CrossAxisAlignment.end,
+          mainAxisAlignment: MainAxisAlignment.center,
           children: [
             Flexible(
               child: Column(
-                crossAxisAlignment: CrossAxisAlignment.start,
+                crossAxisAlignment: CrossAxisAlignment.center,
                 children: [
                   FittedBox(
                     fit: BoxFit.scaleDown,
@@ -2817,9 +2937,10 @@ class _KpiMonthDetailPanel extends StatelessWidget {
                       style: Theme.of(context).textTheme.headlineSmall
                           ?.copyWith(
                             fontWeight: FontWeight.w800,
-                            color: _fg,
+                            color: AppColors.of(context).foreground(_fg),
                             height: 1,
                           ),
+                      textAlign: TextAlign.center,
                     ),
                   ),
                   Text(
@@ -2827,6 +2948,7 @@ class _KpiMonthDetailPanel extends StatelessWidget {
                     style: Theme.of(context).textTheme.labelSmall?.copyWith(
                       color: cs.onSurfaceVariant,
                     ),
+                    textAlign: TextAlign.center,
                   ),
                 ],
               ),
@@ -2863,18 +2985,21 @@ class _KpiMonthDetailPanel extends StatelessWidget {
               style: Theme.of(
                 context,
               ).textTheme.labelSmall?.copyWith(color: cs.onSurfaceVariant),
+              textAlign: TextAlign.center,
             ),
             Text(
               'Rango objetivo',
               style: Theme.of(
                 context,
               ).textTheme.labelSmall?.copyWith(color: cs.onSurfaceVariant),
+              textAlign: TextAlign.center,
             ),
             Text(
               _fmt(max),
               style: Theme.of(
                 context,
               ).textTheme.labelSmall?.copyWith(color: cs.onSurfaceVariant),
+              textAlign: TextAlign.center,
             ),
           ],
         ),
@@ -2904,33 +3029,47 @@ class _MonthDeviationBanner extends StatelessWidget {
     return Container(
       padding: const EdgeInsets.symmetric(horizontal: 12, vertical: 10),
       decoration: BoxDecoration(
-        color: info.color.withValues(alpha: 0.08),
+        color: AppColors.of(
+          context,
+        ).surface(info.color.withValues(alpha: 0.08)),
         borderRadius: BorderRadius.circular(10),
-        border: Border.all(color: info.color.withValues(alpha: 0.22)),
+        border: Border.all(
+          color: AppColors.of(
+            context,
+          ).border(info.color.withValues(alpha: 0.22)),
+        ),
       ),
       child: Row(
+        mainAxisAlignment: MainAxisAlignment.center,
         children: [
           Container(
             width: 34,
             height: 34,
             decoration: BoxDecoration(
-              color: info.color.withValues(alpha: 0.14),
+              color: AppColors.of(
+                context,
+              ).surface(info.color.withValues(alpha: 0.14)),
               shape: BoxShape.circle,
             ),
-            child: Icon(info.icon, size: 18, color: info.color),
+            child: Icon(
+              info.icon,
+              size: 18,
+              color: AppColors.of(context).foreground(info.color),
+            ),
           ),
           const SizedBox(width: 10),
           Expanded(
             child: Column(
-              crossAxisAlignment: CrossAxisAlignment.start,
+              crossAxisAlignment: CrossAxisAlignment.center,
               children: [
                 Text(
                   info.title,
                   style: TextStyle(
                     fontWeight: FontWeight.w700,
                     fontSize: 13,
-                    color: info.color,
+                    color: AppColors.of(context).foreground(info.color),
                   ),
+                  textAlign: TextAlign.center,
                 ),
                 const SizedBox(height: 1),
                 Text(
@@ -2938,6 +3077,7 @@ class _MonthDeviationBanner extends StatelessWidget {
                   style: Theme.of(context).textTheme.bodySmall?.copyWith(
                     color: Theme.of(context).colorScheme.onSurfaceVariant,
                   ),
+                  textAlign: TextAlign.center,
                 ),
               ],
             ),
@@ -2948,8 +3088,9 @@ class _MonthDeviationBanner extends StatelessWidget {
             style: TextStyle(
               fontSize: 13,
               fontWeight: FontWeight.w800,
-              color: info.color,
+              color: AppColors.of(context).foreground(info.color),
             ),
+            textAlign: TextAlign.center,
           ),
         ],
       ),
@@ -3158,26 +3299,34 @@ class _HoySnapshotCard extends StatelessWidget {
     final bg = _semaforoBg(kpiDia.semaforoDia);
     final unidad = kpiDia.unidad != null ? ' ${kpiDia.unidad}' : '';
 
-    return Card(
+    return AppCard(
       margin: const EdgeInsets.only(bottom: 8),
-      color: bg.withValues(alpha: 0.45),
+      color: AppColors.of(context).surface(bg.withValues(alpha: 0.45)),
       shape: RoundedRectangleBorder(
         borderRadius: BorderRadius.circular(12),
-        side: BorderSide(color: fg.withValues(alpha: 0.28)),
+        side: BorderSide(
+          color: AppColors.of(context).border(fg.withValues(alpha: 0.28)),
+        ),
       ),
       child: Padding(
         padding: const EdgeInsets.symmetric(horizontal: 14, vertical: 10),
         child: Row(
+          mainAxisAlignment: MainAxisAlignment.center,
           children: [
-            Icon(Icons.today_outlined, size: 16, color: fg),
+            Icon(
+              Icons.today_outlined,
+              size: 16,
+              color: AppColors.of(context).foreground(fg),
+            ),
             const SizedBox(width: 6),
             Text(
               'Hoy',
               style: TextStyle(
                 fontWeight: FontWeight.w700,
                 fontSize: 13,
-                color: fg,
+                color: AppColors.of(context).foreground(fg),
               ),
+              textAlign: TextAlign.center,
             ),
             const SizedBox(width: 6),
             Text(
@@ -3185,6 +3334,7 @@ class _HoySnapshotCard extends StatelessWidget {
               style: Theme.of(
                 context,
               ).textTheme.labelSmall?.copyWith(color: cs.onSurfaceVariant),
+              textAlign: TextAlign.center,
             ),
             const Spacer(),
             if (kpiDia.resultadoDia != null) ...[
@@ -3193,8 +3343,9 @@ class _HoySnapshotCard extends StatelessWidget {
                 style: TextStyle(
                   fontWeight: FontWeight.w800,
                   fontSize: 16,
-                  color: fg,
+                  color: AppColors.of(context).foreground(fg),
                 ),
+                textAlign: TextAlign.center,
               ),
               const SizedBox(width: 8),
             ],
@@ -3221,23 +3372,26 @@ class _KpiDiaCard extends StatelessWidget {
     final bg = _semaforoBg(sem);
     final unidad = kpi.unidad != null ? ' ${kpi.unidad}' : '';
 
-    return Card(
+    return AppCard(
       margin: const EdgeInsets.only(bottom: 8),
-      color: bg.withValues(alpha: 0.35),
+      color: AppColors.of(context).surface(bg.withValues(alpha: 0.35)),
       shape: RoundedRectangleBorder(
         borderRadius: BorderRadius.circular(12),
-        side: BorderSide(color: fg.withValues(alpha: 0.2)),
+        side: BorderSide(
+          color: AppColors.of(context).border(fg.withValues(alpha: 0.2)),
+        ),
       ),
       child: Padding(
         padding: const EdgeInsets.symmetric(horizontal: 14, vertical: 12),
         child: Column(
-          crossAxisAlignment: CrossAxisAlignment.start,
+          crossAxisAlignment: CrossAxisAlignment.center,
           children: [
             Row(
+              mainAxisAlignment: MainAxisAlignment.center,
               children: [
                 Expanded(
                   child: Column(
-                    crossAxisAlignment: CrossAxisAlignment.start,
+                    crossAxisAlignment: CrossAxisAlignment.center,
                     children: [
                       Text(
                         kpi.nombre,
@@ -3245,12 +3399,14 @@ class _KpiDiaCard extends StatelessWidget {
                           fontWeight: FontWeight.w600,
                           fontSize: 13,
                         ),
+                        textAlign: TextAlign.center,
                       ),
                       Text(
                         kpi.codigo,
                         style: Theme.of(context).textTheme.labelSmall?.copyWith(
                           color: cs.onSurfaceVariant,
                         ),
+                        textAlign: TextAlign.center,
                       ),
                     ],
                   ),
@@ -3263,12 +3419,14 @@ class _KpiDiaCard extends StatelessWidget {
                     style: Theme.of(context).textTheme.labelSmall?.copyWith(
                       color: cs.onSurfaceVariant,
                     ),
+                    textAlign: TextAlign.center,
                   ),
               ],
             ),
             if (kpi.tieneResultado) ...[
               const SizedBox(height: 8),
               Row(
+                mainAxisAlignment: MainAxisAlignment.center,
                 children: [
                   _DiaStatCol(
                     label: 'Resultado día',
@@ -3313,21 +3471,23 @@ class _DiaStatCol extends StatelessWidget {
     final cs = Theme.of(context).colorScheme;
     return Expanded(
       child: Column(
-        crossAxisAlignment: CrossAxisAlignment.start,
+        crossAxisAlignment: CrossAxisAlignment.center,
         children: [
           Text(
             label,
             style: Theme.of(
               context,
             ).textTheme.labelSmall?.copyWith(color: cs.onSurfaceVariant),
+            textAlign: TextAlign.center,
           ),
           Text(
             value,
             style: TextStyle(
               fontWeight: FontWeight.w700,
               fontSize: 14,
-              color: valueColor,
+              color: AppColors.of(context).optionalForeground(valueColor),
             ),
+            textAlign: TextAlign.center,
           ),
         ],
       ),
@@ -3410,7 +3570,7 @@ class _DailySparklineSection extends StatelessWidget {
                 style: TextStyle(
                   fontWeight: FontWeight.w700,
                   fontSize: 13,
-                  color: fg,
+                  color: AppColors.of(context).foreground(fg),
                 ),
               ),
             Text(

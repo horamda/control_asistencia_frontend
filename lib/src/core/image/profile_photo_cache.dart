@@ -11,6 +11,15 @@ class ProfilePhotoCache {
     required Uri backend,
     required Uri page,
   }) {
+    // Flutter's development server does not provide the nginx image proxy.
+    final host = page.host.toLowerCase();
+    if (host == 'localhost' ||
+        host.endsWith('.localhost') ||
+        host == '127.0.0.1' ||
+        host == '::1' ||
+        host == '[::1]') {
+      return rawUrl;
+    }
     final uri = Uri.tryParse(rawUrl);
     if (uri == null ||
         !uri.hasAuthority ||

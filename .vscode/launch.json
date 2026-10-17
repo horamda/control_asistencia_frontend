@@ -2,11 +2,36 @@
   "version": "0.2.0",
   "configurations": [
     {
-      "name": "FichaYa (DEV)",
+      "name": "FichaYa Web (backend local)",
+      "request": "launch",
+      "type": "dart",
+      "deviceId": "web-server",
+      "args": [
+        "--web-hostname=localhost",
+        "--web-port=8080",
+        "--dart-define=API_BASE_URL=http://localhost:5000",
+        "--dart-define=APP_FLAVOR=DEV"
+      ]
+    },
+    {
+      "name": "FichaYa Web (Railway · datos reales)",
+      "request": "launch",
+      "type": "dart",
+      "deviceId": "web-server",
+      "args": [
+        "--web-hostname=localhost",
+        "--web-port=8080",
+        "--dart-define=API_BASE_URL=https://control-asistencia.up.railway.app",
+        "--dart-define=APP_FLAVOR=PROD"
+      ]
+    },
+    {
+      "name": "FichaYa (Railway · datos reales)",
       "request": "launch",
       "type": "dart",
       "args": [
-        "--dart-define=API_BASE_URL=https://control-asistencia.up.railway.app"
+        "--dart-define=API_BASE_URL=https://control-asistencia.up.railway.app",
+        "--dart-define=APP_FLAVOR=PROD"
       ]
     },
     {
@@ -15,7 +40,7 @@
       "type": "dart",
       "args": [
         "--dart-define=API_BASE_URL=https://control-asistencia.up.railway.app",
-        "--dart-define=APP_PROD=true",
+        "--dart-define=APP_FLAVOR=PROD",
         "--release"
       ]
     }

@@ -1,8 +1,63 @@
+import 'app_palette.dart';
 import 'package:flutter/material.dart';
 
 /// Shared type and control sizes for every route; system text scaling is preserved.
-ThemeData buildAppTheme() {
-  final colors = ColorScheme.fromSeed(seedColor: const Color(0xFF0E3A5B));
+ThemeData buildAppTheme({Brightness brightness = Brightness.light}) {
+  final dark = brightness == Brightness.dark;
+  final colors =
+      ColorScheme.fromSeed(
+        seedColor: AppPalette.blue,
+        brightness: brightness,
+      ).copyWith(
+        primary: dark ? const Color(0xFF8FC3FF) : AppPalette.blue,
+        onPrimary: dark ? const Color(0xFF101E30) : Colors.white,
+        primaryContainer: dark
+            ? const Color(0xFF263951)
+            : const Color(0xFFE7F0FF),
+        onPrimaryContainer: dark
+            ? const Color(0xFFB9D8FF)
+            : const Color(0xFF0757D6),
+        secondaryContainer: dark
+            ? const Color(0xFF263951)
+            : const Color(0xFFE7F0FF),
+        onSecondaryContainer: dark
+            ? const Color(0xFFB9D8FF)
+            : const Color(0xFF0757D6),
+        tertiary: dark ? const Color(0xFFE1A230) : AppPalette.warning,
+        onTertiary: dark ? const Color(0xFF211A0D) : Colors.white,
+        tertiaryContainer: dark
+            ? const Color(0xFF3B301B)
+            : const Color(0xFFFFF0D5),
+        onTertiaryContainer: dark
+            ? const Color(0xFFFFDFA3)
+            : const Color(0xFF684000),
+        errorContainer: dark
+            ? const Color(0xFF44242D)
+            : const Color(0xFFFFE9E6),
+        onErrorContainer: dark
+            ? const Color(0xFFFFB3C1)
+            : const Color(0xFF8F1930),
+        secondary: dark ? const Color(0xFF7DC8F5) : AppPalette.blueLight,
+        surface: dark ? const Color(0xFF202A38) : Colors.white,
+        surfaceContainerLowest: dark ? const Color(0xFF111720) : Colors.white,
+        surfaceContainerLow: dark
+            ? const Color(0xFF263244)
+            : const Color(0xFFF7F8FA),
+        surfaceContainer: dark
+            ? const Color(0xFF2B3748)
+            : const Color(0xFFF7F8FA),
+        surfaceContainerHigh: dark
+            ? const Color(0xFF344257)
+            : const Color(0xFFEEF3FF),
+        surfaceContainerHighest: dark
+            ? const Color(0xFF3E4D63)
+            : const Color(0xFFEEF3FF),
+        onSurface: dark ? const Color(0xFFF1F5FA) : const Color(0xFF111827),
+        onSurfaceVariant: dark ? const Color(0xFFCBD5E1) : AppPalette.muted,
+        outline: dark ? const Color(0xFF94A3B8) : const Color(0xFF737B89),
+        outlineVariant: dark ? const Color(0xFF65758A) : AppPalette.border,
+        error: dark ? const Color(0xFFFF8FA3) : AppPalette.danger,
+      );
   final base = ThemeData(useMaterial3: true, colorScheme: colors);
   final border = OutlineInputBorder(
     borderRadius: BorderRadius.circular(12),
@@ -21,7 +76,9 @@ ThemeData buildAppTheme() {
     ),
   );
   return base.copyWith(
-    scaffoldBackgroundColor: const Color(0xFFF2F5F8),
+    scaffoldBackgroundColor: dark
+        ? const Color(0xFF111720)
+        : AppPalette.background,
     visualDensity: VisualDensity.standard,
     materialTapTargetSize: MaterialTapTargetSize.padded,
     textTheme: base.textTheme
@@ -79,7 +136,7 @@ ThemeData buildAppTheme() {
     appBarTheme: AppBarTheme(
       backgroundColor: colors.surface,
       foregroundColor: colors.onSurface,
-      centerTitle: false,
+      centerTitle: true,
       elevation: 0,
       scrolledUnderElevation: 1,
       titleTextStyle: TextStyle(
@@ -105,14 +162,85 @@ ThemeData buildAppTheme() {
       margin: const EdgeInsets.symmetric(vertical: 4),
       shape: RoundedRectangleBorder(
         borderRadius: BorderRadius.circular(16),
-        side: BorderSide(color: colors.outlineVariant.withValues(alpha: .55)),
+        side: BorderSide(
+          color: dark
+              ? colors.outline.withValues(alpha: .65)
+              : colors.outlineVariant,
+          width: 1.2,
+        ),
       ),
       clipBehavior: Clip.antiAlias,
     ),
-    filledButtonTheme: FilledButtonThemeData(style: buttonStyle),
+    filledButtonTheme: FilledButtonThemeData(
+      style: buttonStyle.copyWith(
+        backgroundColor: WidgetStateProperty.resolveWith(
+          (states) =>
+              states.contains(WidgetState.disabled) ? null : AppPalette.blue,
+        ),
+        foregroundColor: WidgetStateProperty.resolveWith(
+          (states) =>
+              states.contains(WidgetState.disabled) ? null : Colors.white,
+        ),
+      ),
+    ),
     elevatedButtonTheme: ElevatedButtonThemeData(style: buttonStyle),
     outlinedButtonTheme: OutlinedButtonThemeData(style: buttonStyle),
     textButtonTheme: TextButtonThemeData(style: buttonStyle),
+    dialogTheme: DialogThemeData(
+      backgroundColor: colors.surface,
+      surfaceTintColor: Colors.transparent,
+      shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(20)),
+      insetPadding: const EdgeInsets.symmetric(horizontal: 16, vertical: 24),
+    ),
+    popupMenuTheme: PopupMenuThemeData(
+      color: colors.surface,
+      surfaceTintColor: Colors.transparent,
+      elevation: 6,
+      shape: RoundedRectangleBorder(
+        borderRadius: BorderRadius.circular(16),
+        side: BorderSide(color: colors.outlineVariant),
+      ),
+    ),
+    listTileTheme: ListTileThemeData(
+      iconColor: colors.primary,
+      contentPadding: const EdgeInsets.symmetric(horizontal: 16, vertical: 4),
+      minVerticalPadding: 10,
+      titleTextStyle: base.textTheme.titleMedium?.copyWith(
+        color: colors.onSurface,
+        fontWeight: FontWeight.w600,
+      ),
+      subtitleTextStyle: base.textTheme.bodyMedium?.copyWith(
+        color: colors.onSurfaceVariant,
+        height: 1.4,
+      ),
+    ),
+    chipTheme: ChipThemeData(
+      backgroundColor: colors.surfaceContainerLow,
+      selectedColor: colors.primaryContainer,
+      side: BorderSide(color: colors.outlineVariant),
+      shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(10)),
+      labelStyle: TextStyle(
+        color: colors.onSurface,
+        fontSize: 13,
+        fontWeight: FontWeight.w600,
+      ),
+      padding: const EdgeInsets.symmetric(horizontal: 8, vertical: 6),
+    ),
+    bottomSheetTheme: BottomSheetThemeData(
+      backgroundColor: colors.surface,
+      surfaceTintColor: Colors.transparent,
+      shape: const RoundedRectangleBorder(
+        borderRadius: BorderRadius.vertical(top: Radius.circular(20)),
+      ),
+      constraints: const BoxConstraints(maxWidth: 840),
+    ),
+    floatingActionButtonTheme: FloatingActionButtonThemeData(
+      backgroundColor: colors.primaryContainer,
+      foregroundColor: colors.onPrimaryContainer,
+      elevation: 3,
+      shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(16)),
+    ),
+    dividerTheme: DividerThemeData(color: colors.outlineVariant, thickness: 1),
     tabBarTheme: const TabBarThemeData(
       labelStyle: TextStyle(fontSize: 15, fontWeight: FontWeight.w700),
       unselectedLabelStyle: TextStyle(
@@ -121,9 +249,13 @@ ThemeData buildAppTheme() {
       ),
       dividerHeight: 0,
     ),
-    tooltipTheme: const TooltipThemeData(
-      textStyle: TextStyle(fontSize: 14, color: Colors.white),
-      padding: EdgeInsets.symmetric(horizontal: 12, vertical: 8),
+    tooltipTheme: TooltipThemeData(
+      decoration: BoxDecoration(
+        color: const Color(0xFF202A38),
+        borderRadius: BorderRadius.circular(8),
+      ),
+      textStyle: const TextStyle(fontSize: 14, color: Colors.white),
+      padding: const EdgeInsets.symmetric(horizontal: 12, vertical: 8),
     ),
     snackBarTheme: const SnackBarThemeData(behavior: SnackBarBehavior.floating),
   );
@@ -140,7 +272,7 @@ class AppViewport extends StatelessWidget {
     builder: (context, box) {
       final width = box.maxWidth > 1440 ? 1440.0 : box.maxWidth;
       return ColoredBox(
-        color: const Color(0xFFE5EBF1),
+        color: Theme.of(context).scaffoldBackgroundColor,
         child: Center(
           child: SizedBox(
             width: width,

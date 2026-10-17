@@ -1,3 +1,6 @@
+import 'package:ficharqr/src/presentation/widgets/app_card.dart';
+import '../widgets/app_page_layout.dart';
+import 'package:ficharqr/src/presentation/theme/app_palette.dart';
 import 'package:flutter/foundation.dart';
 import '../widgets/browser_permission_dialog.dart';
 import 'dart:async';
@@ -208,16 +211,19 @@ class _ProfilePageState extends State<ProfilePage> {
     final confirmed = await showDialog<bool>(
       context: context,
       builder: (ctx) => AlertDialog(
-        title: const Text('Eliminar foto'),
-        content: const Text('Se eliminara tu foto de perfil actual.'),
+        title: const Text('Eliminar foto', textAlign: TextAlign.center),
+        content: const Text(
+          'Se eliminara tu foto de perfil actual.',
+          textAlign: TextAlign.center,
+        ),
         actions: [
           TextButton(
             onPressed: () => Navigator.pop(ctx, false),
-            child: const Text('Cancelar'),
+            child: const Text('Cancelar', textAlign: TextAlign.center),
           ),
           FilledButton(
             onPressed: () => Navigator.pop(ctx, true),
-            child: const Text('Eliminar'),
+            child: const Text('Eliminar', textAlign: TextAlign.center),
           ),
         ],
       ),
@@ -337,7 +343,7 @@ class _ProfilePageState extends State<ProfilePage> {
 
     return Scaffold(
       appBar: AppBar(
-        title: const Text('Mi perfil'),
+        title: const Text('Mi perfil', textAlign: TextAlign.center),
         bottom: (_uploadingPhoto || _deletingPhoto || _savingProfile)
             ? const PreferredSize(
                 preferredSize: Size.fromHeight(3),
@@ -389,32 +395,32 @@ class _ProfilePageState extends State<ProfilePage> {
                           if (p != null) ...[
                             _SectionCard(
                               title: 'Informacion',
-                              icon: Icons.badge_outlined,
+                              icon: Icons.badge_rounded,
                               children: [
                                 _InfoTile(
-                                  icon: Icons.numbers_outlined,
+                                  icon: Icons.numbers_rounded,
                                   label: 'Legajo',
                                   value: p.legajo ?? '–',
                                 ),
                                 _InfoTile(
-                                  icon: Icons.fingerprint,
+                                  icon: Icons.fingerprint_rounded,
                                   label: 'DNI',
                                   value: p.dni ?? '–',
                                 ),
                                 _InfoTile(
-                                  icon: Icons.email_outlined,
+                                  icon: Icons.email_rounded,
                                   label: 'Email',
                                   value: p.email ?? '–',
                                 ),
                                 if ((p.telefono ?? '').isNotEmpty)
                                   _InfoTile(
-                                    icon: Icons.phone_outlined,
+                                    icon: Icons.phone_rounded,
                                     label: 'Telefono',
                                     value: p.telefono!,
                                   ),
                                 if ((p.direccion ?? '').isNotEmpty)
                                   _InfoTile(
-                                    icon: Icons.home_outlined,
+                                    icon: Icons.home_rounded,
                                     label: 'Direccion',
                                     value: p.direccion!,
                                   ),
@@ -427,7 +433,7 @@ class _ProfilePageState extends State<ProfilePage> {
                           if (_selectedPhoto != null) ...[
                             _SectionCard(
                               title: 'Nueva foto seleccionada',
-                              icon: Icons.photo_outlined,
+                              icon: Icons.photo_rounded,
                               children: [
                                 _PhotoPreviewRow(
                                   photoPath: _selectedPhoto!.path,
@@ -452,7 +458,7 @@ class _ProfilePageState extends State<ProfilePage> {
                               child: OutlinedButton.icon(
                                 onPressed: busyPhoto ? null : _deletePhoto,
                                 icon: Icon(
-                                  Icons.delete_outline,
+                                  Icons.delete_rounded,
                                   color: Theme.of(context).colorScheme.error,
                                 ),
                                 label: Text(
@@ -462,6 +468,7 @@ class _ProfilePageState extends State<ProfilePage> {
                                   style: TextStyle(
                                     color: Theme.of(context).colorScheme.error,
                                   ),
+                                  textAlign: TextAlign.center,
                                 ),
                                 style: OutlinedButton.styleFrom(
                                   side: BorderSide(
@@ -476,7 +483,7 @@ class _ProfilePageState extends State<ProfilePage> {
                           // ── Edit data ──────────────────────────────
                           _SectionCard(
                             title: 'Editar datos',
-                            icon: Icons.edit_outlined,
+                            icon: Icons.edit_rounded,
                             children: [
                               TextField(
                                 controller: _telefonoController,
@@ -484,7 +491,7 @@ class _ProfilePageState extends State<ProfilePage> {
                                 decoration: const InputDecoration(
                                   labelText: 'Telefono',
                                   border: OutlineInputBorder(),
-                                  prefixIcon: Icon(Icons.phone_outlined),
+                                  prefixIcon: Icon(Icons.phone_rounded),
                                   isDense: true,
                                 ),
                               ),
@@ -494,7 +501,7 @@ class _ProfilePageState extends State<ProfilePage> {
                                 decoration: const InputDecoration(
                                   labelText: 'Direccion',
                                   border: OutlineInputBorder(),
-                                  prefixIcon: Icon(Icons.home_outlined),
+                                  prefixIcon: Icon(Icons.home_rounded),
                                   isDense: true,
                                 ),
                               ),
@@ -512,9 +519,10 @@ class _ProfilePageState extends State<ProfilePage> {
                                           ),
                                         ),
                                       )
-                                    : const Icon(Icons.save_outlined),
+                                    : const Icon(Icons.save_rounded),
                                 label: Text(
                                   _savingProfile ? 'Guardando...' : 'Guardar',
+                                  textAlign: TextAlign.center,
                                 ),
                                 style: FilledButton.styleFrom(
                                   minimumSize: const Size(double.infinity, 48),
@@ -527,7 +535,7 @@ class _ProfilePageState extends State<ProfilePage> {
                           // ── Change password ────────────────────────
                           _SectionCard(
                             title: 'Cambiar contraseña',
-                            icon: Icons.lock_outline,
+                            icon: Icons.lock_rounded,
                             children: [
                               TextField(
                                 controller: _passwordActualController,
@@ -535,13 +543,13 @@ class _ProfilePageState extends State<ProfilePage> {
                                 decoration: InputDecoration(
                                   labelText: 'Contraseña actual',
                                   border: const OutlineInputBorder(),
-                                  prefixIcon: const Icon(Icons.lock_outlined),
+                                  prefixIcon: const Icon(Icons.lock_rounded),
                                   isDense: true,
                                   suffixIcon: IconButton(
                                     icon: Icon(
                                       _obscureActual
-                                          ? Icons.visibility_off_outlined
-                                          : Icons.visibility_outlined,
+                                          ? Icons.visibility_off_rounded
+                                          : Icons.visibility_rounded,
                                     ),
                                     onPressed: () => setState(
                                       () => _obscureActual = !_obscureActual,
@@ -557,15 +565,15 @@ class _ProfilePageState extends State<ProfilePage> {
                                   labelText: 'Nueva contraseña',
                                   border: const OutlineInputBorder(),
                                   prefixIcon: const Icon(
-                                    Icons.lock_open_outlined,
+                                    Icons.lock_open_rounded,
                                   ),
                                   helperText: 'Mínimo 8 caracteres',
                                   isDense: true,
                                   suffixIcon: IconButton(
                                     icon: Icon(
                                       _obscureNueva
-                                          ? Icons.visibility_off_outlined
-                                          : Icons.visibility_outlined,
+                                          ? Icons.visibility_off_rounded
+                                          : Icons.visibility_rounded,
                                     ),
                                     onPressed: () => setState(
                                       () => _obscureNueva = !_obscureNueva,
@@ -589,7 +597,10 @@ class _ProfilePageState extends State<ProfilePage> {
                                           strokeWidth: 2,
                                         ),
                                       )
-                                    : const Text('Actualizar contraseña'),
+                                    : const Text(
+                                        'Actualizar contraseña',
+                                        textAlign: TextAlign.center,
+                                      ),
                               ),
                             ],
                           ),
@@ -634,22 +645,24 @@ class _ProfileHero extends StatelessWidget {
     final estado = (p?.estado ?? '').toLowerCase();
     final estadoColor = estado == 'activo' ? Colors.green.shade700 : cs.error;
 
-    return Card(
+    return AppCard(
       clipBehavior: Clip.antiAlias,
       child: Column(
+        crossAxisAlignment: CrossAxisAlignment.center,
         children: [
           // Colored banner top
           Container(
             height: 56,
             decoration: BoxDecoration(
               gradient: LinearGradient(
-                colors: [cs.primary, cs.primary.withValues(alpha: 0.7)],
+                colors: AppColors.of(context).brandGradient,
               ),
             ),
           ),
           Padding(
             padding: const EdgeInsets.fromLTRB(16, 0, 16, 16),
             child: Column(
+              crossAxisAlignment: CrossAxisAlignment.center,
               children: [
                 // Avatar overlapping the banner
                 Transform.translate(
@@ -686,8 +699,11 @@ class _ProfileHero extends StatelessWidget {
                               value: ImageSource.camera,
                               child: ListTile(
                                 dense: true,
-                                leading: Icon(Icons.camera_alt_outlined),
-                                title: Text('Cámara'),
+                                leading: Icon(Icons.camera_alt_rounded),
+                                title: Text(
+                                  'Cámara',
+                                  textAlign: TextAlign.center,
+                                ),
                                 contentPadding: EdgeInsets.zero,
                               ),
                             ),
@@ -695,8 +711,11 @@ class _ProfileHero extends StatelessWidget {
                               value: ImageSource.gallery,
                               child: ListTile(
                                 dense: true,
-                                leading: Icon(Icons.photo_library_outlined),
-                                title: Text('Galeria'),
+                                leading: Icon(Icons.photo_library_rounded),
+                                title: Text(
+                                  'Galeria',
+                                  textAlign: TextAlign.center,
+                                ),
                                 contentPadding: EdgeInsets.zero,
                               ),
                             ),
@@ -709,7 +728,7 @@ class _ProfileHero extends StatelessWidget {
                               border: Border.all(color: cs.surface, width: 2),
                             ),
                             child: Icon(
-                              Icons.edit_outlined,
+                              Icons.edit_rounded,
                               size: 14,
                               color: cs.onPrimaryContainer,
                             ),
@@ -723,6 +742,7 @@ class _ProfileHero extends StatelessWidget {
                 Transform.translate(
                   offset: const Offset(0, -24),
                   child: Column(
+                    crossAxisAlignment: CrossAxisAlignment.center,
                     children: [
                       Text(
                         nombre,
@@ -739,20 +759,27 @@ class _ProfileHero extends StatelessWidget {
                             vertical: 4,
                           ),
                           decoration: BoxDecoration(
-                            color: estadoColor.withValues(alpha: 0.12),
+                            color: AppColors.of(
+                              context,
+                            ).surface(estadoColor.withValues(alpha: 0.12)),
                             borderRadius: BorderRadius.circular(20),
                             border: Border.all(
-                              color: estadoColor.withValues(alpha: 0.3),
+                              color: AppColors.of(
+                                context,
+                              ).border(estadoColor.withValues(alpha: 0.3)),
                             ),
                           ),
                           child: Row(
                             mainAxisSize: MainAxisSize.min,
+                            mainAxisAlignment: MainAxisAlignment.center,
                             children: [
                               Container(
                                 width: 7,
                                 height: 7,
                                 decoration: BoxDecoration(
-                                  color: estadoColor,
+                                  color: AppColors.of(
+                                    context,
+                                  ).surface(estadoColor),
                                   shape: BoxShape.circle,
                                 ),
                               ),
@@ -762,8 +789,11 @@ class _ProfileHero extends StatelessWidget {
                                 style: TextStyle(
                                   fontSize: 13,
                                   fontWeight: FontWeight.w700,
-                                  color: estadoColor,
+                                  color: AppColors.of(
+                                    context,
+                                  ).foreground(estadoColor),
                                 ),
+                                textAlign: TextAlign.center,
                               ),
                             ],
                           ),
@@ -799,21 +829,25 @@ class _SectionCard extends StatelessWidget {
   @override
   Widget build(BuildContext context) {
     final cs = Theme.of(context).colorScheme;
-    return Card(
+    return AppCard(
       child: Padding(
         padding: const EdgeInsets.all(16),
         child: Column(
-          crossAxisAlignment: CrossAxisAlignment.start,
+          crossAxisAlignment: CrossAxisAlignment.center,
           children: [
             Row(
+              mainAxisAlignment: MainAxisAlignment.center,
               children: [
                 Icon(icon, size: 16, color: cs.primary),
                 const SizedBox(width: 6),
-                Text(
-                  title,
-                  style: Theme.of(context).textTheme.labelLarge?.copyWith(
-                    color: cs.primary,
-                    fontWeight: FontWeight.w700,
+                Flexible(
+                  child: Text(
+                    title,
+                    style: Theme.of(context).textTheme.labelLarge?.copyWith(
+                      color: cs.primary,
+                      fontWeight: FontWeight.w700,
+                    ),
+                    textAlign: TextAlign.center,
                   ),
                 ),
               ],
@@ -848,24 +882,27 @@ class _InfoTile extends StatelessWidget {
     return Padding(
       padding: const EdgeInsets.only(bottom: 10),
       child: Row(
+        mainAxisAlignment: MainAxisAlignment.center,
         children: [
           Icon(icon, size: 18, color: cs.onSurfaceVariant),
           const SizedBox(width: 10),
           Expanded(
             child: Column(
-              crossAxisAlignment: CrossAxisAlignment.start,
+              crossAxisAlignment: CrossAxisAlignment.center,
               children: [
                 Text(
                   label,
                   style: Theme.of(
                     context,
                   ).textTheme.labelSmall?.copyWith(color: cs.onSurfaceVariant),
+                  textAlign: TextAlign.center,
                 ),
                 Text(
                   value,
                   style: Theme.of(
                     context,
                   ).textTheme.bodyMedium?.copyWith(fontWeight: FontWeight.w500),
+                  textAlign: TextAlign.center,
                 ),
               ],
             ),
@@ -894,84 +931,52 @@ class _PhotoPreviewRow extends StatelessWidget {
   final VoidCallback? onDiscard;
 
   @override
-  Widget build(BuildContext context) {
-    final cs = Theme.of(context).colorScheme;
-    return Column(
-      crossAxisAlignment: CrossAxisAlignment.start,
-      children: [
-        Row(
-          children: [
-            ClipRRect(
-              borderRadius: BorderRadius.circular(8),
-              child: kIsWeb
-                  ? Image.network(
-                      photoPath,
-                      width: 64,
-                      height: 64,
-                      fit: BoxFit.cover,
-                    )
-                  : Image.file(
-                      File(photoPath),
-                      width: 64,
-                      height: 64,
-                      fit: BoxFit.cover,
-                    ),
-            ),
-            const SizedBox(width: 12),
-            Expanded(
-              child: Column(
-                crossAxisAlignment: CrossAxisAlignment.start,
-                children: [
-                  Text(
-                    sizeLabel,
-                    style: Theme.of(
-                      context,
-                    ).textTheme.bodySmall?.copyWith(color: cs.onSurfaceVariant),
-                  ),
-                  const SizedBox(height: 8),
-                  Row(
-                    children: [
-                      Expanded(
-                        child: FilledButton.icon(
-                          onPressed: onUpload,
-                          icon: uploading
-                              ? const SizedBox(
-                                  width: 14,
-                                  height: 14,
-                                  child: CircularProgressIndicator(
-                                    strokeWidth: 2,
-                                    valueColor: AlwaysStoppedAnimation(
-                                      Colors.white,
-                                    ),
-                                  ),
-                                )
-                              : const Icon(Icons.upload_outlined, size: 16),
-                          label: Text(uploading ? 'Subiendo...' : 'Subir'),
-                          style: FilledButton.styleFrom(
-                            visualDensity: VisualDensity.compact,
-                          ),
-                        ),
-                      ),
-                      const SizedBox(width: 8),
-                      Expanded(
-                        child: OutlinedButton(
-                          onPressed: onDiscard,
-                          style: OutlinedButton.styleFrom(
-                            visualDensity: VisualDensity.compact,
-                          ),
-                          child: const Text('Descartar'),
-                        ),
-                      ),
-                    ],
-                  ),
-                ],
-              ),
-            ),
-          ],
+  Widget build(BuildContext context) => Column(
+    crossAxisAlignment: CrossAxisAlignment.stretch,
+    children: [
+      Center(
+        child: ClipRRect(
+          borderRadius: BorderRadius.circular(12),
+          child: kIsWeb
+              ? Image.network(
+                  photoPath,
+                  width: 88,
+                  height: 88,
+                  fit: BoxFit.cover,
+                )
+              : Image.file(
+                  File(photoPath),
+                  width: 88,
+                  height: 88,
+                  fit: BoxFit.cover,
+                ),
         ),
-      ],
-    );
-  }
+      ),
+      const SizedBox(height: 12),
+      Text(
+        sizeLabel,
+        textAlign: TextAlign.center,
+        style: Theme.of(context).textTheme.bodySmall,
+      ),
+      const SizedBox(height: 12),
+      AppAdaptiveActions(
+        children: [
+          FilledButton.icon(
+            onPressed: onUpload,
+            icon: uploading
+                ? const SizedBox(
+                    width: 18,
+                    height: 18,
+                    child: CircularProgressIndicator(strokeWidth: 2),
+                  )
+                : const Icon(Icons.upload_rounded),
+            label: Text(uploading ? 'Subiendo...' : 'Subir foto'),
+          ),
+          OutlinedButton(onPressed: onDiscard, child: const Text('Descartar')),
+        ],
+      ),
+    ],
+  );
 }
 
 // ─── Error banner ──────────────────────────────────────────────────────────────
@@ -985,18 +990,20 @@ class _ErrorBanner extends StatelessWidget {
   @override
   Widget build(BuildContext context) {
     final cs = Theme.of(context).colorScheme;
-    return Card(
+    return AppCard(
       color: cs.errorContainer,
       child: Padding(
         padding: const EdgeInsets.all(12),
         child: Row(
+          mainAxisAlignment: MainAxisAlignment.center,
           children: [
-            Icon(Icons.error_outline, color: cs.onErrorContainer),
+            Icon(Icons.error_rounded, color: cs.onErrorContainer),
             const SizedBox(width: 10),
             Expanded(
               child: Text(
                 message,
                 style: TextStyle(color: cs.onErrorContainer),
+                textAlign: TextAlign.center,
               ),
             ),
             TextButton(
@@ -1004,6 +1011,7 @@ class _ErrorBanner extends StatelessWidget {
               child: Text(
                 'Reintentar',
                 style: TextStyle(color: cs.onErrorContainer),
+                textAlign: TextAlign.center,
               ),
             ),
           ],

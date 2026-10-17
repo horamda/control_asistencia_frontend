@@ -1,3 +1,6 @@
+import 'package:ficharqr/src/presentation/widgets/app_card.dart';
+import '../theme/theme_preferences.dart';
+import '../theme/app_palette.dart';
 import 'dart:async';
 import 'dart:math';
 
@@ -116,18 +119,22 @@ class _LoginPageState extends State<LoginPage> {
       // Persist credentials for offline access and biometric re-auth
       final offlineCache = widget.offlineCredentialsCache;
       if (offlineCache != null) {
-        unawaited(offlineCache.save(
-          dni: _dniController.text.trim(),
-          password: _passwordController.text,
-          empleado: session.empleado,
-        ));
+        unawaited(
+          offlineCache.save(
+            dni: _dniController.text.trim(),
+            password: _passwordController.text,
+            empleado: session.empleado,
+          ),
+        );
       }
       final bioCache = widget.biometricCredentialCache;
       if (bioCache != null) {
-        unawaited(bioCache.save(
-          dni: _dniController.text.trim(),
-          password: _passwordController.text,
-        ));
+        unawaited(
+          bioCache.save(
+            dni: _dniController.text.trim(),
+            password: _passwordController.text,
+          ),
+        );
       }
       if (!mounted) return;
       await widget.onLoginSuccess(session);
@@ -197,9 +204,7 @@ class _LoginPageState extends State<LoginPage> {
       widget.onBiometricReauth != null;
 
   bool get _offlineAvailable =>
-      _isOffline &&
-      _hasOfflineCreds &&
-      widget.offlineCredentialsCache != null;
+      _isOffline && _hasOfflineCreds && widget.offlineCredentialsCache != null;
 
   String _biometricStatusText() {
     if (!widget.biometricAvailable) {
@@ -234,8 +239,7 @@ class _LoginPageState extends State<LoginPage> {
     biometricLoading: widget.biometricLoading,
     biometricReauthLoading: widget.biometricReauthLoading,
     biometricStatusText: _biometricStatusText(),
-    onToggleObscure: () =>
-        setState(() => _obscurePassword = !_obscurePassword),
+    onToggleObscure: () => setState(() => _obscurePassword = !_obscurePassword),
     onSubmit: _submit,
     onOfflineSubmit: _submitOffline,
     onBiometricLogin: widget.onBiometricLogin,
@@ -247,13 +251,19 @@ class _LoginPageState extends State<LoginPage> {
     return Container(
       padding: const EdgeInsets.symmetric(horizontal: 10, vertical: 5),
       decoration: BoxDecoration(
-        color: Colors.white.withValues(alpha: 0.12),
+        color: AppColors.of(
+          context,
+        ).surface(Colors.white.withValues(alpha: 0.12)),
         borderRadius: BorderRadius.circular(20),
       ),
       child: Row(
         mainAxisSize: MainAxisSize.min,
         children: [
-          const Icon(Icons.developer_mode, size: 12, color: Colors.white60),
+          const Icon(
+            Icons.developer_mode_rounded,
+            size: 12,
+            color: Colors.white60,
+          ),
           const SizedBox(width: 4),
           Text(
             AppConfig.current.flavorLabel,
@@ -267,13 +277,21 @@ class _LoginPageState extends State<LoginPage> {
   @override
   Widget build(BuildContext context) {
     return Scaffold(
-      backgroundColor: const Color(0xFF0D3B66),
+      backgroundColor: AppColors.of(context).surface(AppPalette.navy),
+      floatingActionButtonLocation: FloatingActionButtonLocation.endTop,
+      floatingActionButton: IconButton.filledTonal(
+        tooltip: 'Apariencia',
+        icon: const Icon(Icons.palette_outlined),
+        onPressed: () => Navigator.of(
+          context,
+        ).push(MaterialPageRoute<void>(builder: (_) => const AppearancePage())),
+      ),
       body: Container(
-        decoration: const BoxDecoration(
+        decoration: BoxDecoration(
           gradient: LinearGradient(
             begin: Alignment.topLeft,
             end: Alignment.bottomRight,
-            colors: [Color(0xFF0D3B66), Color(0xFF1B6FA8)],
+            colors: AppColors.of(context).brandGradient,
           ),
         ),
         child: SafeArea(
@@ -286,7 +304,9 @@ class _LoginPageState extends State<LoginPage> {
                 final h = constraints.maxHeight;
 
                 // Tablet / landscape grande: dos columnas
-                if (w >= 700) {
+                if (w >= 900 &&
+                    h >= 500 &&
+                    MediaQuery.textScalerOf(context).scale(1) <= 1.3) {
                   return _WideLayout(
                     formCard: _formCard(),
                     devChip: _devChip(),
@@ -331,10 +351,7 @@ class _WideLayout extends StatelessWidget {
               mainAxisAlignment: MainAxisAlignment.center,
               children: [
                 const _BrandHeader(compact: false),
-                if (devChip != null) ...[
-                  const SizedBox(height: 14),
-                  devChip!,
-                ],
+                if (devChip != null) ...[const SizedBox(height: 14), devChip!],
               ],
             ),
           ),
@@ -343,7 +360,9 @@ class _WideLayout extends StatelessWidget {
         Container(
           width: 1,
           margin: const EdgeInsets.symmetric(vertical: 48),
-          color: Colors.white.withValues(alpha: 0.18),
+          color: AppColors.of(
+            context,
+          ).surface(Colors.white.withValues(alpha: 0.18)),
         ),
         // ── Columna derecha: formulario ──
         Expanded(
@@ -426,22 +445,13 @@ class _BrandHeader extends StatelessWidget {
 
     return Column(
       children: [
-        Container(
+        SizedBox(
           width: logoSize,
           height: logoSize,
-          padding: EdgeInsets.all(compact ? 8 : 12),
-          decoration: BoxDecoration(
-            color: Colors.white.withValues(alpha: 0.10),
-            borderRadius: BorderRadius.circular(compact ? 18 : 24),
-            border: Border.all(
-              color: Colors.white.withValues(alpha: 0.25),
-              width: 2,
-            ),
-          ),
           child: ClipRRect(
-            borderRadius: BorderRadius.circular(compact ? 14 : 20),
+            borderRadius: BorderRadius.circular(compact ? 18 : 24),
             child: Image.asset(
-              'assets/branding/logo_dp.png',
+              'assets/branding/fichaya-login.png',
               fit: BoxFit.cover,
             ),
           ),
@@ -520,7 +530,7 @@ class _FormCard extends StatelessWidget {
     final cs = Theme.of(context).colorScheme;
     final anyLoading = loading || offlineLoading;
 
-    return Card(
+    return AppCard(
       margin: EdgeInsets.zero,
       elevation: 8,
       shadowColor: Colors.black38,
@@ -537,16 +547,16 @@ class _FormCard extends StatelessWidget {
               children: [
                 Text(
                   'Iniciar sesión',
-                  style: Theme.of(context).textTheme.titleLarge?.copyWith(
-                    fontWeight: FontWeight.w700,
-                  ),
+                  style: Theme.of(
+                    context,
+                  ).textTheme.titleLarge?.copyWith(fontWeight: FontWeight.w700),
                 ),
                 const SizedBox(height: 4),
                 Text(
                   'Ingresa tus credenciales de empleado',
-                  style: Theme.of(context).textTheme.bodySmall?.copyWith(
-                    color: cs.onSurfaceVariant,
-                  ),
+                  style: Theme.of(
+                    context,
+                  ).textTheme.bodySmall?.copyWith(color: cs.onSurfaceVariant),
                 ),
                 const SizedBox(height: 24),
 
@@ -566,7 +576,7 @@ class _FormCard extends StatelessWidget {
                     border: OutlineInputBorder(
                       borderRadius: BorderRadius.circular(14),
                     ),
-                    prefixIcon: const Icon(Icons.badge_outlined),
+                    prefixIcon: const Icon(Icons.badge_rounded),
                   ),
                   validator: (value) {
                     final text = value?.trim() ?? '';
@@ -592,13 +602,13 @@ class _FormCard extends StatelessWidget {
                     border: OutlineInputBorder(
                       borderRadius: BorderRadius.circular(14),
                     ),
-                    prefixIcon: const Icon(Icons.lock_outline),
+                    prefixIcon: const Icon(Icons.lock_rounded),
                     suffixIcon: IconButton(
                       onPressed: onToggleObscure,
                       icon: Icon(
                         obscurePassword
-                            ? Icons.visibility_off_outlined
-                            : Icons.visibility_outlined,
+                            ? Icons.visibility_off_rounded
+                            : Icons.visibility_rounded,
                       ),
                       tooltip: obscurePassword
                           ? 'Mostrar contraseña'
@@ -630,8 +640,8 @@ class _FormCard extends StatelessWidget {
 
                 // ── Ingresar (online) ──
                 if (!isOffline || !offlineAvailable)
-                  SizedBox(
-                    height: 52,
+                  ConstrainedBox(
+                    constraints: const BoxConstraints(minHeight: 52),
                     child: FilledButton(
                       onPressed: anyLoading ? null : onSubmit,
                       style: FilledButton.styleFrom(
@@ -645,8 +655,9 @@ class _FormCard extends StatelessWidget {
                               height: 22,
                               child: CircularProgressIndicator(
                                 strokeWidth: 2.2,
-                                valueColor:
-                                    AlwaysStoppedAnimation(Colors.white),
+                                valueColor: AlwaysStoppedAnimation(
+                                  Colors.white,
+                                ),
                               ),
                             )
                           : const Text(
@@ -663,11 +674,11 @@ class _FormCard extends StatelessWidget {
                 if (offlineAvailable) ...[
                   if (!isOffline) ...[
                     const SizedBox(height: 12),
-                    _Divider(label: 'o'),
+                    const _Divider(label: 'o'),
                     const SizedBox(height: 12),
                   ],
-                  SizedBox(
-                    height: 52,
+                  ConstrainedBox(
+                    constraints: const BoxConstraints(minHeight: 52),
                     child: OutlinedButton.icon(
                       onPressed: anyLoading ? null : onOfflineSubmit,
                       style: OutlinedButton.styleFrom(
@@ -697,7 +708,8 @@ class _FormCard extends StatelessWidget {
 
                 // ── Biometrico ──
                 () {
-                  final showBioButton = canUseBiometric ||
+                  final showBioButton =
+                      canUseBiometric ||
                       canBiometricReauth ||
                       biometricLoading ||
                       biometricReauthLoading;
@@ -706,20 +718,22 @@ class _FormCard extends StatelessWidget {
                       (canUseBiometric || canBiometricReauth) &&
                       !anyLoading &&
                       !bioLoading;
-                  final bioCallback =
-                      canUseBiometric ? onBiometricLogin : onBiometricReauth;
+                  final bioCallback = canUseBiometric
+                      ? onBiometricLogin
+                      : onBiometricReauth;
                   if (showBioButton) {
                     return Column(
                       crossAxisAlignment: CrossAxisAlignment.stretch,
                       children: [
                         const SizedBox(height: 16),
-                        _Divider(label: 'o'),
+                        const _Divider(label: 'o'),
                         const SizedBox(height: 16),
-                        SizedBox(
-                          height: 52,
+                        ConstrainedBox(
+                          constraints: const BoxConstraints(minHeight: 52),
                           child: OutlinedButton(
-                            onPressed:
-                                bioEnabled ? () => bioCallback!.call() : null,
+                            onPressed: bioEnabled
+                                ? () => bioCallback!.call()
+                                : null,
                             style: OutlinedButton.styleFrom(
                               shape: RoundedRectangleBorder(
                                 borderRadius: BorderRadius.circular(14),
@@ -737,15 +751,21 @@ class _FormCard extends StatelessWidget {
                                     ),
                                   )
                                 else
-                                  const Icon(Icons.fingerprint, size: 22),
+                                  const Icon(
+                                    Icons.fingerprint_rounded,
+                                    size: 22,
+                                  ),
                                 const SizedBox(width: 10),
-                                Text(
-                                  bioLoading
-                                      ? 'Validando huella...'
-                                      : 'Ingresar con huella',
-                                  style: const TextStyle(
-                                    fontSize: 15,
-                                    fontWeight: FontWeight.w500,
+                                Flexible(
+                                  child: Text(
+                                    bioLoading
+                                        ? 'Validando huella...'
+                                        : 'Ingresar con huella',
+                                    textAlign: TextAlign.center,
+                                    style: const TextStyle(
+                                      fontSize: 15,
+                                      fontWeight: FontWeight.w500,
+                                    ),
                                   ),
                                 ),
                               ],
@@ -763,7 +783,7 @@ class _FormCard extends StatelessWidget {
                           mainAxisAlignment: MainAxisAlignment.center,
                           children: [
                             Icon(
-                              Icons.fingerprint,
+                              Icons.fingerprint_rounded,
                               size: 14,
                               color: cs.onSurfaceVariant,
                             ),
@@ -812,20 +832,27 @@ class _OfflineNotice extends StatelessWidget {
     return Container(
       padding: const EdgeInsets.symmetric(horizontal: 14, vertical: 10),
       decoration: BoxDecoration(
-        color: color,
+        color: AppColors.of(context).surface(color),
         borderRadius: BorderRadius.circular(12),
       ),
       child: Row(
         crossAxisAlignment: CrossAxisAlignment.start,
         children: [
-          Icon(Icons.wifi_off_rounded, size: 16, color: onColor),
+          Icon(
+            Icons.wifi_off_rounded,
+            size: 16,
+            color: AppColors.of(context).foreground(onColor),
+          ),
           const SizedBox(width: 8),
           Expanded(
             child: Text(
               offlineAvailable
                   ? 'Sin conexión. Podés ingresar con tus credenciales guardadas.'
                   : 'Sin conexión a internet. Conectate para ingresar.',
-              style: TextStyle(color: onColor, fontSize: 13),
+              style: TextStyle(
+                color: AppColors.of(context).foreground(onColor),
+                fontSize: 13,
+              ),
             ),
           ),
         ],
@@ -851,9 +878,9 @@ class _Divider extends StatelessWidget {
           padding: const EdgeInsets.symmetric(horizontal: 12),
           child: Text(
             label,
-            style: Theme.of(context).textTheme.bodySmall?.copyWith(
-              color: cs.onSurfaceVariant,
-            ),
+            style: Theme.of(
+              context,
+            ).textTheme.bodySmall?.copyWith(color: cs.onSurfaceVariant),
           ),
         ),
         const Expanded(child: Divider()),
@@ -881,7 +908,7 @@ class _ErrorBanner extends StatelessWidget {
       child: Row(
         crossAxisAlignment: CrossAxisAlignment.start,
         children: [
-          Icon(Icons.error_outline, size: 18, color: cs.onErrorContainer),
+          Icon(Icons.error_rounded, size: 18, color: cs.onErrorContainer),
           const SizedBox(width: 8),
           Expanded(
             child: Text(

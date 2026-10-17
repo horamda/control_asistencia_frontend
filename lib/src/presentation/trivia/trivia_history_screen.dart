@@ -1,3 +1,5 @@
+import 'package:ficharqr/src/presentation/widgets/app_card.dart';
+import '../theme/app_palette.dart';
 import 'dart:async';
 
 import 'package:flutter/material.dart';
@@ -5,7 +7,7 @@ import 'package:flutter/material.dart';
 import '../../core/network/mobile_api_client.dart';
 import 'trivia_ranking_screen.dart';
 
-const _kPrimary = Color(0xFF0E3A5B);
+const _kPrimary = AppPalette.navy;
 const _kGold = Color(0xFFF5A623);
 
 class TriviaHistoryScreen extends StatefulWidget {
@@ -37,43 +39,55 @@ class _TriviaHistoryScreenState extends State<TriviaHistoryScreen> {
 
   Future<void> _load() async {
     if (!mounted) return;
-    setState(() { _loading = true; _error = null; });
+    setState(() {
+      _loading = true;
+      _error = null;
+    });
     try {
       final r = await widget.apiClient.getHistorialTrivia(token: widget.token);
       if (!mounted) return;
-      setState(() { _historial = r; _loading = false; });
+      setState(() {
+        _historial = r;
+        _loading = false;
+      });
     } on ApiException catch (e) {
       if (!mounted) return;
-      setState(() { _error = e.message; _loading = false; });
+      setState(() {
+        _error = e.message;
+        _loading = false;
+      });
     } catch (_) {
       if (!mounted) return;
-      setState(() { _error = 'No se pudo obtener el historial.'; _loading = false; });
+      setState(() {
+        _error = 'No se pudo obtener el historial.';
+        _loading = false;
+      });
     }
   }
 
   void _openRanking(int triviaId) {
-    Navigator.of(context).push(MaterialPageRoute(
-      builder: (_) => TriviaRankingScreen(
-        apiClient: widget.apiClient,
-        token: widget.token,
-        triviaId: triviaId,
-        empleadoDni: widget.empleadoDni,
+    Navigator.of(context).push(
+      MaterialPageRoute(
+        builder: (_) => TriviaRankingScreen(
+          apiClient: widget.apiClient,
+          token: widget.token,
+          triviaId: triviaId,
+          empleadoDni: widget.empleadoDni,
+        ),
       ),
-    ));
+    );
   }
 
   @override
   Widget build(BuildContext context) {
     final items = _historial?.items ?? [];
     return Scaffold(
-      backgroundColor: const Color(0xFFF2F5F8),
+      backgroundColor: AppColors.of(context).surface(AppPalette.background),
       appBar: AppBar(
-        title: const Text('Historial de Trivias'),
-        backgroundColor: _kPrimary,
-        foregroundColor: Colors.white,
+        title: const Text('Historial de Trivias', textAlign: TextAlign.center),
         actions: [
           IconButton(
-            icon: const Icon(Icons.refresh),
+            icon: const Icon(Icons.refresh_rounded),
             onPressed: _loading ? null : _load,
           ),
         ],
@@ -81,21 +95,21 @@ class _TriviaHistoryScreenState extends State<TriviaHistoryScreen> {
       body: _loading
           ? const Center(child: CircularProgressIndicator())
           : _error != null
-              ? _ErrorView(message: _error!, onRetry: _load)
-              : items.isEmpty
-                  ? _EmptyState()
-                  : RefreshIndicator(
-                      onRefresh: _load,
-                      child: ListView.separated(
-                        padding: const EdgeInsets.all(16),
-                        itemCount: items.length,
-                        separatorBuilder: (_, __) => const SizedBox(height: 10),
-                        itemBuilder: (_, i) => _HistorialTile(
-                          item: items[i],
-                          onRanking: () => _openRanking(items[i].id),
-                        ),
-                      ),
-                    ),
+          ? _ErrorView(message: _error!, onRetry: _load)
+          : items.isEmpty
+          ? _EmptyState()
+          : RefreshIndicator(
+              onRefresh: _load,
+              child: ListView.separated(
+                padding: const EdgeInsets.all(16),
+                itemCount: items.length,
+                separatorBuilder: (_, __) => const SizedBox(height: 10),
+                itemBuilder: (_, i) => _HistorialTile(
+                  item: items[i],
+                  onRanking: () => _openRanking(items[i].id),
+                ),
+              ),
+            ),
     );
   }
 }
@@ -108,26 +122,32 @@ class _HistorialTile extends StatelessWidget {
   @override
   Widget build(BuildContext context) {
     final ganador = item.ganadorNombre;
-    return Card(
+    return AppCard(
       elevation: 1,
       shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(14)),
       child: Padding(
         padding: const EdgeInsets.all(16),
         child: Column(
-          crossAxisAlignment: CrossAxisAlignment.start,
+          crossAxisAlignment: CrossAxisAlignment.center,
           children: [
             Row(
+              mainAxisAlignment: MainAxisAlignment.center,
               children: [
-                const Icon(Icons.quiz_outlined, size: 18, color: _kPrimary),
+                Icon(
+                  Icons.quiz_rounded,
+                  size: 18,
+                  color: AppColors.of(context).foreground(_kPrimary),
+                ),
                 const SizedBox(width: 8),
                 Expanded(
                   child: Text(
                     item.titulo ?? 'Trivia',
-                    style: const TextStyle(
+                    style: TextStyle(
                       fontWeight: FontWeight.w700,
                       fontSize: 15,
-                      color: _kPrimary,
+                      color: AppColors.of(context).foreground(_kPrimary),
                     ),
+                    textAlign: TextAlign.center,
                   ),
                 ),
               ],
@@ -138,36 +158,69 @@ class _HistorialTile extends StatelessWidget {
             if (item.fechaFin != null)
               _InfoChip(text: 'Fin: ${_fmtFecha(item.fechaFin)}'),
             if (item.premio != null)
-              _InfoChip(text: 'Premio: ${item.premio}', icon: Icons.card_giftcard_outlined),
+              _InfoChip(
+                text: 'Premio: ${item.premio}',
+                icon: Icons.card_giftcard_rounded,
+              ),
             if (ganador != null) ...[
               const SizedBox(height: 10),
               Container(
                 padding: const EdgeInsets.all(10),
                 decoration: BoxDecoration(
-                  color: _kGold.withValues(alpha: 0.1),
+                  color: AppColors.of(
+                    context,
+                  ).surface(_kGold.withValues(alpha: 0.1)),
                   borderRadius: BorderRadius.circular(10),
-                  border: Border.all(color: _kGold.withValues(alpha: 0.3)),
+                  border: Border.all(
+                    color: AppColors.of(
+                      context,
+                    ).border(_kGold.withValues(alpha: 0.3)),
+                  ),
                 ),
                 child: Row(
+                  mainAxisAlignment: MainAxisAlignment.center,
                   children: [
-                    const Text('🏆', style: TextStyle(fontSize: 18)),
+                    const Text(
+                      '🏆',
+                      style: TextStyle(fontSize: 18),
+                      textAlign: TextAlign.center,
+                    ),
                     const SizedBox(width: 8),
                     Expanded(
                       child: Column(
-                        crossAxisAlignment: CrossAxisAlignment.start,
+                        crossAxisAlignment: CrossAxisAlignment.center,
                         children: [
-                          const Text('Ganador',
-                              style: TextStyle(fontSize: 13, color: Color(0xFF7A4800))),
+                          Text(
+                            'Ganador',
+                            style: TextStyle(
+                              fontSize: 13,
+                              color: AppColors.of(
+                                context,
+                              ).foreground(const Color(0xFF7A4800)),
+                            ),
+                            textAlign: TextAlign.center,
+                          ),
                           Text(
                             ganador,
-                            style: const TextStyle(
+                            style: TextStyle(
                               fontWeight: FontWeight.w700,
-                              color: Color(0xFF7A4800),
+                              color: AppColors.of(
+                                context,
+                              ).foreground(const Color(0xFF7A4800)),
                             ),
+                            textAlign: TextAlign.center,
                           ),
                           if (item.ganadorPuntos != null)
-                            Text('${item.ganadorPuntos} pts',
-                                style: const TextStyle(fontSize: 13, color: Color(0xFF7A4800))),
+                            Text(
+                              '${item.ganadorPuntos} pts',
+                              style: TextStyle(
+                                fontSize: 13,
+                                color: AppColors.of(
+                                  context,
+                                ).foreground(const Color(0xFF7A4800)),
+                              ),
+                              textAlign: TextAlign.center,
+                            ),
                         ],
                       ),
                     ),
@@ -179,8 +232,8 @@ class _HistorialTile extends StatelessWidget {
             SizedBox(
               width: double.infinity,
               child: OutlinedButton.icon(
-                icon: const Icon(Icons.leaderboard_outlined, size: 18),
-                label: const Text('Ver ranking'),
+                icon: const Icon(Icons.leaderboard_rounded, size: 18),
+                label: const Text('Ver ranking', textAlign: TextAlign.center),
                 onPressed: onRanking,
               ),
             ),
@@ -202,12 +255,20 @@ class _InfoChip extends StatelessWidget {
       padding: const EdgeInsets.only(bottom: 4),
       child: Row(
         children: [
-          Icon(icon ?? Icons.calendar_today_outlined,
-              size: 13, color: Colors.grey.shade500),
+          Icon(
+            icon ?? Icons.calendar_today_rounded,
+            size: 13,
+            color: AppColors.of(context).foreground(Colors.grey.shade500),
+          ),
           const SizedBox(width: 6),
           Expanded(
-            child: Text(text,
-                style: TextStyle(fontSize: 13, color: Colors.grey.shade700)),
+            child: Text(
+              text,
+              style: TextStyle(
+                fontSize: 13,
+                color: AppColors.of(context).foreground(Colors.grey.shade700),
+              ),
+            ),
           ),
         ],
       ),
@@ -221,11 +282,21 @@ class _EmptyState extends StatelessWidget {
     return Center(
       child: Column(
         mainAxisSize: MainAxisSize.min,
+        crossAxisAlignment: CrossAxisAlignment.center,
         children: [
-          Icon(Icons.history_outlined, size: 56, color: Colors.grey.shade300),
+          Icon(
+            Icons.history_rounded,
+            size: 56,
+            color: AppColors.of(context).foreground(Colors.grey.shade300),
+          ),
           const SizedBox(height: 12),
-          Text('No hay trivias finalizadas aún.',
-              style: TextStyle(color: Colors.grey.shade500)),
+          Text(
+            'No hay trivias finalizadas aún.',
+            style: TextStyle(
+              color: AppColors.of(context).foreground(Colors.grey.shade500),
+            ),
+            textAlign: TextAlign.center,
+          ),
         ],
       ),
     );
@@ -245,15 +316,25 @@ class _ErrorView extends StatelessWidget {
         child: Column(
           mainAxisSize: MainAxisSize.min,
           children: [
-            Icon(Icons.error_outline, size: 48, color: Colors.grey.shade400),
+            Icon(
+              Icons.error_rounded,
+              size: 48,
+              color: AppColors.of(context).foreground(Colors.grey.shade400),
+            ),
             const SizedBox(height: 12),
-            Text(message,
-                textAlign: TextAlign.center,
-                style: TextStyle(color: Colors.grey.shade600)),
+            Text(
+              message,
+              textAlign: TextAlign.center,
+              style: TextStyle(
+                color: AppColors.of(context).foreground(Colors.grey.shade600),
+              ),
+            ),
             const SizedBox(height: 20),
             FilledButton.icon(
-              style: FilledButton.styleFrom(backgroundColor: _kPrimary),
-              icon: const Icon(Icons.refresh),
+              style: FilledButton.styleFrom(
+                backgroundColor: AppColors.of(context).surface(_kPrimary),
+              ),
+              icon: const Icon(Icons.refresh_rounded),
               label: const Text('Reintentar'),
               onPressed: onRetry,
             ),

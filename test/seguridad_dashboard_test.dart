@@ -177,6 +177,7 @@ void main() {
 
   for (final size in [
     const Size(320, 740),
+    const Size(440, 956),
     const Size(800, 900),
     const Size(1440, 900),
   ]) {
@@ -220,6 +221,29 @@ void main() {
           await expectLater(
             find.byKey(const Key('security-preview')),
             matchesGoldenFile('../build/security_${size.width.toInt()}.png'),
+          );
+          await tester.scrollUntilVisible(
+            find.byKey(const ValueKey('security-type-accidente')),
+            180,
+            scrollable: find
+                .descendant(
+                  of: find.byType(SeguridadDashboard),
+                  matching: find.byType(Scrollable),
+                )
+                .first,
+          );
+          await Scrollable.ensureVisible(
+            tester.element(
+              find.byKey(const ValueKey('security-type-accidente')),
+            ),
+            alignment: .2,
+          );
+          await tester.pumpAndSettle();
+          await expectLater(
+            find.byKey(const Key('security-preview')),
+            matchesGoldenFile(
+              '../build/security_cards_${size.width.toInt()}.png',
+            ),
           );
           await tester.scrollUntilVisible(
             find.byType(SeguridadMonthlySeries),
@@ -293,7 +317,7 @@ void main() {
     );
     await tester.pumpAndSettle();
     await tester.scrollUntilVisible(
-      find.widgetWithText(ListTile, 'Comportamiento seguro'),
+      find.byKey(const ValueKey('security-type-seguro')),
       180,
       scrollable: find
           .descendant(
@@ -303,13 +327,19 @@ void main() {
           .first,
     );
     await Scrollable.ensureVisible(
-      tester.element(find.widgetWithText(ListTile, 'Comportamiento seguro')),
+      tester.element(find.byKey(const ValueKey('security-type-seguro'))),
       alignment: 0.5,
     );
     await tester.pumpAndSettle();
-    await tester.tap(
-      find.widgetWithText(ListTile, 'Comportamiento seguro').first,
+    final card = find.byKey(const ValueKey('security-type-seguro'));
+    final title = find.descendant(
+      of: card,
+      matching: find.text('Comportamiento seguro'),
     );
+    final count = find.descendant(of: card, matching: find.text('2'));
+    expect(tester.getCenter(title).dx, closeTo(tester.getCenter(card).dx, 1));
+    expect(tester.getCenter(count).dx, closeTo(tester.getCenter(card).dx, 1));
+    await tester.tap(card);
     await tester.pumpAndSettle();
     final request = Uri.parse(api.paths.last);
     expect(request.queryParameters, containsPair('vista', 'propio'));
@@ -380,28 +410,38 @@ void main() {
     },
   );
 
-  testWidgets('monthly chart preserves future null and has scrollable labels', (
-    tester,
-  ) async {
-    await tester.binding.setSurfaceSize(const Size(320, 740));
-    addTearDown(() => tester.binding.setSurfaceSize(null));
-    await tester.pumpWidget(
-      MaterialApp(
-        theme: buildAppTheme(),
-        home: Scaffold(
-          body: SeguridadMonthlySeries(
-            values: [0, 1, 2, 0, 3, 0, 1, 0, 0, 4, null, null],
-            year: 2026,
-            cutoff: DateTime(2026, 10, 6),
+  testWidgets(
+    'monthly chart wraps months within mobile width and preserves future null',
+    (tester) async {
+      await tester.binding.setSurfaceSize(const Size(320, 740));
+      addTearDown(() => tester.binding.setSurfaceSize(null));
+      await tester.pumpWidget(
+        MaterialApp(
+          theme: buildAppTheme(),
+          home: Scaffold(
+            body: SeguridadMonthlySeries(
+              values: [0, 1, 2, 0, 3, 0, 1, 0, 0, 4, null, null],
+              year: 2026,
+              cutoff: DateTime(2026, 10, 6),
+            ),
           ),
         ),
-      ),
-    );
-    expect(find.text('0'), findsWidgets);
-    expect(find.text('—'), findsWidgets);
-    expect(find.text('Oct*'), findsOneWidget);
-    expect(tester.takeException(), isNull);
-  });
+      );
+      expect(find.text('0'), findsWidgets);
+      expect(find.text('—'), findsWidgets);
+      expect(find.text('Oct*'), findsOneWidget);
+      for (final label in ['Ene', 'Jul', 'Dic']) {
+        final bounds = tester.getRect(find.text(label));
+        expect(bounds.left, greaterThanOrEqualTo(0));
+        expect(bounds.right, lessThanOrEqualTo(320));
+      }
+      expect(
+        tester.getTopLeft(find.text('Dic')).dy,
+        greaterThan(tester.getTopLeft(find.text('Ene')).dy),
+      );
+      expect(tester.takeException(), isNull);
+    },
+  );
 
   testWidgets('home cards retain readable values with large text at 320px', (
     tester,
@@ -423,13 +463,13 @@ void main() {
                   AttendanceStatItem(
                     title: 'A tiempo esta semana',
                     value: '100 / 100',
-                    icon: Icons.schedule,
+                    icon: Icons.schedule_rounded,
                     accent: Colors.blue,
                   ),
                   AttendanceStatItem(
                     title: 'Última fichada',
                     value: '18:00',
-                    icon: Icons.schedule,
+                    icon: Icons.schedule_rounded,
                     accent: Colors.blue,
                   ),
                 ],

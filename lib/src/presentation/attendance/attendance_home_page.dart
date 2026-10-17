@@ -1,3 +1,17 @@
+import 'package:ficharqr/src/presentation/widgets/app_card.dart';
+import '../theme/theme_preferences.dart';
+import '../../core/network/reuniones_models.dart';
+import '../../core/reuniones/reunion_reminders.dart';
+import '../../core/reuniones/push_service.dart';
+import '../../core/reuniones/reunion_navigation.dart';
+import 'reuniones_page.dart';
+import 'comunicados_page.dart';
+import '../../core/reuniones/comunicados_navigation.dart';
+import 'camera_permission_page.dart';
+import 'notification_settings_page.dart';
+import 'widgets/home_reuniones_card.dart';
+import 'widgets/branch_safety_card.dart';
+import '../theme/app_palette.dart';
 import 'package:flutter/foundation.dart';
 import '../widgets/browser_permission_dialog.dart';
 import 'dart:async';
@@ -10,6 +24,7 @@ import 'package:url_launcher/url_launcher.dart';
 
 import '../../config/app_config.dart';
 import '../../core/alerts/employee_alerts_repository.dart';
+import '../../core/alerts/employee_alerts_read_state.dart';
 import '../../core/attendance/attendance_config_cache.dart';
 import '../../core/attendance/clock_readiness_cache.dart';
 import '../../core/attendance/clock_feedback_presenter.dart';
@@ -90,9 +105,155 @@ class _AttendanceHomePageState extends State<AttendanceHomePage>
   late final PendingQueueController _pendingQueueController;
   late final EmployeeAlertsRepository _alertsRepository;
 
+  List<ReunionOccurrence> _reuniones = [];
+  Map<String, dynamic>? _reunionesSummary;
+  StreamSubscription? _pushMessages;
+  int _comunicadosUnread = 0, _comunicadosRequest = 0;
+  Future<void> _loadComunicadosBadge() async {
+    final request = ++_comunicadosRequest;
+    final token = widget.token;
+    if (_isOfflineToken) return;
+    try {
+      final data = await widget.apiClient.getComunicados(token: token);
+      if (mounted && request == _comunicadosRequest && widget.token == token) {
+        setState(
+          () => _comunicadosUnread = (data['no_leidos'] as num?)?.toInt() ?? 0,
+        );
+      }
+    } catch (_) {
+      /* Keep attendance usable when the optional inbox is offline. */
+    }
+  }
+
+  void _comunicadosRefresh() => unawaited(_loadComunicadosBadge());
+  void _comunicadoRoute() {
+    if (!mounted || _isOfflineToken || widget.sessionManager.isLocked) return;
+    final id = ComunicadosNavigation.pending.value;
+    if (id == null) return;
+    ComunicadosNavigation.pending.value = null;
+    unawaited(_openComunicados(id: id));
+  }
+
+  Future<void> _openComunicados({int id = 0}) async {
+    await Navigator.of(context).push(
+      MaterialPageRoute<void>(
+        builder: (_) => id == 0
+            ? ComunicadosPage(api: widget.apiClient, token: widget.token)
+            : ComunicadoDetailPage(
+                api: widget.apiClient,
+                token: widget.token,
+                id: id,
+              ),
+      ),
+    );
+    if (mounted) await _loadComunicadosBadge();
+  }
+
+  void _notificationRoute() {
+    _comunicadoRoute();
+    if (!mounted || _isOfflineToken || widget.sessionManager.isLocked) return;
+    final id = ReunionNavigation.pending.value;
+    if (id == null) return;
+    ReunionNavigation.pending.value = null;
+    if (id == 0) {
+      unawaited(_openReuniones());
+      return;
+    }
+    unawaited(
+      Navigator.of(context).push(
+        MaterialPageRoute<void>(
+          builder: (_) => ReunionDetailPage(
+            api: widget.apiClient,
+            token: widget.token,
+            id: id,
+          ),
+        ),
+      ),
+    );
+  }
+
+  void _notificationRefresh() {
+    if (mounted) unawaited(_loadReuniones());
+  }
+
+  String? _reunionesError;
+  bool _loadingReuniones = false;
+  int _reunionesRequest = 0;
+
+  Future<void> _loadReuniones() async {
+    if (!mounted) return;
+    final request = ++_reunionesRequest;
+    setState(() => _loadingReuniones = true);
+    try {
+      final data = await widget.apiClient.getReuniones(
+        token: widget.token,
+        path: '/proximas',
+        query: {'semana': 'actual'},
+      );
+      if (!mounted || request != _reunionesRequest) return;
+      final items = reunionMaps(
+        data['items'],
+      ).map(ReunionOccurrence.new).toList();
+      setState(() {
+        _reuniones = items;
+        _reunionesSummary = data['resumen'] is Map
+            ? Map<String, dynamic>.from(data['resumen'])
+            : null;
+        _reunionesError = null;
+      });
+      try {
+        final upcoming = await widget.apiClient.getReuniones(
+          token: widget.token,
+          path: '/proximas',
+          query: {'dias': '7'},
+        );
+        if (!mounted || request != _reunionesRequest) return;
+        await ReunionReminders.instance.replace(
+          reunionMaps(upcoming['items']).map(ReunionOccurrence.new).toList(),
+          employeeId: widget.empleado.id,
+        );
+      } catch (_) {
+        if (mounted) {
+          setState(
+            () => _reunionesError =
+                'No se pudieron actualizar los recordatorios locales. Reintentá la actualización.',
+          );
+        }
+      }
+    } catch (e) {
+      if (!mounted || request != _reunionesRequest) return;
+      setState(
+        () => _reunionesError = e is ApiException
+            ? e.message
+            : 'No se pudieron actualizar las reuniones.',
+      );
+    } finally {
+      if (mounted && request == _reunionesRequest) {
+        setState(() => _loadingReuniones = false);
+      }
+    }
+  }
+
+  Future<void> _openReuniones() async {
+    if (_submitting) return;
+    await Navigator.push<void>(
+      context,
+      MaterialPageRoute(
+        builder: (_) => ReunionesPage(
+          api: widget.apiClient,
+          token: widget.token,
+          onClockQr: (qr) => _runScanAndClock(scannedQr: qr),
+          onChanged: _loadReuniones,
+        ),
+      ),
+    );
+    if (mounted) await _loadReuniones();
+  }
+
   int _selectedTab = 0;
 
   bool _submitting = false;
+  final _branchSafetyKey = GlobalKey<BranchSafetyCardState>();
   bool _loadingConfig = false;
   bool _loadingProfile = false;
   bool _locatingGps = false;
@@ -136,6 +297,25 @@ class _AttendanceHomePageState extends State<AttendanceHomePage>
   @override
   void initState() {
     super.initState();
+    ReunionNavigation.pending.addListener(_notificationRoute);
+    ComunicadosNavigation.pending.addListener(_comunicadoRoute);
+    ComunicadosNavigation.refresh.addListener(_comunicadosRefresh);
+    unawaited(_loadComunicadosBadge());
+    ReunionNavigation.refresh.addListener(_notificationRefresh);
+    WidgetsBinding.instance.addPostFrameCallback((_) => _notificationRoute());
+    _pushMessages = PushService.instance.foreground.stream.listen((message) {
+      if (!mounted || widget.sessionManager.isLocked) return;
+      showCenteredSnackBar(
+        context,
+        text:
+            '${message.notification?.title ?? 'FichaYa'}: ${message.notification?.body ?? ''}',
+        action: SnackBarAction(
+          label: 'Ver',
+          onPressed: () =>
+              ReunionNavigation.open(message.data['ruta'] as String?),
+        ),
+      );
+    });
     WidgetsBinding.instance.addObserver(this);
     _pendingClockSyncService = PendingClockSyncService(
       offlineClockQueue: OfflineClockQueue(),
@@ -189,6 +369,7 @@ class _AttendanceHomePageState extends State<AttendanceHomePage>
     _loadConfig();
     _loadProfile();
     unawaited(_loadDashboard());
+    unawaited(_loadReuniones());
     unawaited(_loadTurnoHoy());
     unawaited(_loadTriviaEstado());
     unawaited(_loadAlertsOverview());
@@ -235,6 +416,11 @@ class _AttendanceHomePageState extends State<AttendanceHomePage>
 
   @override
   void dispose() {
+    ReunionNavigation.pending.removeListener(_notificationRoute);
+    ReunionNavigation.refresh.removeListener(_notificationRefresh);
+    _pushMessages?.cancel();
+    ComunicadosNavigation.pending.removeListener(_comunicadoRoute);
+    ComunicadosNavigation.refresh.removeListener(_comunicadosRefresh);
     WidgetsBinding.instance.removeObserver(this);
     _stopTimers();
     _connectivitySubscription?.cancel();
@@ -275,7 +461,10 @@ class _AttendanceHomePageState extends State<AttendanceHomePage>
   @override
   void didChangeAppLifecycleState(AppLifecycleState state) {
     if (state == AppLifecycleState.resumed) {
+      unawaited(_loadComunicadosBadge());
+      unawaited(PushService.instance.refresh());
       _startTimers();
+      unawaited(_loadReuniones());
       unawaited(_warmUpClockReadiness(forceGps: true, refreshConfig: true));
       unawaited(_loadAlertsOverview());
       unawaited(_loadCargaPermission());
@@ -329,11 +518,14 @@ class _AttendanceHomePageState extends State<AttendanceHomePage>
     if (_alertsLoading) return;
     _alertsLoading = true;
     try {
-      final snapshot = await _alertsRepository.loadOverview(
-        token: widget.token,
-      );
+      final snapshot = await _alertsRepository.loadDetails(token: widget.token);
       if (!mounted) return;
-      setState(() => _alertsCount = snapshot.activeCount);
+      final count = await EmployeeAlertsReadState(
+        server: widget.apiClient.baseUrl,
+        employeeId: widget.empleado.id,
+      ).unreadCount(snapshot);
+      if (!mounted) return;
+      setState(() => _alertsCount = count);
     } catch (error, stackTrace) {
       _log.warning(
         'No se pudo actualizar el contador de alertas.',
@@ -353,6 +545,7 @@ class _AttendanceHomePageState extends State<AttendanceHomePage>
       context,
       apiClient: widget.apiClient,
       token: widget.token,
+      employeeId: widget.empleado.id,
     );
     if (mounted) {
       unawaited(_loadAlertsOverview());
@@ -975,11 +1168,43 @@ class _AttendanceHomePageState extends State<AttendanceHomePage>
     }
   }
 
-  Future<void> _runScanAndClock() async {
+  Future<void> _runScanAndClock({String? scannedQr}) async {
     if (_submitting || _loadingConfig) {
       return;
     }
 
+    final qrData = scannedQr ?? await _homeCoordinator.scanQr(context);
+    if (!mounted) return;
+    if (qrData == null) return;
+    if (isReunionQr(qrData)) {
+      setState(() {
+        _submitting = true;
+        _clockActionPhase = 'Registrando reunión...';
+      });
+      try {
+        await registerReunionQr(
+          context,
+          widget.apiClient,
+          widget.token,
+          qrData,
+        );
+        if (mounted) await _loadReuniones();
+      } finally {
+        if (mounted) {
+          setState(() {
+            _submitting = false;
+            _clockActionPhase = null;
+          });
+        }
+      }
+      return;
+    }
+    final cleanQrData = qrData.trim();
+    if (cleanQrData.isEmpty) {
+      _showNotice(_clockFeedbackPresenter.invalidQr());
+      return;
+    }
+    // Only clock QR codes use attendance configuration, GPS, photo and offline queue.
     await _loadConfig();
     if (!mounted) {
       return;
@@ -1032,26 +1257,6 @@ class _AttendanceHomePageState extends State<AttendanceHomePage>
       return;
     }
 
-    unawaited(_warmUpClockReadiness(forceGps: true));
-
-    final qrData = await _homeCoordinator.scanQr(
-      context,
-      requiresPhoto: effectiveConfig.requiereFoto,
-    );
-
-    if (!mounted) {
-      return;
-    }
-    if (qrData == null) {
-      _showMessage('Fichada cancelada.', isError: false);
-      return;
-    }
-
-    final cleanQrData = qrData.trim();
-    if (cleanQrData.isEmpty) {
-      _showNotice(_clockFeedbackPresenter.invalidQr());
-      return;
-    }
     final eventAt = DateTime.now();
 
     setState(() {
@@ -1269,9 +1474,12 @@ class _AttendanceHomePageState extends State<AttendanceHomePage>
 
   Future<void> _refreshHome() async {
     await Future.wait([
+      _loadComunicadosBadge(),
+      _branchSafetyKey.currentState?.refresh() ?? Future<void>.value(),
       _loadConfig(force: true),
       _loadProfile(force: true),
       _loadDashboard(),
+      _loadReuniones(),
       _loadTurnoHoy(),
       _loadTriviaEstado(),
       _loadLegajoEventosAdminPermisos(),
@@ -1408,6 +1616,30 @@ class _AttendanceHomePageState extends State<AttendanceHomePage>
             );
           }
         };
+      case AttendanceHomeActionIntent.openReintegros:
+        return () {
+          if (!_submitting) {
+            unawaited(
+              _homeCoordinator.openReintegros(
+                context,
+                apiClient: widget.apiClient,
+                token: widget.token,
+              ),
+            );
+          }
+        };
+      case AttendanceHomeActionIntent.openEpp:
+        return () {
+          if (!_submitting) {
+            unawaited(
+              _homeCoordinator.openEpp(
+                context,
+                apiClient: widget.apiClient,
+                token: widget.token,
+              ),
+            );
+          }
+        };
       case AttendanceHomeActionIntent.openSkap:
         return () {
           unawaited(_openSkap());
@@ -1451,9 +1683,9 @@ class _AttendanceHomePageState extends State<AttendanceHomePage>
       text: notice.message,
       isError: notice.isError,
       duration: notice.duration,
-      backgroundColor: notice.style == ClockNoticeStyle.fraud
-          ? Colors.red.shade800
-          : null,
+      backgroundColor: AppColors.of(context).optionalSurface(
+        notice.style == ClockNoticeStyle.fraud ? Colors.red.shade800 : null,
+      ),
       action: _buildSnackBarAction(notice.action),
     );
   }
@@ -1525,6 +1757,7 @@ class _AttendanceHomePageState extends State<AttendanceHomePage>
         minChildSize: 0.3,
         maxChildSize: 0.85,
         builder: (ctx, sc) => Column(
+          crossAxisAlignment: CrossAxisAlignment.center,
           children: [
             Padding(
               padding: const EdgeInsets.symmetric(vertical: 10),
@@ -1795,6 +2028,7 @@ class _AttendanceHomePageState extends State<AttendanceHomePage>
         ? Text(
             alertsCount > 99 ? '99+' : '$alertsCount',
             style: const TextStyle(fontSize: 13),
+            textAlign: TextAlign.center,
           )
         : null;
     return Scaffold(
@@ -1808,26 +2042,74 @@ class _AttendanceHomePageState extends State<AttendanceHomePage>
             onPressed: _submitting
                 ? null
                 : () => unawaited(_openEmployeeAlerts()),
-            icon: const Icon(Icons.notifications_active_outlined),
+            icon: const Icon(Icons.notifications_active_rounded),
             tooltip: hasAlerts
                 ? 'Alertas (${alertsCount > 99 ? '99+' : alertsCount})'
                 : 'Alertas',
           ),
         ),
-        title: const Text('FichaYa'),
+        title: Row(
+          mainAxisSize: MainAxisSize.min,
+          mainAxisAlignment: MainAxisAlignment.center,
+          children: [
+            Image.asset(
+              'assets/branding/fichaya-header.png',
+              width: 32,
+              height: 32,
+              cacheWidth: 96,
+              cacheHeight: 96,
+              excludeFromSemantics: true,
+              errorBuilder: (_, __, ___) =>
+                  const SizedBox(width: 32, height: 32),
+            ),
+            const SizedBox(width: 8),
+            const Flexible(
+              child: Text(
+                'FichaYa',
+                maxLines: 1,
+                overflow: TextOverflow.ellipsis,
+                textAlign: TextAlign.center,
+              ),
+            ),
+          ],
+        ),
         actions: [
           PopupMenuButton<_HomeMenuAction>(
             enabled: !_submitting,
-            icon: const Icon(Icons.more_vert),
+            icon: const Icon(Icons.more_vert_rounded),
             tooltip: 'Mas opciones',
             onSelected: (action) async {
               switch (action) {
+                case _HomeMenuAction.notifications:
+                  await Navigator.of(context).push(
+                    MaterialPageRoute<void>(
+                      builder: (_) => const NotificationSettingsPage(),
+                    ),
+                  );
+                case _HomeMenuAction.appearance:
+                  await Navigator.of(context).push(
+                    MaterialPageRoute<void>(
+                      builder: (_) => const AppearancePage(),
+                    ),
+                  );
+                case _HomeMenuAction.reuniones:
+                  await _openReuniones();
+                case _HomeMenuAction.comunicados:
+                  await _openComunicados();
                 case _HomeMenuAction.biometrics:
                   await _openBiometricSettings();
                 case _HomeMenuAction.security:
                   await _openSecurityEvents();
                 case _HomeMenuAction.locationGps:
                   await _openGpsLocation();
+                case _HomeMenuAction.camera:
+                  await Navigator.of(context).push(
+                    MaterialPageRoute<void>(
+                      builder: (_) => CameraPermissionPage(
+                        permissions: _devicePermissionBootstrap,
+                      ),
+                    ),
+                  );
                 case _HomeMenuAction.rateApp:
                   await _openRateApp();
                 case _HomeMenuAction.links:
@@ -1849,11 +2131,28 @@ class _AttendanceHomePageState extends State<AttendanceHomePage>
               }
             },
             itemBuilder: (_) => [
-              const PopupMenuItem(
-                value: _HomeMenuAction.biometrics,
+              PopupMenuItem(
+                value: _HomeMenuAction.comunicados,
                 child: ListTile(
-                  leading: Icon(Icons.fingerprint),
-                  title: Text('Sesion y sonido'),
+                  minLeadingWidth: 24,
+                  horizontalTitleGap: 12,
+                  leading: Badge(
+                    isLabelVisible: _comunicadosUnread > 0,
+                    label: Text('$_comunicadosUnread'),
+                    child: const Icon(Icons.campaign_outlined),
+                  ),
+                  title: const Text('Comunicados', textAlign: TextAlign.start),
+                  contentPadding: EdgeInsets.zero,
+                  dense: true,
+                ),
+              ),
+              const PopupMenuItem(
+                value: _HomeMenuAction.reuniones,
+                child: ListTile(
+                  minLeadingWidth: 24,
+                  horizontalTitleGap: 12,
+                  leading: Icon(Icons.groups_outlined),
+                  title: Text('Mis reuniones', textAlign: TextAlign.start),
                   contentPadding: EdgeInsets.zero,
                   dense: true,
                 ),
@@ -1861,26 +2160,10 @@ class _AttendanceHomePageState extends State<AttendanceHomePage>
               const PopupMenuItem(
                 value: _HomeMenuAction.security,
                 child: ListTile(
-                  leading: Icon(Icons.shield_outlined),
-                  title: Text('Seguridad'),
-                  contentPadding: EdgeInsets.zero,
-                  dense: true,
-                ),
-              ),
-              const PopupMenuItem(
-                value: _HomeMenuAction.locationGps,
-                child: ListTile(
-                  leading: Icon(Icons.my_location_outlined),
-                  title: Text('Mi ubicacion GPS'),
-                  contentPadding: EdgeInsets.zero,
-                  dense: true,
-                ),
-              ),
-              const PopupMenuItem(
-                value: _HomeMenuAction.rateApp,
-                child: ListTile(
-                  leading: Icon(Icons.star_outline_rounded),
-                  title: Text('Calificá la app'),
+                  minLeadingWidth: 24,
+                  horizontalTitleGap: 12,
+                  leading: Icon(Icons.shield_rounded),
+                  title: Text('Seguridad laboral', textAlign: TextAlign.start),
                   contentPadding: EdgeInsets.zero,
                   dense: true,
                 ),
@@ -1888,8 +2171,89 @@ class _AttendanceHomePageState extends State<AttendanceHomePage>
               const PopupMenuItem(
                 value: _HomeMenuAction.links,
                 child: ListTile(
+                  minLeadingWidth: 24,
+                  horizontalTitleGap: 12,
                   leading: Icon(Icons.link_rounded),
-                  title: Text('Acceso a mis Links'),
+                  title: Text('Mis enlaces', textAlign: TextAlign.start),
+                  contentPadding: EdgeInsets.zero,
+                  dense: true,
+                ),
+              ),
+              const PopupMenuDivider(),
+              const PopupMenuItem(
+                value: _HomeMenuAction.notifications,
+                child: ListTile(
+                  contentPadding: EdgeInsets.zero,
+                  minLeadingWidth: 24,
+                  horizontalTitleGap: 12,
+                  dense: true,
+                  leading: Icon(Icons.notifications_outlined),
+                  title: Text('Notificaciones', textAlign: TextAlign.start),
+                ),
+              ),
+              const PopupMenuItem(
+                value: _HomeMenuAction.locationGps,
+                child: ListTile(
+                  minLeadingWidth: 24,
+                  horizontalTitleGap: 12,
+                  leading: Icon(Icons.my_location_rounded),
+                  title: Text('Ubicación GPS', textAlign: TextAlign.start),
+                  contentPadding: EdgeInsets.zero,
+                  dense: true,
+                ),
+              ),
+              const PopupMenuItem(
+                value: _HomeMenuAction.camera,
+                child: ListTile(
+                  minLeadingWidth: 24,
+                  horizontalTitleGap: 12,
+                  leading: Icon(Icons.camera_alt_outlined),
+                  title: Text('Cámara y permisos', textAlign: TextAlign.start),
+                  contentPadding: EdgeInsets.zero,
+                  dense: true,
+                ),
+              ),
+              const PopupMenuItem(
+                value: _HomeMenuAction.biometrics,
+                child: ListTile(
+                  minLeadingWidth: 24,
+                  horizontalTitleGap: 12,
+                  leading: Icon(Icons.fingerprint_rounded),
+                  title: Text('Huella y sonido', textAlign: TextAlign.start),
+                  contentPadding: EdgeInsets.zero,
+                  dense: true,
+                ),
+              ),
+              const PopupMenuItem(
+                value: _HomeMenuAction.appearance,
+                child: ListTile(
+                  minLeadingWidth: 24,
+                  horizontalTitleGap: 12,
+                  leading: Icon(Icons.palette_outlined),
+                  title: Text('Apariencia', textAlign: TextAlign.start),
+                  contentPadding: EdgeInsets.zero,
+                  dense: true,
+                ),
+              ),
+              const PopupMenuDivider(),
+              const PopupMenuItem(
+                value: _HomeMenuAction.rateApp,
+                child: ListTile(
+                  minLeadingWidth: 24,
+                  horizontalTitleGap: 12,
+                  leading: Icon(Icons.star_outline_rounded),
+                  title: Text('Calificá la app', textAlign: TextAlign.start),
+                  contentPadding: EdgeInsets.zero,
+                  dense: true,
+                ),
+              ),
+              const PopupMenuItem(
+                value: _HomeMenuAction.about,
+                child: ListTile(
+                  minLeadingWidth: 24,
+                  horizontalTitleGap: 12,
+                  leading: Icon(Icons.info_rounded),
+                  title: Text('Acerca de FichaYa', textAlign: TextAlign.start),
                   contentPadding: EdgeInsets.zero,
                   dense: true,
                 ),
@@ -1898,27 +2262,22 @@ class _AttendanceHomePageState extends State<AttendanceHomePage>
                 const PopupMenuItem(
                   value: _HomeMenuAction.diagnostics,
                   child: ListTile(
-                    leading: Icon(Icons.developer_mode_outlined),
-                    title: Text('Diagnóstico'),
+                    minLeadingWidth: 24,
+                    horizontalTitleGap: 12,
+                    leading: Icon(Icons.developer_mode_rounded),
+                    title: Text('Diagnóstico', textAlign: TextAlign.start),
                     contentPadding: EdgeInsets.zero,
                     dense: true,
                   ),
                 ),
               const PopupMenuDivider(),
               const PopupMenuItem(
-                value: _HomeMenuAction.about,
-                child: ListTile(
-                  leading: Icon(Icons.info_outline),
-                  title: Text('Acerca de'),
-                  contentPadding: EdgeInsets.zero,
-                  dense: true,
-                ),
-              ),
-              const PopupMenuItem(
                 value: _HomeMenuAction.lockSession,
                 child: ListTile(
-                  leading: Icon(Icons.lock_outline),
-                  title: Text('Bloquear sesión'),
+                  minLeadingWidth: 24,
+                  horizontalTitleGap: 12,
+                  leading: Icon(Icons.lock_rounded),
+                  title: Text('Bloquear sesión', textAlign: TextAlign.start),
                   contentPadding: EdgeInsets.zero,
                   dense: true,
                 ),
@@ -1926,8 +2285,10 @@ class _AttendanceHomePageState extends State<AttendanceHomePage>
               const PopupMenuItem(
                 value: _HomeMenuAction.logout,
                 child: ListTile(
-                  leading: Icon(Icons.logout),
-                  title: Text('Cerrar sesión'),
+                  minLeadingWidth: 24,
+                  horizontalTitleGap: 12,
+                  leading: Icon(Icons.logout_rounded),
+                  title: Text('Cerrar sesión', textAlign: TextAlign.start),
                   contentPadding: EdgeInsets.zero,
                   dense: true,
                 ),
@@ -1940,7 +2301,7 @@ class _AttendanceHomePageState extends State<AttendanceHomePage>
         onPressed: _submitting ? null : _fichar,
         backgroundColor: _submitting
             ? cs.surfaceContainerHighest
-            : const Color(0xFF00B09C),
+            : AppPalette.blue,
         foregroundColor: Colors.white,
         elevation: 6,
         tooltip: 'Fichar con QR',
@@ -1954,11 +2315,11 @@ class _AttendanceHomePageState extends State<AttendanceHomePage>
                   valueColor: AlwaysStoppedAnimation(Colors.white),
                 ),
               )
-            : const Icon(Icons.qr_code_scanner, size: 26),
+            : const Icon(Icons.qr_code_scanner_rounded, size: 26),
       ),
       floatingActionButtonLocation: FloatingActionButtonLocation.centerDocked,
       bottomNavigationBar: BottomAppBar(
-        height: 48 + MediaQuery.textScalerOf(context).scale(26),
+        height: 48 + MediaQuery.textScalerOf(context).scale(34),
         padding: EdgeInsets.zero,
         notchMargin: 8,
         shape: const CircularNotchedRectangle(),
@@ -1971,32 +2332,33 @@ class _AttendanceHomePageState extends State<AttendanceHomePage>
                 label: Text(
                   '${pendingQueue.total}',
                   style: const TextStyle(fontSize: 13),
+                  textAlign: TextAlign.center,
                 ),
-                child: const Icon(Icons.home_outlined),
+                child: const Icon(Icons.home_rounded),
               ),
-              selectedIcon: const Icon(Icons.home),
+              selectedIcon: const Icon(Icons.home_rounded),
               label: 'Inicio',
               selected: _selectedTab == 0,
               onTap: () => _onTabSelected(0),
             ),
             _NavBarItem(
-              icon: const Icon(Icons.punch_clock_outlined),
-              selectedIcon: const Icon(Icons.punch_clock),
+              icon: const Icon(Icons.punch_clock_rounded),
+              selectedIcon: const Icon(Icons.punch_clock_rounded),
               label: 'Historial',
               selected: _selectedTab == 1,
               onTap: () => _onTabSelected(1),
             ),
             const SizedBox(width: 64), // espacio para el FAB
             _NavBarItem(
-              icon: const Icon(Icons.bar_chart_outlined),
-              selectedIcon: const Icon(Icons.bar_chart),
+              icon: const Icon(Icons.bar_chart_rounded),
+              selectedIcon: const Icon(Icons.bar_chart_rounded),
               label: 'Stats',
               selected: _selectedTab == 2,
               onTap: () => _onTabSelected(2),
             ),
             _NavBarItem(
-              icon: const Icon(Icons.person_outline),
-              selectedIcon: const Icon(Icons.person),
+              icon: const Icon(Icons.person_rounded),
+              selectedIcon: const Icon(Icons.person_rounded),
               label: 'Perfil',
               selected: _selectedTab == 3,
               onTap: () => _onTabSelected(3),
@@ -2017,7 +2379,7 @@ class _AttendanceHomePageState extends State<AttendanceHomePage>
                     viewData.horizontalPadding,
                     20,
                     viewData.horizontalPadding,
-                    24,
+                    80,
                   ),
                   children: [
                     if (_loadingConfig || _loadingProfile)
@@ -2055,7 +2417,7 @@ class _AttendanceHomePageState extends State<AttendanceHomePage>
                     ),
                     if (_profileLoadError != null) ...[
                       const SizedBox(height: 8),
-                      Card(
+                      AppCard(
                         color: Theme.of(context).colorScheme.errorContainer,
                         child: Padding(
                           padding: const EdgeInsets.all(12),
@@ -2066,6 +2428,7 @@ class _AttendanceHomePageState extends State<AttendanceHomePage>
                                 context,
                               ).colorScheme.onErrorContainer,
                             ),
+                            textAlign: TextAlign.center,
                           ),
                         ),
                       ),
@@ -2088,7 +2451,59 @@ class _AttendanceHomePageState extends State<AttendanceHomePage>
                       _TurnoHoyBanner(turno: _turnoHoy!),
                     ],
                     const SizedBox(height: 12),
+                    BranchSafetyCard(
+                      key: _branchSafetyKey,
+                      api: widget.apiClient,
+                      token: widget.token,
+                      offline: _isOfflineToken,
+                      onOpen: () async {
+                        if (_submitting) return;
+                        await _homeCoordinator.openSeguridad(
+                          context,
+                          apiClient: widget.apiClient,
+                          token: widget.token,
+                        );
+                        if (mounted) {
+                          await _branchSafetyKey.currentState?.refresh();
+                        }
+                      },
+                    ),
+                    const SizedBox(height: 12),
                     // ── Stats grid (4 tiles) ───────────────────────────
+                    AttendanceQuickActionsCard(
+                      items: [
+                        AttendanceQuickActionItem(
+                          icon: Icons.campaign_outlined,
+                          label: _comunicadosUnread > 0
+                              ? 'Comunicados ($_comunicadosUnread)'
+                              : 'Comunicados',
+                          onTap: () => unawaited(_openComunicados()),
+                        ),
+                        ...actionViewData.quickActions.map(_quickActionItem),
+                      ],
+                    ),
+                    const SizedBox(height: 16),
+                    HomeReunionesCard(
+                      items: _reuniones,
+                      summary: _reunionesSummary,
+                      loading: _loadingReuniones,
+                      error: _reunionesError,
+                      onOpen: _openReuniones,
+                      onRetry: _loadReuniones,
+                      onScan: _submitting ? null : _fichar,
+                      onDetail: (id) => unawaited(
+                        Navigator.of(context).push<void>(
+                          MaterialPageRoute(
+                            builder: (_) => ReunionDetailPage(
+                              api: widget.apiClient,
+                              token: widget.token,
+                              id: id,
+                            ),
+                          ),
+                        ),
+                      ),
+                    ),
+                    const SizedBox(height: 16),
                     AttendanceStatsCarousel(
                       items: [
                         AttendanceStatItem(
@@ -2096,21 +2511,34 @@ class _AttendanceHomePageState extends State<AttendanceHomePage>
                           value: _dashboard != null
                               ? '${_dashboard!.asistencia.kpis.puntualidadPct.toStringAsFixed(0)}%'
                               : '–',
-                          icon: Icons.timer_outlined,
-                          accent: const Color(0xFF2A789E),
+                          icon: Icons.timer_rounded,
+                          accent: AppPalette.blueLight,
                         ),
+                        if (_dashboard?.fichaje?.efectividadPct != null)
+                          AttendanceStatItem(
+                            title: 'Fichaje completo',
+                            value: _dashboard?.fichaje?.efectividadPct != null
+                                ? '${_dashboard!.fichaje!.efectividadPct!.toStringAsFixed(0)}%'
+                                : '–',
+                            icon: Icons.fact_check_rounded,
+                            accent: _dashboard!.fichaje!.efectividadPct! >= 95
+                                ? const Color(0xFF2E7D4F)
+                                : _dashboard!.fichaje!.efectividadPct! >= 80
+                                ? const Color(0xFFC85F0F)
+                                : const Color(0xFFB3261E),
+                          ),
                         AttendanceStatItem(
                           title: 'A tiempo semana',
                           value: _dashboard != null
                               ? '${_dashboard!.asistencia.totales.ok} / ${_dashboard!.asistencia.totales.ok + _dashboard!.asistencia.totales.tarde + _dashboard!.asistencia.totales.ausente}'
                               : '–',
-                          icon: Icons.calendar_today_outlined,
+                          icon: Icons.calendar_today_rounded,
                           accent: const Color(0xFF315D52),
                         ),
                         AttendanceStatItem(
                           title: 'Pendientes',
                           value: '${pendingQueue.total}',
-                          icon: Icons.cloud_upload_outlined,
+                          icon: Icons.cloud_upload_rounded,
                           accent: pendingQueue.total > 0
                               ? const Color(0xFFC85F0F)
                               : const Color(0xFF3D4F6B),
@@ -2118,7 +2546,7 @@ class _AttendanceHomePageState extends State<AttendanceHomePage>
                         AttendanceStatItem(
                           title: 'Última fichada',
                           value: viewData.lastClockStatText,
-                          icon: Icons.punch_clock_outlined,
+                          icon: Icons.punch_clock_rounded,
                           accent: const Color(0xFF5C3D8F),
                         ),
                       ],
@@ -2171,26 +2599,25 @@ class _AttendanceHomePageState extends State<AttendanceHomePage>
                     ],
                     const SizedBox(height: 12),
                     // ── Quick actions ──────────────────────────────────
-                    AttendanceQuickActionsCard(
-                      items: actionViewData.quickActions
-                          .map(_quickActionItem)
-                          .toList(growable: false),
-                    ),
                     if (_loadingCargaPermission)
                       const Padding(
                         padding: EdgeInsets.all(12),
                         child: Text(
                           'Consultando acceso a Validación de carga…',
+                          textAlign: TextAlign.center,
                         ),
                       )
                     else if (_cargaPermissionMessage != null)
                       ListTile(
-                        leading: const Icon(Icons.local_shipping_outlined),
-                        title: Text(_cargaPermissionMessage!),
+                        leading: const Icon(Icons.local_shipping_rounded),
+                        title: Text(
+                          _cargaPermissionMessage!,
+                          textAlign: TextAlign.center,
+                        ),
                         trailing: IconButton(
                           tooltip: 'Volver a consultar acceso a cargas',
                           onPressed: _submitting ? null : _loadCargaPermission,
-                          icon: const Icon(Icons.refresh),
+                          icon: const Icon(Icons.refresh_rounded),
                         ),
                       ),
                   ],
@@ -2228,24 +2655,27 @@ class _TurnoHoyBanner extends StatelessWidget {
         border: Border.all(color: cs.outlineVariant),
       ),
       child: Row(
+        mainAxisAlignment: MainAxisAlignment.center,
         children: [
           Icon(Icons.schedule_outlined, size: 18, color: cs.primary),
           const SizedBox(width: 10),
           Expanded(
             child: Column(
-              crossAxisAlignment: CrossAxisAlignment.start,
+              crossAxisAlignment: CrossAxisAlignment.center,
               children: [
                 Text(
                   'Turno de hoy',
                   style: Theme.of(
                     context,
                   ).textTheme.labelSmall?.copyWith(color: cs.onSurfaceVariant),
+                  textAlign: TextAlign.center,
                 ),
                 Text(
                   _bloquesText(),
                   style: Theme.of(
                     context,
                   ).textTheme.bodyMedium?.copyWith(fontWeight: FontWeight.w600),
+                  textAlign: TextAlign.center,
                 ),
               ],
             ),
@@ -2265,6 +2695,7 @@ class _TurnoHoyBanner extends StatelessWidget {
                   fontWeight: FontWeight.w600,
                   color: cs.onSecondaryContainer,
                 ),
+                textAlign: TextAlign.center,
               ),
             ),
           ],
@@ -2284,6 +2715,11 @@ class _TurnoHoyBanner extends StatelessWidget {
 // ─── Menu actions ────────────────────────────────────────────────────────────
 
 enum _HomeMenuAction {
+  notifications,
+  comunicados,
+  camera,
+  appearance,
+  reuniones,
   biometrics,
   security,
   locationGps,
@@ -2310,9 +2746,11 @@ class _ClockProcessingOverlay extends StatelessWidget {
     final theme = Theme.of(context);
     final cs = theme.colorScheme;
     return DecoratedBox(
-      decoration: const BoxDecoration(color: Colors.black45),
+      decoration: BoxDecoration(
+        color: AppColors.of(context).surface(Colors.black45),
+      ),
       child: Center(
-        child: Card(
+        child: AppCard(
           margin: const EdgeInsets.symmetric(horizontal: 48),
           shape: RoundedRectangleBorder(
             borderRadius: BorderRadius.circular(24),
@@ -2322,6 +2760,7 @@ class _ClockProcessingOverlay extends StatelessWidget {
             padding: const EdgeInsets.symmetric(horizontal: 32, vertical: 36),
             child: Column(
               mainAxisSize: MainAxisSize.min,
+              crossAxisAlignment: CrossAxisAlignment.center,
               children: [
                 SizedBox(
                   width: 52,
@@ -2373,9 +2812,7 @@ class _TriviaDashboardCard extends StatelessWidget {
   final List<TriviaNotificacion> notificaciones;
   final VoidCallback onTap;
 
-  static const _primary = Color(0xFF0E3A5B);
-  static const _gradientA = Color(0xFF6C3EB8);
-  static const _gradientB = Color(0xFF00B09C);
+  static const _primary = AppPalette.navy;
 
   @override
   Widget build(BuildContext context) {
@@ -2386,27 +2823,31 @@ class _TriviaDashboardCard extends StatelessWidget {
     if (e != null && e.hayTriviaActiva) {
       final trivia = e.trivia!;
       if (trivia.estado == 'activa' && !e.yaParticipo) {
-        return _buildActivaCard(trivia, tieneNotif);
+        return _buildActivaCard(context, trivia, tieneNotif);
       }
     }
 
     return _buildCompactCard(context, e, tieneNotif);
   }
 
-  Widget _buildActivaCard(TriviaInfo trivia, bool tieneNotif) {
+  Widget _buildActivaCard(
+    BuildContext context,
+    TriviaInfo trivia,
+    bool tieneNotif,
+  ) {
     return GestureDetector(
       onTap: onTap,
       child: Container(
         decoration: BoxDecoration(
-          gradient: const LinearGradient(
-            colors: [_gradientA, _gradientB],
+          gradient: LinearGradient(
+            colors: AppColors.of(context).brandGradient,
             begin: Alignment.topLeft,
             end: Alignment.bottomRight,
           ),
           borderRadius: BorderRadius.circular(18),
           boxShadow: [
             BoxShadow(
-              color: _gradientA.withValues(alpha: 0.35),
+              color: AppPalette.blue.withValues(alpha: 0.35),
               blurRadius: 18,
               offset: const Offset(0, 7),
             ),
@@ -2414,9 +2855,10 @@ class _TriviaDashboardCard extends StatelessWidget {
         ),
         padding: const EdgeInsets.fromLTRB(20, 18, 20, 20),
         child: Column(
-          crossAxisAlignment: CrossAxisAlignment.start,
+          crossAxisAlignment: CrossAxisAlignment.center,
           children: [
             Row(
+              mainAxisAlignment: MainAxisAlignment.center,
               children: [
                 Container(
                   padding: const EdgeInsets.symmetric(
@@ -2429,6 +2871,7 @@ class _TriviaDashboardCard extends StatelessWidget {
                   ),
                   child: Row(
                     mainAxisSize: MainAxisSize.min,
+                    mainAxisAlignment: MainAxisAlignment.center,
                     children: [
                       if (tieneNotif)
                         Container(
@@ -2448,12 +2891,17 @@ class _TriviaDashboardCard extends StatelessWidget {
                           fontWeight: FontWeight.w800,
                           letterSpacing: 0.6,
                         ),
+                        textAlign: TextAlign.center,
                       ),
                     ],
                   ),
                 ),
                 const Spacer(),
-                const Text('🏆', style: TextStyle(fontSize: 24)),
+                const Text(
+                  '🏆',
+                  style: TextStyle(fontSize: 24),
+                  textAlign: TextAlign.center,
+                ),
               ],
             ),
             const SizedBox(height: 14),
@@ -2467,11 +2915,13 @@ class _TriviaDashboardCard extends StatelessWidget {
               ),
               maxLines: 2,
               overflow: TextOverflow.ellipsis,
+              textAlign: TextAlign.center,
             ),
             const SizedBox(height: 4),
             const Text(
               '¡Respondé y competí por el primer lugar!',
               style: TextStyle(color: Colors.white70, fontSize: 13),
+              textAlign: TextAlign.center,
             ),
             const SizedBox(height: 18),
             SizedBox(
@@ -2479,7 +2929,7 @@ class _TriviaDashboardCard extends StatelessWidget {
               child: ElevatedButton(
                 style: ElevatedButton.styleFrom(
                   backgroundColor: Colors.white,
-                  foregroundColor: _gradientA,
+                  foregroundColor: AppPalette.blue,
                   padding: const EdgeInsets.symmetric(vertical: 13),
                   shape: RoundedRectangleBorder(
                     borderRadius: BorderRadius.circular(12),
@@ -2491,7 +2941,7 @@ class _TriviaDashboardCard extends StatelessWidget {
                   ),
                 ),
                 onPressed: onTap,
-                child: const Text('Jugar ahora →'),
+                child: const Text('Jugar ahora →', textAlign: TextAlign.center),
               ),
             ),
           ],
@@ -2540,7 +2990,7 @@ class _TriviaDashboardCard extends StatelessWidget {
         final pts = e.participacion?.puntosTotal;
         titulo = 'Ya participaste';
         subtitulo = pts != null ? '${trivia.titulo} · $pts pts' : trivia.titulo;
-        badgeColor = const Color(0xFF2A789E);
+        badgeColor = AppPalette.blueLight;
         icono = Icons.check_circle_outline;
         botonLabel = 'Ver ranking';
       } else {
@@ -2562,6 +3012,7 @@ class _TriviaDashboardCard extends StatelessWidget {
         ),
         padding: const EdgeInsets.symmetric(horizontal: 14, vertical: 12),
         child: Row(
+          mainAxisAlignment: MainAxisAlignment.center,
           children: [
             Stack(
               clipBehavior: Clip.none,
@@ -2569,10 +3020,16 @@ class _TriviaDashboardCard extends StatelessWidget {
                 Container(
                   padding: const EdgeInsets.all(10),
                   decoration: BoxDecoration(
-                    color: badgeColor.withValues(alpha: 0.1),
+                    color: AppColors.of(
+                      context,
+                    ).surface(badgeColor.withValues(alpha: 0.1)),
                     borderRadius: BorderRadius.circular(12),
                   ),
-                  child: Icon(icono, color: badgeColor, size: 24),
+                  child: Icon(
+                    icono,
+                    color: AppColors.of(context).foreground(badgeColor),
+                    size: 24,
+                  ),
                 ),
                 if (tieneNotif)
                   Positioned(
@@ -2581,8 +3038,8 @@ class _TriviaDashboardCard extends StatelessWidget {
                     child: Container(
                       width: 12,
                       height: 12,
-                      decoration: const BoxDecoration(
-                        color: Colors.red,
+                      decoration: BoxDecoration(
+                        color: AppColors.of(context).surface(Colors.red),
                         shape: BoxShape.circle,
                       ),
                     ),
@@ -2592,7 +3049,7 @@ class _TriviaDashboardCard extends StatelessWidget {
             const SizedBox(width: 12),
             Expanded(
               child: Column(
-                crossAxisAlignment: CrossAxisAlignment.start,
+                crossAxisAlignment: CrossAxisAlignment.center,
                 children: [
                   Container(
                     padding: const EdgeInsets.symmetric(
@@ -2600,7 +3057,9 @@ class _TriviaDashboardCard extends StatelessWidget {
                       vertical: 2,
                     ),
                     decoration: BoxDecoration(
-                      color: badgeColor.withValues(alpha: 0.1),
+                      color: AppColors.of(
+                        context,
+                      ).surface(badgeColor.withValues(alpha: 0.1)),
                       borderRadius: BorderRadius.circular(20),
                     ),
                     child: Text(
@@ -2608,8 +3067,9 @@ class _TriviaDashboardCard extends StatelessWidget {
                       style: TextStyle(
                         fontSize: 13,
                         fontWeight: FontWeight.w700,
-                        color: badgeColor,
+                        color: AppColors.of(context).foreground(badgeColor),
                       ),
+                      textAlign: TextAlign.center,
                     ),
                   ),
                   const SizedBox(height: 3),
@@ -2620,6 +3080,7 @@ class _TriviaDashboardCard extends StatelessWidget {
                     ).textTheme.bodySmall?.copyWith(color: cs.onSurfaceVariant),
                     maxLines: 1,
                     overflow: TextOverflow.ellipsis,
+                    textAlign: TextAlign.center,
                   ),
                 ],
               ),
@@ -2628,7 +3089,7 @@ class _TriviaDashboardCard extends StatelessWidget {
               const SizedBox(width: 8),
               FilledButton(
                 style: FilledButton.styleFrom(
-                  backgroundColor: badgeColor,
+                  backgroundColor: AppColors.of(context).surface(badgeColor),
                   padding: const EdgeInsets.symmetric(
                     horizontal: 14,
                     vertical: 8,
@@ -2644,7 +3105,7 @@ class _TriviaDashboardCard extends StatelessWidget {
                   ),
                 ),
                 onPressed: onTap,
-                child: Text(botonLabel),
+                child: Text(botonLabel, textAlign: TextAlign.center),
               ),
             ] else
               Icon(Icons.chevron_right, color: cs.onSurfaceVariant),
@@ -2670,12 +3131,17 @@ class _TriviaPuntosCard extends StatelessWidget {
       child: Container(
         padding: const EdgeInsets.symmetric(horizontal: 16, vertical: 11),
         decoration: BoxDecoration(
-          color: const Color(0xFF0E3A5B),
+          color: AppColors.of(context).surface(AppPalette.navy),
           borderRadius: BorderRadius.circular(12),
         ),
         child: Row(
+          mainAxisAlignment: MainAxisAlignment.center,
           children: [
-            const Text('⭐', style: TextStyle(fontSize: 16)),
+            const Text(
+              '⭐',
+              style: TextStyle(fontSize: 16),
+              textAlign: TextAlign.center,
+            ),
             const SizedBox(width: 10),
             const Text(
               'Mis Puntos Trivia',
@@ -2684,6 +3150,7 @@ class _TriviaPuntosCard extends StatelessWidget {
                 fontSize: 13,
                 fontWeight: FontWeight.w500,
               ),
+              textAlign: TextAlign.center,
             ),
             const Spacer(),
             Text(
@@ -2693,6 +3160,7 @@ class _TriviaPuntosCard extends StatelessWidget {
                 fontSize: 15,
                 fontWeight: FontWeight.w800,
               ),
+              textAlign: TextAlign.center,
             ),
             const SizedBox(width: 6),
             const Icon(Icons.chevron_right, color: Colors.white38, size: 20),
@@ -2736,16 +3204,29 @@ class _NavBarItem extends StatelessWidget {
             mainAxisSize: MainAxisSize.min,
             children: [
               IconTheme(
-                data: IconThemeData(color: color, size: 24),
+                data: IconThemeData(
+                  color: AppColors.of(context).foreground(color),
+                  size: 24,
+                ),
                 child: selected ? selectedIcon : icon,
               ),
               const SizedBox(height: 2),
-              Text(
-                label,
-                style: TextStyle(
-                  fontSize: 13,
-                  color: color,
-                  fontWeight: selected ? FontWeight.w700 : FontWeight.normal,
+              Padding(
+                padding: const EdgeInsets.symmetric(horizontal: 4),
+                child: FittedBox(
+                  fit: BoxFit.scaleDown,
+                  child: Text(
+                    label,
+                    maxLines: 1,
+                    softWrap: false,
+                    style: TextStyle(
+                      fontSize: 13,
+                      color: AppColors.of(context).foreground(color),
+                      fontWeight: selected
+                          ? FontWeight.w700
+                          : FontWeight.normal,
+                    ),
+                  ),
                 ),
               ),
             ],

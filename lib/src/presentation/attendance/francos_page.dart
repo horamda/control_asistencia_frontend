@@ -1,13 +1,12 @@
+import 'package:ficharqr/src/presentation/widgets/app_card.dart';
+import '../widgets/app_page_layout.dart';
+import '../widgets/scrollable_error_state.dart';
 import 'package:flutter/material.dart';
 
 import '../../core/network/mobile_api_client.dart';
 
 class FrancosPage extends StatefulWidget {
-  const FrancosPage({
-    super.key,
-    required this.apiClient,
-    required this.token,
-  });
+  const FrancosPage({super.key, required this.apiClient, required this.token});
 
   final MobileApiClient apiClient;
   final String token;
@@ -91,7 +90,7 @@ class _FrancosPageState extends State<FrancosPage> {
   Widget build(BuildContext context) {
     return Scaffold(
       appBar: AppBar(
-        title: const Text('Francos'),
+        title: const Text('Francos', textAlign: TextAlign.center),
         actions: [
           if (_loading)
             const Padding(
@@ -104,15 +103,14 @@ class _FrancosPageState extends State<FrancosPage> {
             )
           else
             IconButton(
-              icon: const Icon(Icons.refresh),
+              icon: const Icon(Icons.refresh_rounded),
               tooltip: 'Actualizar',
               onPressed: _load,
             ),
         ],
       ),
-      body: RefreshIndicator(
-        onRefresh: _load,
-        child: _buildBody(),
+      body: AppPageBody(
+        child: RefreshIndicator(onRefresh: _load, child: _buildBody()),
       ),
     );
   }
@@ -123,29 +121,13 @@ class _FrancosPageState extends State<FrancosPage> {
     }
 
     if (_error != null) {
-      return Center(
-        child: Padding(
-          padding: const EdgeInsets.all(24),
-          child: Column(
-            mainAxisSize: MainAxisSize.min,
-            children: [
-              Icon(Icons.error_outline, size: 48, color: Colors.red[300]),
-              const SizedBox(height: 12),
-              Text(_error!, textAlign: TextAlign.center),
-              const SizedBox(height: 16),
-              FilledButton.icon(
-                onPressed: _load,
-                icon: const Icon(Icons.refresh),
-                label: const Text('Reintentar'),
-              ),
-            ],
-          ),
-        ),
-      );
+      return ScrollableErrorState(message: _error!, onRetry: _load);
     }
 
     if (_items.isEmpty) {
-      return const Center(child: Text('No hay francos registrados.'));
+      return const Center(
+        child: Text('No hay francos registrados.', textAlign: TextAlign.center),
+      );
     }
 
     return NotificationListener<ScrollNotification>(
@@ -180,14 +162,15 @@ class _FrancoCard extends StatelessWidget {
 
   @override
   Widget build(BuildContext context) {
-    return Card(
+    return AppCard(
       margin: const EdgeInsets.only(bottom: 10),
       child: ListTile(
         contentPadding: const EdgeInsets.symmetric(horizontal: 16, vertical: 8),
-        leading: const Icon(Icons.event_available_outlined, size: 26),
+        leading: const Icon(Icons.event_available_rounded, size: 26),
         title: Text(
           item.fecha ?? '—',
           style: const TextStyle(fontWeight: FontWeight.w600),
+          textAlign: TextAlign.center,
         ),
         subtitle: item.motivo != null
             ? Text(
@@ -195,6 +178,7 @@ class _FrancoCard extends StatelessWidget {
                 style: Theme.of(context).textTheme.bodySmall?.copyWith(
                   color: Theme.of(context).colorScheme.onSurfaceVariant,
                 ),
+                textAlign: TextAlign.center,
               )
             : null,
       ),

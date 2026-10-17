@@ -3,8 +3,79 @@ import 'package:ficharqr/src/core/network/mobile_api_client.dart';
 import 'package:ficharqr/src/presentation/attendance/employee_alerts_page.dart';
 import 'package:flutter/material.dart';
 import 'package:flutter_test/flutter_test.dart';
+import 'package:flutter_secure_storage/flutter_secure_storage.dart';
+import 'package:ficharqr/src/core/alerts/employee_alerts_read_state.dart';
+import 'package:ficharqr/src/core/alerts/employee_alerts_repository.dart';
 
 void main() {
+  setUp(() => FlutterSecureStorage.setMockInitialValues({}));
+  test('viewed modules persist and new status changes become unread', () async {
+    final api = _FakeAlertsApiClient();
+    final repo = EmployeeAlertsRepository(api);
+    final state = EmployeeAlertsReadState(server: api.baseUrl, employeeId: 1);
+    final initial = await repo.loadDetails(token: 'token');
+    expect(await state.unreadCount(initial), 3);
+    await state.markViewed(initial);
+    final reopened = EmployeeAlertsReadState(
+      server: api.baseUrl,
+      employeeId: 1,
+    );
+    expect(
+      await reopened.unreadCount(await repo.loadDetails(token: 'new-token')),
+      0,
+    );
+    expect(
+      await EmployeeAlertsReadState(
+        server: api.baseUrl,
+        employeeId: 2,
+      ).unreadCount(initial),
+      3,
+    );
+    api.advanceState = 'rechazado';
+    expect(
+      await reopened.unreadCount(await repo.loadDetails(token: 'token')),
+      1,
+    );
+  });
+
+  testWidgets('mark viewed clears badge without resolving requests', (
+    tester,
+  ) async {
+    final api = _FakeAlertsApiClient();
+    await tester.pumpWidget(
+      MaterialApp(
+        home: EmployeeAlertsPage(apiClient: api, token: 'token', employeeId: 1),
+      ),
+    );
+    await tester.pumpAndSettle();
+    final mark = find.text('Marcar como vistas');
+    await tester.ensureVisible(mark);
+    await tester.tap(mark);
+    await tester.pumpAndSettle();
+    expect(find.text('Sin novedades pendientes'), findsOneWidget);
+    expect(find.text('Adelantos'), findsNothing);
+    await tester.tap(find.byTooltip('Actualizar'));
+    await tester.pumpAndSettle();
+    expect(find.text('Sin novedades pendientes'), findsOneWidget);
+    expect(find.text('Adelantos'), findsNothing);
+    await tester.tap(find.text('Ver vistas'));
+    await tester.pumpAndSettle();
+    expect(find.text('Adelantos'), findsOneWidget);
+    await tester.tap(find.text('Ver pendientes'));
+    await tester.pumpAndSettle();
+    expect(find.text('Adelantos'), findsNothing);
+    api.advanceState = 'rechazado';
+    await tester.tap(find.byTooltip('Actualizar'));
+    await tester.pumpAndSettle();
+    expect(find.text('Adelantos'), findsOneWidget);
+    expect(find.text('Mercadería'), findsNothing);
+    expect(find.text('Marcar como vistas'), findsOneWidget);
+    final snapshot = await EmployeeAlertsRepository(
+      api,
+    ).loadDetails(token: 'token');
+    expect(snapshot.mercaderia!.pedidoMesActual!.estado, 'en_proceso');
+    expect(tester.takeException(), isNull);
+  });
   testWidgets('renders employee alerts overview and recent changes', (
     tester,
   ) async {
@@ -39,6 +110,7 @@ void main() {
 
 class _FakeAlertsApiClient extends MobileApiClient {
   _FakeAlertsApiClient() : super(baseUrl: 'https://example.com');
+  String advanceState = 'aprobado';
 
   @override
   void dispose() {}
@@ -60,7 +132,7 @@ class _FakeAlertsApiClient extends MobileApiClient {
         periodoYear: 2026,
         periodoMonth: 6,
         fechaSolicitud: '2026-06-15',
-        estado: 'aprobado',
+        estado: advanceState,
         createdAt: '2026-06-15T09:00:00',
         resueltoAt: '2026-06-16T10:00:00',
         resueltoPor: 'RRHH',

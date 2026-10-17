@@ -1,3 +1,5 @@
+import 'package:ficharqr/src/presentation/widgets/app_card.dart';
+import 'package:ficharqr/src/presentation/theme/app_palette.dart';
 import 'package:flutter/foundation.dart';
 import 'package:flutter/material.dart';
 import 'package:image_picker/image_picker.dart';
@@ -210,20 +212,21 @@ class _CargasPageState extends State<CargasPage> {
     final confirmed = await showDialog<bool>(
       context: context,
       builder: (ctx) => AlertDialog(
-        title: const Text('Confirmar validación'),
+        title: const Text('Confirmar validación', textAlign: TextAlign.center),
         content: Text(
           '${_truckLabel(_maps(_config?['camiones']).firstWhere((t) => t['id'] == _camion))}\n'
           '${_tipo == 'inicial' ? 'Carga inicial' : 'Recarga'} · Consolidado ${_consolidado.text.trim()}\n'
           '¿Valida la carga? ${_valida! ? 'Sí' : 'No'}\n\nLa fecha y hora se registrarán al recibir el envío. La respuesta quedará en el historial.',
+          textAlign: TextAlign.center,
         ),
         actions: [
           TextButton(
             onPressed: () => Navigator.pop(ctx, false),
-            child: const Text('Revisar'),
+            child: const Text('Revisar', textAlign: TextAlign.center),
           ),
           FilledButton(
             onPressed: () => Navigator.pop(ctx, true),
-            child: const Text('Enviar'),
+            child: const Text('Enviar', textAlign: TextAlign.center),
           ),
         ],
       ),
@@ -267,17 +270,19 @@ class _CargasPageState extends State<CargasPage> {
             result['repetido'] == true
                 ? 'Registro #${row['id']} ya recibido'
                 : 'Registro #${row['id']} guardado',
+            textAlign: TextAlign.center,
           ),
           content: Text(
             '${result['repetido'] == true ? 'El envío ya estaba registrado. No se creó un duplicado.\n' : ''}'
             '${_date(row['registrado_at'])}\n'
             '${row['en_horario'] == 1 ? 'En término' : 'Fuera de horario'}\n'
             'Respuesta: ${row['valida'] == 1 ? 'Sí valida' : 'No valida'}',
+            textAlign: TextAlign.center,
           ),
           actions: [
             TextButton(
               onPressed: () => Navigator.pop(ctx),
-              child: const Text('Aceptar'),
+              child: const Text('Aceptar', textAlign: TextAlign.center),
             ),
           ],
         ),
@@ -312,27 +317,28 @@ class _CargasPageState extends State<CargasPage> {
             horizontal: 16,
             vertical: 24,
           ),
-          title: Text('Validación #${row['id']}'),
+          title: Text('Validación #${row['id']}', textAlign: TextAlign.center),
           content: SizedBox(
             width: 500,
             child: SingleChildScrollView(
               child: Column(
-                crossAxisAlignment: CrossAxisAlignment.start,
+                crossAxisAlignment: CrossAxisAlignment.center,
                 children: [
                   Wrap(
                     spacing: 8,
                     runSpacing: 8,
+                    alignment: WrapAlignment.center,
                     children: [
                       _badge(
                         row['valida'] == 1 ? 'S\u00ed valida' : 'No valida',
-                        Icons.fact_check_outlined,
+                        Icons.fact_check_rounded,
                         negative: row['valida'] != 1,
                       ),
                       _badge(
                         row['en_horario'] == 1
                             ? 'En t\u00e9rmino'
                             : 'Fuera de horario',
-                        Icons.schedule,
+                        Icons.schedule_rounded,
                         negative: row['en_horario'] != 1,
                       ),
                     ],
@@ -341,41 +347,52 @@ class _CargasPageState extends State<CargasPage> {
                   Text(
                     _date(row['registrado_at']),
                     style: Theme.of(ctx).textTheme.bodyMedium,
+                    textAlign: TextAlign.center,
                   ),
                   _section(
                     'Veh\u00edculo y carga',
-                    Icons.local_shipping_outlined,
+                    Icons.local_shipping_rounded,
                   ),
                   Text(
                     'Cami\u00f3n ${row['camion_numero']} \u00b7 ${row['camion_patente']}\n'
                     'Consolidado: ${row['consolidado']}\n'
                     'Tipo: ${row['tipo'] == 'inicial' ? 'Carga inicial' : 'Recarga'}\n'
                     '${row['sucursal_camion_nombre'] == null ? '' : 'Sucursal del cami\u00f3n: ${row['sucursal_camion_nombre']}'}',
+                    textAlign: TextAlign.center,
                   ),
-                  _section('Registrado por', Icons.person_outline),
+                  _section('Registrado por', Icons.person_rounded),
                   Text(
                     '${row['empleado_nombre']} \u00b7 Legajo ${row['legajo']}\n'
                     'Sucursal: ${row['sucursal_empleado_nombre']}'
                     '${row['puesto_nombre'] == null ? '' : '\nPuesto: ${row['puesto_nombre']}'}',
+                    textAlign: TextAlign.center,
                   ),
                   if (row['horario_nombre'] != null) ...[
-                    _section('Horario de carga', Icons.schedule),
-                    Text('Horario: ${row['horario_nombre']}'),
+                    _section('Horario de carga', Icons.schedule_rounded),
+                    Text(
+                      'Horario: ${row['horario_nombre']}',
+                      textAlign: TextAlign.center,
+                    ),
                     if (row['desde_minuto'] is int &&
                         row['hasta_minuto'] is int)
                       Text(
                         '${_clock(row['desde_minuto'])} inclusive a ${_clock(row['hasta_minuto'])} exclusivo',
+                        textAlign: TextAlign.center,
                       ),
                   ],
-                  _section('Observaciones', Icons.notes_outlined),
+                  _section('Observaciones', Icons.notes_rounded),
                   Text(
                     (row['observaciones'] ?? '').toString().trim().isEmpty
                         ? 'Sin observaciones'
                         : row['observaciones'].toString(),
+                    textAlign: TextAlign.center,
                   ),
-                  _section('Fotos adjuntas', Icons.photo_library_outlined),
+                  _section('Fotos adjuntas', Icons.photo_library_rounded),
                   if (_maps(row['fotos']).isEmpty)
-                    const Text('Sin fotos adjuntas.'),
+                    const Text(
+                      'Sin fotos adjuntas.',
+                      textAlign: TextAlign.center,
+                    ),
                   for (final foto in _maps(row['fotos']))
                     Padding(
                       padding: const EdgeInsets.only(top: 12),
@@ -392,7 +409,7 @@ class _CargasPageState extends State<CargasPage> {
           actions: [
             TextButton(
               onPressed: () => Navigator.pop(ctx),
-              child: const Text('Cerrar'),
+              child: const Text('Cerrar', textAlign: TextAlign.center),
             ),
           ],
         ),
@@ -411,6 +428,7 @@ class _CargasPageState extends State<CargasPage> {
   Widget _section(String title, IconData icon) => Padding(
     padding: const EdgeInsets.only(top: 20, bottom: 14),
     child: Row(
+      mainAxisAlignment: MainAxisAlignment.center,
       children: [
         Icon(icon, size: 22, color: Theme.of(context).colorScheme.primary),
         const SizedBox(width: 10),
@@ -420,6 +438,7 @@ class _CargasPageState extends State<CargasPage> {
             style: Theme.of(
               context,
             ).textTheme.titleMedium?.copyWith(fontWeight: FontWeight.w700),
+            textAlign: TextAlign.center,
           ),
         ),
       ],
@@ -439,22 +458,25 @@ class _CargasPageState extends State<CargasPage> {
         border: Border.all(color: colors.primary.withValues(alpha: .2)),
       ),
       child: Column(
-        crossAxisAlignment: CrossAxisAlignment.start,
+        crossAxisAlignment: CrossAxisAlignment.center,
         children: [
           Text(
             'Camión ${truck['numero']}',
             style: Theme.of(
               context,
             ).textTheme.titleMedium?.copyWith(fontWeight: FontWeight.w700),
+            textAlign: TextAlign.center,
           ),
           const SizedBox(height: 4),
           Text(
             description.isEmpty ? 'Sin descripción registrada' : description,
+            textAlign: TextAlign.center,
           ),
           const SizedBox(height: 8),
           Text(
             'Patente: ${truck['patente']}${branch.isEmpty ? '' : ' · Sucursal: $branch'}',
             style: Theme.of(context).textTheme.bodySmall,
+            textAlign: TextAlign.center,
           ),
         ],
       ),
@@ -499,6 +521,7 @@ class _CargasPageState extends State<CargasPage> {
         }
         return Row(
           crossAxisAlignment: CrossAxisAlignment.start,
+          mainAxisAlignment: MainAxisAlignment.center,
           children: [
             Expanded(child: left),
             const SizedBox(width: 20),
@@ -522,17 +545,23 @@ class _CargasPageState extends State<CargasPage> {
       ),
       child: Row(
         mainAxisSize: MainAxisSize.min,
+        mainAxisAlignment: MainAxisAlignment.center,
         children: [
-          Icon(icon, size: 16, color: foreground),
+          Icon(
+            icon,
+            size: 16,
+            color: AppColors.of(context).foreground(foreground),
+          ),
           const SizedBox(width: 6),
           Flexible(
             child: Text(
               label,
               style: TextStyle(
-                color: foreground,
+                color: AppColors.of(context).foreground(foreground),
                 fontSize: 13,
                 fontWeight: FontWeight.w600,
               ),
+              textAlign: TextAlign.center,
             ),
           ),
         ],
@@ -544,7 +573,7 @@ class _CargasPageState extends State<CargasPage> {
     final colors = Theme.of(context).colorScheme;
     final valid = row['valida'] == 1;
     final onTime = row['en_horario'] == 1;
-    return Card(
+    return AppCard(
       margin: EdgeInsets.zero,
       elevation: 0,
       color: colors.surface,
@@ -558,26 +587,29 @@ class _CargasPageState extends State<CargasPage> {
         child: Padding(
           padding: const EdgeInsets.all(20),
           child: Column(
-            crossAxisAlignment: CrossAxisAlignment.start,
+            crossAxisAlignment: CrossAxisAlignment.center,
             children: [
               Row(
                 crossAxisAlignment: CrossAxisAlignment.start,
+                mainAxisAlignment: MainAxisAlignment.center,
                 children: [
-                  Icon(Icons.local_shipping_outlined, color: colors.primary),
+                  Icon(Icons.local_shipping_rounded, color: colors.primary),
                   const SizedBox(width: 12),
                   Expanded(
                     child: Column(
-                      crossAxisAlignment: CrossAxisAlignment.start,
+                      crossAxisAlignment: CrossAxisAlignment.center,
                       children: [
                         Text(
                           'Cami\u00f3n ${row['camion_numero']} \u00b7 ${row['consolidado']}',
                           style: Theme.of(context).textTheme.titleMedium
                               ?.copyWith(fontWeight: FontWeight.w700),
+                          textAlign: TextAlign.center,
                         ),
                         const SizedBox(height: 4),
                         Text(
                           '${row['camion_patente'] ?? ''} \u00b7 ${row['tipo'] == 'inicial' ? 'Carga inicial' : 'Recarga'}',
                           style: Theme.of(context).textTheme.bodyMedium,
+                          textAlign: TextAlign.center,
                         ),
                       ],
                     ),
@@ -588,15 +620,16 @@ class _CargasPageState extends State<CargasPage> {
               Wrap(
                 spacing: 8,
                 runSpacing: 8,
+                alignment: WrapAlignment.center,
                 children: [
                   _badge(
                     valid ? 'S\u00ed valida' : 'No valida',
-                    valid ? Icons.check_circle_outline : Icons.cancel_outlined,
+                    valid ? Icons.check_circle_rounded : Icons.cancel_rounded,
                     negative: !valid,
                   ),
                   _badge(
                     onTime ? 'En t\u00e9rmino' : 'Fuera de horario',
-                    Icons.schedule,
+                    Icons.schedule_rounded,
                     negative: !onTime,
                   ),
                 ],
@@ -605,14 +638,17 @@ class _CargasPageState extends State<CargasPage> {
               Text(
                 _date(row['registrado_at']),
                 style: Theme.of(context).textTheme.bodySmall,
+                textAlign: TextAlign.center,
               ),
               const SizedBox(height: 12),
               Row(
+                mainAxisAlignment: MainAxisAlignment.center,
                 children: [
                   Expanded(
                     child: Text(
                       'Registro #${row['id']}',
                       style: Theme.of(context).textTheme.bodySmall,
+                      textAlign: TextAlign.center,
                     ),
                   ),
                   Text(
@@ -621,8 +657,13 @@ class _CargasPageState extends State<CargasPage> {
                       color: colors.primary,
                       fontWeight: FontWeight.w600,
                     ),
+                    textAlign: TextAlign.center,
                   ),
-                  Icon(Icons.chevron_right, color: colors.primary, size: 20),
+                  Icon(
+                    Icons.chevron_right_rounded,
+                    color: colors.primary,
+                    size: 20,
+                  ),
                 ],
               ),
             ],
@@ -655,12 +696,17 @@ class _CargasPageState extends State<CargasPage> {
               style: Theme.of(
                 context,
               ).textTheme.headlineSmall?.copyWith(fontWeight: FontWeight.w700),
+              textAlign: TextAlign.center,
             ),
             const SizedBox(height: 8),
-            Text('$_total registros \u00b7 P\u00e1gina $_page'),
+            Text(
+              '$_total registros \u00b7 P\u00e1gina $_page',
+              textAlign: TextAlign.center,
+            ),
             const SizedBox(height: 8),
             const Text(
               'Consult\u00e1 la respuesta, el horario y las fotos de cada carga.',
+              textAlign: TextAlign.center,
             ),
             const SizedBox(height: 24),
             if (_rows.isEmpty && !_loading)
@@ -671,9 +717,10 @@ class _CargasPageState extends State<CargasPage> {
                   borderRadius: BorderRadius.circular(16),
                 ),
                 child: Column(
+                  crossAxisAlignment: CrossAxisAlignment.center,
                   children: [
                     Icon(
-                      Icons.history_outlined,
+                      Icons.history_rounded,
                       size: 48,
                       color: Theme.of(context).colorScheme.primary,
                     ),
@@ -694,6 +741,7 @@ class _CargasPageState extends State<CargasPage> {
             Wrap(
               spacing: 16,
               runSpacing: 16,
+              alignment: WrapAlignment.center,
               children: [
                 for (final row in _rows)
                   SizedBox(
@@ -716,8 +764,8 @@ class _CargasPageState extends State<CargasPage> {
                             _load();
                           }
                         : null,
-                    icon: const Icon(Icons.chevron_left),
-                    label: const Text('Anterior'),
+                    icon: const Icon(Icons.chevron_left_rounded),
+                    label: const Text('Anterior', textAlign: TextAlign.center),
                   ),
                   OutlinedButton.icon(
                     onPressed: _page * 30 < _total && !_loading
@@ -726,8 +774,8 @@ class _CargasPageState extends State<CargasPage> {
                             _load();
                           }
                         : null,
-                    icon: const Icon(Icons.chevron_right),
-                    label: const Text('Siguiente'),
+                    icon: const Icon(Icons.chevron_right_rounded),
+                    label: const Text('Siguiente', textAlign: TextAlign.center),
                   ),
                 ],
               ),
@@ -766,11 +814,11 @@ class _CargasPageState extends State<CargasPage> {
       child: Scaffold(
         backgroundColor: colors.surfaceContainerLowest,
         appBar: AppBar(
-          title: const Text('Validación de carga'),
+          title: const Text('Validación de carga', textAlign: TextAlign.center),
           actions: [
             IconButton(
               onPressed: busy || _loading ? null : _load,
-              icon: const Icon(Icons.refresh),
+              icon: const Icon(Icons.refresh_rounded),
               tooltip: 'Actualizar',
             ),
           ],
@@ -782,14 +830,15 @@ class _CargasPageState extends State<CargasPage> {
           ),
         ),
         body: Column(
+          crossAxisAlignment: CrossAxisAlignment.center,
           children: [
             if (_error != null)
               MaterialBanner(
-                content: Text(_error!),
+                content: Text(_error!, textAlign: TextAlign.center),
                 actions: [
                   TextButton(
                     onPressed: () => setState(() => _error = null),
-                    child: const Text('Cerrar'),
+                    child: const Text('Cerrar', textAlign: TextAlign.center),
                   ),
                 ],
               ),
@@ -808,10 +857,12 @@ class _CargasPageState extends State<CargasPage> {
                         child: _config == null
                             ? const Text(
                                 'Actualice para consultar los vehículos y horarios.',
+                                textAlign: TextAlign.center,
                               )
                             : _config!['habilitado'] != true
                             ? const Text(
                                 'Su puesto no está habilitado para registrar cargas. Puede consultar su historial.',
+                                textAlign: TextAlign.center,
                               )
                             : AbsorbPointer(
                                 absorbing: busy || _loading,
@@ -865,16 +916,18 @@ class _CargasPageState extends State<CargasPage> {
                                                 ?.copyWith(
                                                   fontWeight: FontWeight.w700,
                                                 ),
+                                            textAlign: TextAlign.center,
                                           ),
                                           const SizedBox(height: 8),
                                           const Text(
                                             'Una persona registra la carga del camión. El legajo, la sucursal y la hora se guardan automáticamente.',
+                                            textAlign: TextAlign.center,
                                           ),
                                           _formSections(
                                             vehicle: [
                                               _section(
                                                 'Vehículo y carga',
-                                                Icons.local_shipping_outlined,
+                                                Icons.local_shipping_rounded,
                                               ),
                                               DropdownButtonFormField<int>(
                                                 key: ValueKey(_camion),
@@ -898,6 +951,8 @@ class _CargasPageState extends State<CargasPage> {
                                                           _truckLabel(t),
                                                           overflow: TextOverflow
                                                               .ellipsis,
+                                                          textAlign:
+                                                              TextAlign.center,
                                                         ),
                                                       ),
                                                     )
@@ -922,6 +977,7 @@ class _CargasPageState extends State<CargasPage> {
                                               if (trucks.isEmpty)
                                                 const Text(
                                                   'No hay vehículos activos. Contacte al administrador.',
+                                                  textAlign: TextAlign.center,
                                                 ),
                                               const SizedBox(height: 12),
                                               DropdownButtonFormField<String>(
@@ -938,11 +994,17 @@ class _CargasPageState extends State<CargasPage> {
                                                     value: 'inicial',
                                                     child: Text(
                                                       'Carga inicial',
+                                                      textAlign:
+                                                          TextAlign.center,
                                                     ),
                                                   ),
                                                   DropdownMenuItem(
                                                     value: 'recarga',
-                                                    child: Text('Recarga'),
+                                                    child: Text(
+                                                      'Recarga',
+                                                      textAlign:
+                                                          TextAlign.center,
+                                                    ),
                                                   ),
                                                 ],
                                                 onChanged: (v) => setState(() {
@@ -958,6 +1020,7 @@ class _CargasPageState extends State<CargasPage> {
                                                       ),
                                                   child: Text(
                                                     '${h['nombre']}: desde ${_clock(h['desde_minuto'])} inclusive hasta ${_clock(h['hasta_minuto'])} exclusivo.',
+                                                    textAlign: TextAlign.center,
                                                   ),
                                                 ),
                                               ),
@@ -980,7 +1043,7 @@ class _CargasPageState extends State<CargasPage> {
                                             result: [
                                               _section(
                                                 'Resultado de la validación',
-                                                Icons.fact_check_outlined,
+                                                Icons.fact_check_rounded,
                                               ),
                                               DropdownButtonFormField<bool>(
                                                 key: ValueKey(_valida),
@@ -994,11 +1057,19 @@ class _CargasPageState extends State<CargasPage> {
                                                 items: const [
                                                   DropdownMenuItem(
                                                     value: true,
-                                                    child: Text('Sí'),
+                                                    child: Text(
+                                                      'Sí',
+                                                      textAlign:
+                                                          TextAlign.center,
+                                                    ),
                                                   ),
                                                   DropdownMenuItem(
                                                     value: false,
-                                                    child: Text('No'),
+                                                    child: Text(
+                                                      'No',
+                                                      textAlign:
+                                                          TextAlign.center,
+                                                    ),
                                                   ),
                                                 ],
                                                 validator: (v) => v == null
@@ -1032,29 +1103,36 @@ class _CargasPageState extends State<CargasPage> {
                                             photos: [
                                               _section(
                                                 'Evidencia fotográfica',
-                                                Icons.photo_library_outlined,
+                                                Icons.photo_library_rounded,
                                               ),
                                               Text(
                                                 'Fotos opcionales (${_fotos.length}/$_maxFotos)',
+                                                textAlign: TextAlign.center,
                                               ),
                                               Text(
                                                 _photoLimits,
                                                 style: Theme.of(
                                                   context,
                                                 ).textTheme.bodySmall,
+                                                textAlign: TextAlign.center,
                                               ),
                                               const SizedBox(height: 10),
                                               Wrap(
                                                 spacing: 8,
+                                                alignment: WrapAlignment.center,
                                                 children: [
                                                   OutlinedButton.icon(
                                                     onPressed: _canAddPhotos
                                                         ? () => _pick(true)
                                                         : null,
                                                     icon: const Icon(
-                                                      Icons.camera_alt_outlined,
+                                                      Icons.camera_alt_rounded,
                                                     ),
-                                                    label: const Text('Cámara'),
+                                                    label: const Text(
+                                                      'Cámara',
+                                                      textAlign:
+                                                          TextAlign.center,
+                                                    ),
                                                   ),
                                                   OutlinedButton.icon(
                                                     onPressed: _canAddPhotos
@@ -1066,12 +1144,15 @@ class _CargasPageState extends State<CargasPage> {
                                                     ),
                                                     label: const Text(
                                                       'Galería',
+                                                      textAlign:
+                                                          TextAlign.center,
                                                     ),
                                                   ),
                                                 ],
                                               ),
                                               Wrap(
                                                 spacing: 8,
+                                                alignment: WrapAlignment.center,
                                                 children: [
                                                   for (
                                                     var i = 0;
@@ -1079,6 +1160,9 @@ class _CargasPageState extends State<CargasPage> {
                                                     i++
                                                   )
                                                     Column(
+                                                      crossAxisAlignment:
+                                                          CrossAxisAlignment
+                                                              .center,
                                                       children: [
                                                         Image.memory(
                                                           _fotos[i],
@@ -1096,6 +1180,8 @@ class _CargasPageState extends State<CargasPage> {
                                                               }),
                                                           child: const Text(
                                                             'Quitar',
+                                                            textAlign: TextAlign
+                                                                .center,
                                                           ),
                                                         ),
                                                       ],
@@ -1116,17 +1202,19 @@ class _CargasPageState extends State<CargasPage> {
                                                 ? null
                                                 : _send,
                                             icon: const Icon(
-                                              Icons.check_circle_outline,
+                                              Icons.check_circle_rounded,
                                             ),
                                             label: Text(
                                               _sending
                                                   ? 'Enviando…'
                                                   : 'Registrar validación',
+                                              textAlign: TextAlign.center,
                                             ),
                                           ),
                                           const SizedBox(height: 12),
                                           const Text(
                                             'Requiere conexión. Los envíos fuera del horario configurado quedan registrados como fuera de término.',
+                                            textAlign: TextAlign.center,
                                           ),
                                         ],
                                       ),
@@ -1173,6 +1261,7 @@ class _CargaPhotoState extends State<_CargaPhoto> {
       if (snapshot.hasError) {
         return const Text(
           'No se pudo cargar esta foto. Vuelva a abrir el detalle para reintentar.',
+          textAlign: TextAlign.center,
         );
       }
       if (!snapshot.hasData) return const LinearProgressIndicator();

@@ -1,3 +1,5 @@
+import 'package:ficharqr/src/presentation/widgets/app_card.dart';
+import 'package:ficharqr/src/presentation/theme/app_palette.dart';
 import 'package:flutter/material.dart';
 
 import '../../core/network/mobile_api_client.dart';
@@ -45,7 +47,8 @@ class _EmployeeStatsPageState extends State<EmployeeStatsPage> {
     return DateTime(now.year, now.month, now.day);
   }
 
-  String _fmtDisplayDate(DateTime date) => DateFormatter.formatDisplayDate(date);
+  String _fmtDisplayDate(DateTime date) =>
+      DateFormatter.formatDisplayDate(date);
   DateTime? _parseInputDate(String raw) => DateFormatter.parseFlexibleDate(raw);
   String? _controllerDateToApi(TextEditingController ctrl) =>
       DateFormatter.toApiDateOrNull(ctrl.text);
@@ -170,21 +173,27 @@ class _EmployeeStatsPageState extends State<EmployeeStatsPage> {
 
   void _set7Days() {
     final today = _todayDate();
-    _desdeController.text = _fmtDisplayDate(today.subtract(const Duration(days: 6)));
+    _desdeController.text = _fmtDisplayDate(
+      today.subtract(const Duration(days: 6)),
+    );
     _hastaController.text = _fmtDisplayDate(today);
     _loadStats();
   }
 
   void _set30Days() {
     final today = _todayDate();
-    _desdeController.text = _fmtDisplayDate(today.subtract(const Duration(days: 29)));
+    _desdeController.text = _fmtDisplayDate(
+      today.subtract(const Duration(days: 29)),
+    );
     _hastaController.text = _fmtDisplayDate(today);
     _loadStats();
   }
 
   void _setCurrentMonth() {
     final today = _todayDate();
-    _desdeController.text = _fmtDisplayDate(DateTime(today.year, today.month, 1));
+    _desdeController.text = _fmtDisplayDate(
+      DateTime(today.year, today.month, 1),
+    );
     _hastaController.text = _fmtDisplayDate(today);
     _loadStats();
   }
@@ -202,7 +211,7 @@ class _EmployeeStatsPageState extends State<EmployeeStatsPage> {
 
     return Scaffold(
       appBar: AppBar(
-        title: const Text('Mis estadisticas'),
+        title: const Text('Mis estadisticas', textAlign: TextAlign.center),
         bottom: _loadingData
             ? const PreferredSize(
                 preferredSize: Size.fromHeight(3),
@@ -237,15 +246,19 @@ class _EmployeeStatsPageState extends State<EmployeeStatsPage> {
                             onToggleExpand: () => setState(
                               () => _filtersExpanded = !_filtersExpanded,
                             ),
-                            onPickDesde:
-                                _loadingData ? null : () => _pickDate(isDesde: true),
-                            onPickHasta:
-                                _loadingData ? null : () => _pickDate(isDesde: false),
+                            onPickDesde: _loadingData
+                                ? null
+                                : () => _pickDate(isDesde: true),
+                            onPickHasta: _loadingData
+                                ? null
+                                : () => _pickDate(isDesde: false),
                             onApply: _loadingData ? null : _applyFilters,
                             onClear: _loadingData ? null : _clearFilters,
                             onPreset7Days: _loadingData ? null : _set7Days,
                             onPreset30Days: _loadingData ? null : _set30Days,
-                            onPresetMonth: _loadingData ? null : _setCurrentMonth,
+                            onPresetMonth: _loadingData
+                                ? null
+                                : _setCurrentMonth,
                             onPresetYear: _loadingData ? null : _setCurrentYear,
                           ),
                           if (_error != null) ...[
@@ -316,18 +329,20 @@ class _FilterBar extends StatelessWidget {
   @override
   Widget build(BuildContext context) {
     final cs = Theme.of(context).colorScheme;
-    return Card(
+    return AppCard(
       child: Column(
-        crossAxisAlignment: CrossAxisAlignment.start,
+        crossAxisAlignment: CrossAxisAlignment.center,
         children: [
           Padding(
             padding: const EdgeInsets.fromLTRB(12, 10, 12, 4),
             child: Row(
+              mainAxisAlignment: MainAxisAlignment.center,
               children: [
                 Expanded(
                   child: Wrap(
                     spacing: 6,
                     runSpacing: 4,
+                    alignment: WrapAlignment.center,
                     children: [
                       _PresetChip(label: '7 días', onTap: onPreset7Days),
                       _PresetChip(label: '30 días', onTap: onPreset30Days),
@@ -347,8 +362,9 @@ class _FilterBar extends StatelessWidget {
                     ),
                     child: Row(
                       mainAxisSize: MainAxisSize.min,
+                      mainAxisAlignment: MainAxisAlignment.center,
                       children: [
-                        Icon(Icons.tune, size: 16, color: cs.primary),
+                        Icon(Icons.tune_rounded, size: 16, color: cs.primary),
                         const SizedBox(width: 4),
                         Text(
                           'Filtrar',
@@ -357,13 +373,14 @@ class _FilterBar extends StatelessWidget {
                             fontWeight: FontWeight.w600,
                             fontSize: 13,
                           ),
+                          textAlign: TextAlign.center,
                         ),
                         const SizedBox(width: 2),
                         AnimatedRotation(
                           turns: expanded ? 0.5 : 0,
                           duration: const Duration(milliseconds: 200),
                           child: Icon(
-                            Icons.keyboard_arrow_down,
+                            Icons.keyboard_arrow_down_rounded,
                             size: 18,
                             color: cs.primary,
                           ),
@@ -384,10 +401,11 @@ class _FilterBar extends StatelessWidget {
             secondChild: Padding(
               padding: const EdgeInsets.fromLTRB(12, 4, 12, 12),
               child: Column(
-                crossAxisAlignment: CrossAxisAlignment.start,
+                crossAxisAlignment: CrossAxisAlignment.center,
                 children: [
                   const Divider(height: 16),
                   Row(
+                    mainAxisAlignment: MainAxisAlignment.center,
                     children: [
                       Expanded(
                         child: TextField(
@@ -404,7 +422,10 @@ class _FilterBar extends StatelessWidget {
                             ),
                             suffixIcon: IconButton(
                               onPressed: onPickDesde,
-                              icon: const Icon(Icons.calendar_month, size: 18),
+                              icon: const Icon(
+                                Icons.calendar_month_rounded,
+                                size: 18,
+                              ),
                             ),
                           ),
                         ),
@@ -425,7 +446,10 @@ class _FilterBar extends StatelessWidget {
                             ),
                             suffixIcon: IconButton(
                               onPressed: onPickHasta,
-                              icon: const Icon(Icons.calendar_month, size: 18),
+                              icon: const Icon(
+                                Icons.calendar_month_rounded,
+                                size: 18,
+                              ),
                             ),
                           ),
                         ),
@@ -434,6 +458,7 @@ class _FilterBar extends StatelessWidget {
                   ),
                   const SizedBox(height: 10),
                   Row(
+                    mainAxisAlignment: MainAxisAlignment.center,
                     children: [
                       Expanded(
                         child: FilledButton.icon(
@@ -449,16 +474,22 @@ class _FilterBar extends StatelessWidget {
                                     ),
                                   ),
                                 )
-                              : const Icon(Icons.search, size: 16),
-                          label: const Text('Aplicar'),
+                              : const Icon(Icons.search_rounded, size: 16),
+                          label: const Text(
+                            'Aplicar',
+                            textAlign: TextAlign.center,
+                          ),
                         ),
                       ),
                       const SizedBox(width: 8),
                       Expanded(
                         child: OutlinedButton.icon(
                           onPressed: onClear,
-                          icon: const Icon(Icons.clear, size: 16),
-                          label: const Text('Limpiar'),
+                          icon: const Icon(Icons.clear_rounded, size: 16),
+                          label: const Text(
+                            'Limpiar',
+                            textAlign: TextAlign.center,
+                          ),
                         ),
                       ),
                     ],
@@ -516,7 +547,7 @@ class _SummaryHero extends StatelessWidget {
       return (
         label: 'Excelente asistencia',
         sub: 'Puntualidad destacada y ausentismo muy bajo.',
-        icon: Icons.emoji_events_outlined,
+        icon: Icons.emoji_events_rounded,
         color: Colors.green.shade700,
       );
     }
@@ -524,7 +555,7 @@ class _SummaryHero extends StatelessWidget {
       return (
         label: 'Buen desempeño',
         sub: 'Asistencia consistente en el período.',
-        icon: Icons.thumb_up_alt_outlined,
+        icon: Icons.thumb_up_alt_rounded,
         color: Colors.green.shade600,
       );
     }
@@ -532,14 +563,14 @@ class _SummaryHero extends StatelessWidget {
       return (
         label: 'Desempeño regular',
         sub: 'Hay margen de mejora en puntualidad o asistencia.',
-        icon: Icons.trending_flat,
+        icon: Icons.trending_flat_rounded,
         color: Colors.amber.shade700,
       );
     }
     return (
       label: 'Requiere atención',
       sub: 'Nivel de asistencia o puntualidad bajo en el período.',
-      icon: Icons.warning_amber_outlined,
+      icon: Icons.warning_amber_rounded,
       color: cs.error,
     );
   }
@@ -554,67 +585,79 @@ class _SummaryHero extends StatelessWidget {
     final ausentismo = stats.kpis.ausentismoPct;
     final cumplimiento = stats.kpis.cumplimientoJornadaPct;
 
-    return Card(
+    return AppCard(
       clipBehavior: Clip.antiAlias,
       child: IntrinsicHeight(
         child: Row(
           crossAxisAlignment: CrossAxisAlignment.stretch,
+          mainAxisAlignment: MainAxisAlignment.center,
           children: [
-            Container(width: 5, color: v.color),
+            Container(width: 5, color: AppColors.of(context).surface(v.color)),
             Expanded(
               child: Padding(
                 padding: const EdgeInsets.fromLTRB(14, 14, 14, 14),
                 child: Column(
-                  crossAxisAlignment: CrossAxisAlignment.start,
+                  crossAxisAlignment: CrossAxisAlignment.center,
                   children: [
                     // Periodo
                     Row(
+                      mainAxisAlignment: MainAxisAlignment.center,
                       children: [
                         Icon(
-                          Icons.date_range_outlined,
+                          Icons.date_range_rounded,
                           size: 14,
                           color: cs.onSurfaceVariant,
                         ),
                         const SizedBox(width: 5),
                         Text(
                           '$desde — $hasta  ·  ${stats.periodo.dias} días',
-                          style: Theme.of(context).textTheme.bodySmall?.copyWith(
-                            color: cs.onSurfaceVariant,
-                          ),
+                          style: Theme.of(context).textTheme.bodySmall
+                              ?.copyWith(color: cs.onSurfaceVariant),
+                          textAlign: TextAlign.center,
                         ),
                       ],
                     ),
                     const SizedBox(height: 10),
                     // Veredicto
                     Row(
+                      mainAxisAlignment: MainAxisAlignment.center,
                       children: [
                         Container(
                           width: 44,
                           height: 44,
                           decoration: BoxDecoration(
-                            color: v.color.withValues(alpha: 0.12),
+                            color: AppColors.of(
+                              context,
+                            ).surface(v.color.withValues(alpha: 0.12)),
                             shape: BoxShape.circle,
                           ),
-                          child: Icon(v.icon, color: v.color, size: 24),
+                          child: Icon(
+                            v.icon,
+                            color: AppColors.of(context).foreground(v.color),
+                            size: 24,
+                          ),
                         ),
                         const SizedBox(width: 12),
                         Expanded(
                           child: Column(
-                            crossAxisAlignment: CrossAxisAlignment.start,
+                            crossAxisAlignment: CrossAxisAlignment.center,
                             children: [
                               Text(
                                 v.label,
-                                style: Theme.of(
-                                  context,
-                                ).textTheme.titleMedium?.copyWith(
-                                  color: v.color,
-                                  fontWeight: FontWeight.w700,
-                                ),
+                                style: Theme.of(context).textTheme.titleMedium
+                                    ?.copyWith(
+                                      color: AppColors.of(
+                                        context,
+                                      ).foreground(v.color),
+                                      fontWeight: FontWeight.w700,
+                                    ),
+                                textAlign: TextAlign.center,
                               ),
                               const SizedBox(height: 2),
                               Text(
                                 v.sub,
                                 style: Theme.of(context).textTheme.bodySmall,
+                                textAlign: TextAlign.center,
                               ),
                             ],
                           ),
@@ -626,6 +669,7 @@ class _SummaryHero extends StatelessWidget {
                     Wrap(
                       spacing: 8,
                       runSpacing: 6,
+                      alignment: WrapAlignment.center,
                       children: [
                         _StatPill(
                           label: 'Puntualidad',
@@ -688,30 +732,37 @@ class _StatPill extends StatelessWidget {
     return Container(
       padding: const EdgeInsets.symmetric(horizontal: 10, vertical: 5),
       decoration: BoxDecoration(
-        color: color.withValues(alpha: 0.10),
+        color: AppColors.of(context).surface(color.withValues(alpha: 0.10)),
         borderRadius: BorderRadius.circular(20),
-        border: Border.all(color: color.withValues(alpha: 0.25)),
+        border: Border.all(
+          color: AppColors.of(context).border(color.withValues(alpha: 0.25)),
+        ),
       ),
       child: Row(
         mainAxisSize: MainAxisSize.min,
+        mainAxisAlignment: MainAxisAlignment.center,
         children: [
           Text(
             value,
             style: TextStyle(
               fontSize: 13,
               fontWeight: FontWeight.w800,
-              color: color,
+              color: AppColors.of(context).foreground(color),
               height: 1,
             ),
+            textAlign: TextAlign.center,
           ),
           const SizedBox(width: 5),
           Text(
             label,
             style: TextStyle(
               fontSize: 13,
-              color: color.withValues(alpha: 0.85),
+              color: AppColors.of(
+                context,
+              ).foreground(color.withValues(alpha: 0.85)),
               height: 1,
             ),
+            textAlign: TextAlign.center,
           ),
         ],
       ),
@@ -751,43 +802,43 @@ class _KpiSectionState extends State<_KpiSection> {
     final kpis = widget.stats.kpis;
     return [
       (
-        icon: Icons.schedule,
+        icon: Icons.schedule_rounded,
         label: 'Puntualidad',
         value: kpis.puntualidadPct,
         highIsGood: true,
       ),
       (
-        icon: Icons.task_alt,
+        icon: Icons.task_alt_rounded,
         label: 'Jornada completa',
         value: kpis.cumplimientoJornadaPct,
         highIsGood: true,
       ),
       (
-        icon: Icons.leaderboard_outlined,
+        icon: Icons.leaderboard_rounded,
         label: 'Adherencia',
         value: kpis.adherenciaPct,
         highIsGood: true,
       ),
       (
-        icon: Icons.event_busy_outlined,
+        icon: Icons.event_busy_rounded,
         label: 'Ausentismo',
         value: kpis.ausentismoPct,
         highIsGood: false,
       ),
       (
-        icon: Icons.person_off_outlined,
+        icon: Icons.person_off_rounded,
         label: 'No-show',
         value: kpis.noShowPct,
         highIsGood: false,
       ),
       (
-        icon: Icons.logout,
+        icon: Icons.logout_rounded,
         label: 'Salida anticipada',
         value: kpis.tasaSalidaAnticipadaPct,
         highIsGood: false,
       ),
       (
-        icon: Icons.fact_check_outlined,
+        icon: Icons.fact_check_rounded,
         label: 'Justificadas',
         value: widget.stats.justificaciones.tasaJustificacionPct,
         highIsGood: true,
@@ -801,15 +852,16 @@ class _KpiSectionState extends State<_KpiSection> {
     final items = _items();
 
     return Column(
-      crossAxisAlignment: CrossAxisAlignment.start,
+      crossAxisAlignment: CrossAxisAlignment.center,
       children: [
         Padding(
           padding: const EdgeInsets.only(left: 2, bottom: 8),
           child: Text(
             'Indicadores clave',
-            style: Theme.of(context).textTheme.titleSmall?.copyWith(
-              color: cs.onSurfaceVariant,
-            ),
+            style: Theme.of(
+              context,
+            ).textTheme.titleSmall?.copyWith(color: cs.onSurfaceVariant),
+            textAlign: TextAlign.center,
           ),
         ),
         LayoutBuilder(
@@ -819,11 +871,11 @@ class _KpiSectionState extends State<_KpiSection> {
             if (wide) {
               // Grilla de 2 o 3 columnas
               final cols = constraints.maxWidth >= 760 ? 3 : 2;
-              final itemW =
-                  (constraints.maxWidth - (8.0 * (cols - 1))) / cols;
+              final itemW = (constraints.maxWidth - (8.0 * (cols - 1))) / cols;
               return Wrap(
                 spacing: 8,
                 runSpacing: 8,
+                alignment: WrapAlignment.center,
                 children: items
                     .map(
                       (item) => SizedBox(
@@ -843,6 +895,7 @@ class _KpiSectionState extends State<_KpiSection> {
 
             // Carrusel en movil angosto
             return Column(
+              crossAxisAlignment: CrossAxisAlignment.center,
               children: [
                 SizedBox(
                   height: 158,
@@ -921,11 +974,12 @@ class _KpiCard extends StatelessWidget {
     final color = _color(context);
     final cs = Theme.of(context).colorScheme;
 
-    return Card(
+    return AppCard(
       child: Padding(
         padding: const EdgeInsets.symmetric(horizontal: 16, vertical: 14),
         child: Column(
           mainAxisAlignment: MainAxisAlignment.center,
+          crossAxisAlignment: CrossAxisAlignment.center,
           children: [
             Row(
               mainAxisAlignment: MainAxisAlignment.center,
@@ -956,7 +1010,9 @@ class _KpiCard extends StatelessWidget {
                     value: (value / 100).clamp(0.0, 1.0),
                     strokeWidth: 7,
                     strokeCap: StrokeCap.round,
-                    backgroundColor: color.withValues(alpha: 0.12),
+                    backgroundColor: AppColors.of(
+                      context,
+                    ).surface(color.withValues(alpha: 0.12)),
                     valueColor: AlwaysStoppedAnimation(color),
                   ),
                 ),
@@ -965,9 +1021,10 @@ class _KpiCard extends StatelessWidget {
                   style: TextStyle(
                     fontSize: 17,
                     fontWeight: FontWeight.w800,
-                    color: color,
+                    color: AppColors.of(context).foreground(color),
                     height: 1,
                   ),
+                  textAlign: TextAlign.center,
                 ),
               ],
             ),
@@ -989,21 +1046,23 @@ class _ErrorCard extends StatelessWidget {
   @override
   Widget build(BuildContext context) {
     final cs = Theme.of(context).colorScheme;
-    return Card(
+    return AppCard(
       color: cs.errorContainer,
       child: Padding(
         padding: const EdgeInsets.all(12),
         child: Column(
-          crossAxisAlignment: CrossAxisAlignment.start,
+          crossAxisAlignment: CrossAxisAlignment.center,
           children: [
             Row(
+              mainAxisAlignment: MainAxisAlignment.center,
               children: [
-                Icon(Icons.error_outline, size: 16, color: cs.onErrorContainer),
+                Icon(Icons.error_rounded, size: 16, color: cs.onErrorContainer),
                 const SizedBox(width: 6),
                 Expanded(
                   child: Text(
                     message,
                     style: TextStyle(color: cs.onErrorContainer),
+                    textAlign: TextAlign.center,
                   ),
                 ),
               ],
@@ -1011,8 +1070,8 @@ class _ErrorCard extends StatelessWidget {
             const SizedBox(height: 8),
             OutlinedButton.icon(
               onPressed: onRetry,
-              icon: const Icon(Icons.refresh, size: 16),
-              label: const Text('Reintentar'),
+              icon: const Icon(Icons.refresh_rounded, size: 16),
+              label: const Text('Reintentar', textAlign: TextAlign.center),
             ),
           ],
         ),
@@ -1049,24 +1108,29 @@ class _HorasRachaCard extends StatelessWidget {
         ? Colors.amber.shade800
         : cs.onSurfaceVariant;
 
-    return Card(
+    return AppCard(
       child: Padding(
         padding: const EdgeInsets.all(14),
         child: Column(
-          crossAxisAlignment: CrossAxisAlignment.start,
+          crossAxisAlignment: CrossAxisAlignment.center,
           children: [
             Row(
+              mainAxisAlignment: MainAxisAlignment.center,
               children: [
-                const Icon(Icons.insights_outlined, size: 18),
+                const Icon(Icons.insights_rounded, size: 18),
                 const SizedBox(width: 8),
-                Text('Horas y racha',
-                    style: Theme.of(context).textTheme.titleMedium),
+                Text(
+                  'Horas y racha',
+                  style: Theme.of(context).textTheme.titleMedium,
+                  textAlign: TextAlign.center,
+                ),
                 const Spacer(),
                 Text(
                   '${kpis.diasConRegistro} / ${kpis.diasLaborables} días',
-                  style: Theme.of(context).textTheme.bodySmall?.copyWith(
-                        color: cs.onSurfaceVariant,
-                      ),
+                  style: Theme.of(
+                    context,
+                  ).textTheme.bodySmall?.copyWith(color: cs.onSurfaceVariant),
+                  textAlign: TextAlign.center,
                 ),
               ],
             ),
@@ -1077,26 +1141,26 @@ class _HorasRachaCard extends StatelessWidget {
                 final tiles = [
                   if (showHoras)
                     _MetricTile(
-                      icon: Icons.access_time_outlined,
+                      icon: Icons.access_time_rounded,
                       label: 'Horas totales',
                       value: horasTxt,
                       color: cs.primary,
                     ),
                   if (showHoras)
                     _MetricTile(
-                      icon: Icons.av_timer_outlined,
+                      icon: Icons.av_timer_rounded,
                       label: 'Promedio diario',
                       value: promTxt,
                       color: cs.primary,
                     ),
                   _MetricTile(
-                    icon: Icons.local_fire_department_outlined,
+                    icon: Icons.local_fire_department_rounded,
                     label: 'Racha OK',
                     value: rachaTxt,
                     color: rachaColor,
                   ),
                   _MetricTile(
-                    icon: Icons.gps_not_fixed,
+                    icon: Icons.gps_not_fixed_rounded,
                     label: 'Incidencias GPS',
                     value: gpsIncTxt,
                     color: kpis.gpsIncidencias == 0
@@ -1108,19 +1172,21 @@ class _HorasRachaCard extends StatelessWidget {
                 ];
                 if (wide) {
                   return Row(
-                    children: tiles
-                        .map((t) => Expanded(child: t))
-                        .toList(),
+                    mainAxisAlignment: MainAxisAlignment.center,
+                    children: tiles.map((t) => Expanded(child: t)).toList(),
                   );
                 }
                 return Wrap(
                   spacing: 8,
                   runSpacing: 8,
+                  alignment: WrapAlignment.center,
                   children: tiles
-                      .map((t) => SizedBox(
-                            width: (constraints.maxWidth - 8) / 2,
-                            child: t,
-                          ))
+                      .map(
+                        (t) => SizedBox(
+                          width: (constraints.maxWidth - 8) / 2,
+                          child: t,
+                        ),
+                      )
                       .toList(),
                 );
               },
@@ -1151,22 +1217,23 @@ class _MetricTile extends StatelessWidget {
     return Column(
       crossAxisAlignment: CrossAxisAlignment.center,
       children: [
-        Icon(icon, size: 20, color: color),
+        Icon(icon, size: 20, color: AppColors.of(context).foreground(color)),
         const SizedBox(height: 4),
         Text(
           value,
           style: TextStyle(
             fontSize: 16,
             fontWeight: FontWeight.w800,
-            color: color,
+            color: AppColors.of(context).foreground(color),
           ),
+          textAlign: TextAlign.center,
         ),
         Text(
           label,
           textAlign: TextAlign.center,
-          style: Theme.of(context).textTheme.labelSmall?.copyWith(
-                color: cs.onSurfaceVariant,
-              ),
+          style: Theme.of(
+            context,
+          ).textTheme.labelSmall?.copyWith(color: cs.onSurfaceVariant),
         ),
       ],
     );
@@ -1195,26 +1262,29 @@ class _StatusCard extends StatelessWidget {
       if (t.sinEstado > 0) (t.sinEstado, cs.outline),
     ];
 
-    return Card(
+    return AppCard(
       child: Padding(
         padding: const EdgeInsets.all(14),
         child: Column(
-          crossAxisAlignment: CrossAxisAlignment.start,
+          crossAxisAlignment: CrossAxisAlignment.center,
           children: [
             Row(
+              mainAxisAlignment: MainAxisAlignment.center,
               children: [
-                const Icon(Icons.donut_small_outlined, size: 18),
+                const Icon(Icons.donut_small_rounded, size: 18),
                 const SizedBox(width: 8),
                 Text(
                   'Distribución de estados',
                   style: Theme.of(context).textTheme.titleMedium,
+                  textAlign: TextAlign.center,
                 ),
                 const Spacer(),
                 Text(
                   '${t.registros} registros',
-                  style: Theme.of(context).textTheme.bodySmall?.copyWith(
-                    color: cs.onSurfaceVariant,
-                  ),
+                  style: Theme.of(
+                    context,
+                  ).textTheme.bodySmall?.copyWith(color: cs.onSurfaceVariant),
+                  textAlign: TextAlign.center,
                 ),
               ],
             ),
@@ -1226,11 +1296,14 @@ class _StatusCard extends StatelessWidget {
                 child: SizedBox(
                   height: 10,
                   child: Row(
+                    mainAxisAlignment: MainAxisAlignment.center,
                     children: segments.map((seg) {
                       final pct = (seg.$1 * 1.0) / total;
                       return Flexible(
                         flex: (pct * 1000).round(),
-                        child: Container(color: seg.$2),
+                        child: Container(
+                          color: AppColors.of(context).surface(seg.$2),
+                        ),
                       );
                     }).toList(),
                   ),
@@ -1267,32 +1340,35 @@ class _StatusCard extends StatelessWidget {
     return Padding(
       padding: const EdgeInsets.only(bottom: 10),
       child: Column(
-        crossAxisAlignment: CrossAxisAlignment.start,
+        crossAxisAlignment: CrossAxisAlignment.center,
         children: [
           Row(
+            mainAxisAlignment: MainAxisAlignment.center,
             children: [
               Container(
                 width: 9,
                 height: 9,
                 margin: const EdgeInsets.only(right: 7),
                 decoration: BoxDecoration(
-                  color: color,
+                  color: AppColors.of(context).surface(color),
                   shape: BoxShape.circle,
                 ),
               ),
               Expanded(
                 child: Text(
                   label,
-                  style: Theme.of(context).textTheme.bodySmall?.copyWith(
-                    fontWeight: FontWeight.w600,
-                  ),
+                  style: Theme.of(
+                    context,
+                  ).textTheme.bodySmall?.copyWith(fontWeight: FontWeight.w600),
+                  textAlign: TextAlign.center,
                 ),
               ),
               Text(
                 '$value',
-                style: Theme.of(context).textTheme.bodySmall?.copyWith(
-                  fontWeight: FontWeight.w700,
-                ),
+                style: Theme.of(
+                  context,
+                ).textTheme.bodySmall?.copyWith(fontWeight: FontWeight.w700),
+                textAlign: TextAlign.center,
               ),
               const SizedBox(width: 6),
               SizedBox(
@@ -1312,9 +1388,10 @@ class _StatusCard extends StatelessWidget {
             value: pct / 100.0,
             minHeight: 8,
             borderRadius: BorderRadius.circular(999),
-            color: color,
-            backgroundColor:
-                Theme.of(context).colorScheme.surfaceContainerHighest,
+            color: AppColors.of(context).foreground(color),
+            backgroundColor: Theme.of(
+              context,
+            ).colorScheme.surfaceContainerHighest,
           ),
         ],
       ),
@@ -1344,9 +1421,9 @@ class _DetailGrid extends StatelessWidget {
           padding: const EdgeInsets.only(left: 2, bottom: 8),
           child: Text(
             'Detalle del período',
-            style: Theme.of(context).textTheme.titleSmall?.copyWith(
-              color: cs.onSurfaceVariant,
-            ),
+            style: Theme.of(
+              context,
+            ).textTheme.titleSmall?.copyWith(color: cs.onSurfaceVariant),
           ),
         ),
         LayoutBuilder(
@@ -1360,7 +1437,7 @@ class _DetailGrid extends StatelessWidget {
                     child: Column(
                       children: [
                         _DetailTile(
-                          icon: Icons.work_outline,
+                          icon: Icons.work_rounded,
                           title: 'Jornadas',
                           color: cs.primary,
                           rows: [
@@ -1371,7 +1448,7 @@ class _DetailGrid extends StatelessWidget {
                         ),
                         const SizedBox(height: 8),
                         _DetailTile(
-                          icon: Icons.fact_check_outlined,
+                          icon: Icons.fact_check_rounded,
                           title: 'Justificaciones',
                           color: Colors.indigo.shade600,
                           rows: [
@@ -1394,7 +1471,7 @@ class _DetailGrid extends StatelessWidget {
                     child: Column(
                       children: [
                         _DetailTile(
-                          icon: Icons.event_busy_outlined,
+                          icon: Icons.event_busy_rounded,
                           title: 'Ausencias',
                           color: cs.error,
                           rows: [
@@ -1404,7 +1481,7 @@ class _DetailGrid extends StatelessWidget {
                         ),
                         const SizedBox(height: 8),
                         _DetailTile(
-                          icon: Icons.beach_access_outlined,
+                          icon: Icons.beach_access_rounded,
                           title: 'Vacaciones',
                           color: Colors.teal.shade600,
                           rows: [
@@ -1423,7 +1500,7 @@ class _DetailGrid extends StatelessWidget {
             return Column(
               children: [
                 _DetailTile(
-                  icon: Icons.work_outline,
+                  icon: Icons.work_rounded,
                   title: 'Jornadas',
                   color: cs.primary,
                   rows: [
@@ -1434,7 +1511,7 @@ class _DetailGrid extends StatelessWidget {
                 ),
                 const SizedBox(height: 8),
                 _DetailTile(
-                  icon: Icons.event_busy_outlined,
+                  icon: Icons.event_busy_rounded,
                   title: 'Ausencias',
                   color: cs.error,
                   rows: [
@@ -1444,7 +1521,7 @@ class _DetailGrid extends StatelessWidget {
                 ),
                 const SizedBox(height: 8),
                 _DetailTile(
-                  icon: Icons.fact_check_outlined,
+                  icon: Icons.fact_check_rounded,
                   title: 'Justificaciones',
                   color: Colors.indigo.shade600,
                   rows: [
@@ -1461,7 +1538,7 @@ class _DetailGrid extends StatelessWidget {
                 ),
                 const SizedBox(height: 8),
                 _DetailTile(
-                  icon: Icons.beach_access_outlined,
+                  icon: Icons.beach_access_rounded,
                   title: 'Vacaciones',
                   color: Colors.teal.shade600,
                   rows: [
@@ -1494,29 +1571,37 @@ class _DetailTile extends StatelessWidget {
   @override
   Widget build(BuildContext context) {
     final cs = Theme.of(context).colorScheme;
-    return Card(
+    return AppCard(
       child: Padding(
         padding: const EdgeInsets.all(12),
         child: Column(
-          crossAxisAlignment: CrossAxisAlignment.start,
+          crossAxisAlignment: CrossAxisAlignment.center,
           children: [
             Row(
+              mainAxisAlignment: MainAxisAlignment.center,
               children: [
                 Container(
                   width: 28,
                   height: 28,
                   decoration: BoxDecoration(
-                    color: color.withValues(alpha: 0.12),
+                    color: AppColors.of(
+                      context,
+                    ).surface(color.withValues(alpha: 0.12)),
                     borderRadius: BorderRadius.circular(6),
                   ),
-                  child: Icon(icon, size: 16, color: color),
+                  child: Icon(
+                    icon,
+                    size: 16,
+                    color: AppColors.of(context).foreground(color),
+                  ),
                 ),
                 const SizedBox(width: 8),
                 Text(
                   title,
-                  style: Theme.of(context).textTheme.titleSmall?.copyWith(
-                    fontWeight: FontWeight.w700,
-                  ),
+                  style: Theme.of(
+                    context,
+                  ).textTheme.titleSmall?.copyWith(fontWeight: FontWeight.w700),
+                  textAlign: TextAlign.center,
                 ),
               ],
             ),
@@ -1525,6 +1610,7 @@ class _DetailTile extends StatelessWidget {
               final i = entry.$1;
               final row = entry.$2;
               return Column(
+                crossAxisAlignment: CrossAxisAlignment.center,
                 children: [
                   if (i > 0)
                     Divider(
@@ -1539,6 +1625,7 @@ class _DetailTile extends StatelessWidget {
                         style: Theme.of(context).textTheme.bodySmall?.copyWith(
                           color: cs.onSurfaceVariant,
                         ),
+                        textAlign: TextAlign.center,
                       ),
                       Text(
                         row.$2,
@@ -1546,6 +1633,7 @@ class _DetailTile extends StatelessWidget {
                           fontWeight: FontWeight.w700,
                           color: cs.onSurface,
                         ),
+                        textAlign: TextAlign.center,
                       ),
                     ],
                   ),
@@ -1569,19 +1657,21 @@ class _DailyChart extends StatelessWidget {
   @override
   Widget build(BuildContext context) {
     final cs = Theme.of(context).colorScheme;
-    return Card(
+    return AppCard(
       child: Padding(
         padding: const EdgeInsets.all(14),
         child: Column(
-          crossAxisAlignment: CrossAxisAlignment.start,
+          crossAxisAlignment: CrossAxisAlignment.center,
           children: [
             Row(
+              mainAxisAlignment: MainAxisAlignment.center,
               children: [
-                const Icon(Icons.bar_chart_outlined, size: 18),
+                const Icon(Icons.bar_chart_rounded, size: 18),
                 const SizedBox(width: 8),
                 Text(
                   'Tendencia diaria',
                   style: Theme.of(context).textTheme.titleMedium,
+                  textAlign: TextAlign.center,
                 ),
               ],
             ),
@@ -1589,6 +1679,7 @@ class _DailyChart extends StatelessWidget {
             Wrap(
               spacing: 14,
               runSpacing: 4,
+              alignment: WrapAlignment.center,
               children: [
                 _legendDot('OK', Colors.green.shade600),
                 _legendDot('Tarde', Colors.amber.shade700),
@@ -1601,6 +1692,7 @@ class _DailyChart extends StatelessWidget {
               Text(
                 'Sin datos diarios para el período seleccionado.',
                 style: TextStyle(color: cs.onSurfaceVariant),
+                textAlign: TextAlign.center,
               )
             else
               _buildChart(context),
@@ -1640,8 +1732,10 @@ class _DailyChart extends StatelessWidget {
           final reg = d.registros < 1 ? 1 : d.registros;
           final okH = (d.ok * totalH / reg).clamp(0.0, totalH);
           final tardeH = (d.tarde * totalH / reg).clamp(0.0, totalH - okH);
-          final ausenteH =
-              (d.ausente * totalH / reg).clamp(0.0, totalH - okH - tardeH);
+          final ausenteH = (d.ausente * totalH / reg).clamp(
+            0.0,
+            totalH - okH - tardeH,
+          );
           final otroH = (totalH - okH - tardeH - ausenteH).clamp(0.0, totalH);
           final label = DateFormatter.formatApiDateForDisplayShort(d.fecha);
 
@@ -1673,8 +1767,7 @@ class _DailyChart extends StatelessWidget {
                           children: [
                             if (otroH > 0) _seg(otroH, Colors.grey.shade400),
                             if (ausenteH > 0) _seg(ausenteH, errorColor),
-                            if (tardeH > 0)
-                              _seg(tardeH, Colors.amber.shade700),
+                            if (tardeH > 0) _seg(tardeH, Colors.amber.shade700),
                             if (okH > 0) _seg(okH, Colors.green.shade600),
                           ],
                         ),

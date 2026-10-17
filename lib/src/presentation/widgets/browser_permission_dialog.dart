@@ -93,6 +93,7 @@ class _PermissionDialogState extends State<_PermissionDialog> {
         constraints: const BoxConstraints(maxWidth: 480),
         child: Column(
           mainAxisSize: MainAxisSize.min,
+          crossAxisAlignment: CrossAxisAlignment.center,
           children: [
             Flexible(
               child: SingleChildScrollView(
@@ -105,22 +106,24 @@ class _PermissionDialogState extends State<_PermissionDialog> {
                       style: theme.textTheme.titleLarge?.copyWith(
                         fontWeight: FontWeight.w700,
                       ),
+                      textAlign: TextAlign.center,
                     ),
                     const SizedBox(height: 8),
                     const Text(
                       'Activá los permisos para continuar. Elegí Permitir cuando el navegador lo solicite.',
+                      textAlign: TextAlign.center,
                     ),
                     const SizedBox(height: 16),
                     if (widget.camera)
                       _permissionCard(
-                        icon: Icons.camera_alt_outlined,
+                        icon: Icons.camera_alt_rounded,
                         title: 'Cámara',
                         subtitle: 'Para escanear el QR y tomar fotos.',
                         done: _cameraDone,
                       ),
                     if (widget.location)
                       _permissionCard(
-                        icon: Icons.location_on_outlined,
+                        icon: Icons.location_on_rounded,
                         title: 'Ubicación',
                         subtitle: 'Para verificar dónde estás al fichar.',
                         done: _locationDone,
@@ -138,6 +141,7 @@ class _PermissionDialogState extends State<_PermissionDialog> {
                           child: Text(
                             _error!,
                             style: TextStyle(color: colors.onErrorContainer),
+                            textAlign: TextAlign.center,
                           ),
                         ),
                       ),
@@ -146,15 +150,22 @@ class _PermissionDialogState extends State<_PermissionDialog> {
                     if (_busy) ...[
                       const LinearProgressIndicator(),
                       const SizedBox(height: 8),
-                      const Text('Esperando respuesta del navegador…'),
+                      const Text(
+                        'Esperando respuesta del navegador…',
+                        textAlign: TextAlign.center,
+                      ),
                     ],
-                    ExpansionTile(
+                    const ExpansionTile(
                       tilePadding: EdgeInsets.zero,
-                      childrenPadding: const EdgeInsets.only(bottom: 12),
-                      title: const Text('¿Necesitás ayuda?'),
-                      children: const [
+                      childrenPadding: EdgeInsets.only(bottom: 12),
+                      title: Text(
+                        '¿Necesitás ayuda?',
+                        textAlign: TextAlign.center,
+                      ),
+                      children: [
                         Text(
                           'iPhone / Safari: menú de la página → Configuración del sitio web → Cámara y Ubicación.\n\nAndroid / Chrome: información del sitio junto a la dirección → Permisos.\n\nActivá la localización del teléfono y abrí FichaYa directamente en Safari o Chrome.',
+                          textAlign: TextAlign.center,
                         ),
                       ],
                     ),
@@ -180,7 +191,7 @@ class _PermissionDialogState extends State<_PermissionDialog> {
                   final cancel = TextButton(
                     style: TextButton.styleFrom(minimumSize: const Size(0, 48)),
                     onPressed: () => Navigator.pop(context, false),
-                    child: const Text('Ahora no'),
+                    child: const Text('Ahora no', textAlign: TextAlign.center),
                   );
                   if (constraints.maxWidth < 360 ||
                       MediaQuery.textScalerOf(context).scale(14) > 20) {
@@ -191,6 +202,7 @@ class _PermissionDialogState extends State<_PermissionDialog> {
                     );
                   }
                   return Row(
+                    mainAxisAlignment: MainAxisAlignment.center,
                     children: [
                       cancel,
                       const SizedBox(width: 12),
@@ -222,18 +234,20 @@ class _PermissionDialogState extends State<_PermissionDialog> {
       ),
       child: Row(
         crossAxisAlignment: CrossAxisAlignment.start,
+        mainAxisAlignment: MainAxisAlignment.center,
         children: [
-          Icon(done ? Icons.check_circle_outline : icon, color: colors.primary),
+          Icon(done ? Icons.check_circle_rounded : icon, color: colors.primary),
           const SizedBox(width: 12),
           Expanded(
             child: Column(
-              crossAxisAlignment: CrossAxisAlignment.start,
+              crossAxisAlignment: CrossAxisAlignment.center,
               children: [
                 Text(
                   title,
                   style: const TextStyle(fontWeight: FontWeight.w600),
+                  textAlign: TextAlign.center,
                 ),
-                Text(done ? 'Activada' : subtitle),
+                Text(done ? 'Activada' : subtitle, textAlign: TextAlign.center),
               ],
             ),
           ),

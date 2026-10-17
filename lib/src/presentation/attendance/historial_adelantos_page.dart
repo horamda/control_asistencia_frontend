@@ -1,3 +1,7 @@
+import 'package:ficharqr/src/presentation/widgets/app_card.dart';
+import 'package:ficharqr/src/presentation/theme/app_palette.dart';
+import '../widgets/app_page_layout.dart';
+import '../widgets/scrollable_error_state.dart';
 import 'package:flutter/material.dart';
 
 import '../../core/network/mobile_api_client.dart';
@@ -26,8 +30,19 @@ class _HistorialAdelantosPageState extends State<HistorialAdelantosPage> {
   static const _per = 20;
 
   static const _meses = [
-    '', 'Enero', 'Febrero', 'Marzo', 'Abril', 'Mayo', 'Junio',
-    'Julio', 'Agosto', 'Septiembre', 'Octubre', 'Noviembre', 'Diciembre',
+    '',
+    'Enero',
+    'Febrero',
+    'Marzo',
+    'Abril',
+    'Mayo',
+    'Junio',
+    'Julio',
+    'Agosto',
+    'Septiembre',
+    'Octubre',
+    'Noviembre',
+    'Diciembre',
   ];
 
   @override
@@ -101,7 +116,10 @@ class _HistorialAdelantosPageState extends State<HistorialAdelantosPage> {
   Widget build(BuildContext context) {
     return Scaffold(
       appBar: AppBar(
-        title: const Text('Historial de adelantos'),
+        title: const Text(
+          'Historial de adelantos',
+          textAlign: TextAlign.center,
+        ),
         actions: [
           if (_loading)
             const Padding(
@@ -114,15 +132,14 @@ class _HistorialAdelantosPageState extends State<HistorialAdelantosPage> {
             )
           else
             IconButton(
-              icon: const Icon(Icons.refresh),
+              icon: const Icon(Icons.refresh_rounded),
               tooltip: 'Actualizar',
               onPressed: _load,
             ),
         ],
       ),
-      body: RefreshIndicator(
-        onRefresh: _load,
-        child: _buildBody(),
+      body: AppPageBody(
+        child: RefreshIndicator(onRefresh: _load, child: _buildBody()),
       ),
     );
   }
@@ -133,30 +150,15 @@ class _HistorialAdelantosPageState extends State<HistorialAdelantosPage> {
     }
 
     if (_error != null) {
-      return Center(
-        child: Padding(
-          padding: const EdgeInsets.all(24),
-          child: Column(
-            mainAxisSize: MainAxisSize.min,
-            children: [
-              Icon(Icons.error_outline, size: 48, color: Colors.red[300]),
-              const SizedBox(height: 12),
-              Text(_error!, textAlign: TextAlign.center),
-              const SizedBox(height: 16),
-              FilledButton.icon(
-                onPressed: _load,
-                icon: const Icon(Icons.refresh),
-                label: const Text('Reintentar'),
-              ),
-            ],
-          ),
-        ),
-      );
+      return ScrollableErrorState(message: _error!, onRetry: _load);
     }
 
     if (_items.isEmpty) {
       return const Center(
-        child: Text('No hay solicitudes de adelanto en el historial.'),
+        child: Text(
+          'No hay solicitudes de adelanto en el historial.',
+          textAlign: TextAlign.center,
+        ),
       );
     }
 
@@ -192,10 +194,7 @@ class _HistorialAdelantosPageState extends State<HistorialAdelantosPage> {
 }
 
 class _AdelantoHistorialCard extends StatelessWidget {
-  const _AdelantoHistorialCard({
-    required this.item,
-    required this.mesLabel,
-  });
+  const _AdelantoHistorialCard({required this.item, required this.mesLabel});
 
   final AdelantoItem item;
   final String mesLabel;
@@ -204,31 +203,40 @@ class _AdelantoHistorialCard extends StatelessWidget {
   Widget build(BuildContext context) {
     final estado = item.estado ?? 'pendiente';
     final (label, color, icon) = switch (estado) {
-      'aprobado' => ('Aprobado', Colors.green[700]!, Icons.check_circle_outline),
-      'rechazado' => ('Rechazado', Colors.red[700]!, Icons.cancel_outlined),
-      'cancelado' => ('Cancelado', Colors.grey[600]!, Icons.block_outlined),
-      _ => (
-          'Pendiente',
-          Colors.amber[700]!,
-          Icons.hourglass_empty_outlined,
-        ),
+      'aprobado' => (
+        'Aprobado',
+        Colors.green[700]!,
+        Icons.check_circle_rounded,
+      ),
+      'rechazado' => ('Rechazado', Colors.red[700]!, Icons.cancel_rounded),
+      'cancelado' => ('Cancelado', Colors.grey[600]!, Icons.block_rounded),
+      _ => ('Pendiente', Colors.amber[700]!, Icons.hourglass_empty_rounded),
     };
 
-    return Card(
+    return AppCard(
       margin: const EdgeInsets.only(bottom: 10),
       child: ListTile(
         contentPadding: const EdgeInsets.symmetric(horizontal: 16, vertical: 8),
-        leading: Icon(icon, color: color, size: 28),
+        leading: Icon(
+          icon,
+          color: AppColors.of(context).foreground(color),
+          size: 28,
+        ),
         title: Text(
           mesLabel,
           style: const TextStyle(fontWeight: FontWeight.w600),
+          textAlign: TextAlign.center,
         ),
         subtitle: Column(
-          crossAxisAlignment: CrossAxisAlignment.start,
+          crossAxisAlignment: CrossAxisAlignment.center,
           children: [
             Text(
               label,
-              style: TextStyle(color: color, fontWeight: FontWeight.w500),
+              style: TextStyle(
+                color: AppColors.of(context).foreground(color),
+                fontWeight: FontWeight.w500,
+              ),
+              textAlign: TextAlign.center,
             ),
             if (item.fechaSolicitud != null)
               Text(
@@ -236,6 +244,7 @@ class _AdelantoHistorialCard extends StatelessWidget {
                 style: Theme.of(context).textTheme.bodySmall?.copyWith(
                   color: Theme.of(context).colorScheme.onSurfaceVariant,
                 ),
+                textAlign: TextAlign.center,
               ),
             if (item.resueltoAt != null)
               Text(
@@ -243,6 +252,7 @@ class _AdelantoHistorialCard extends StatelessWidget {
                 style: Theme.of(context).textTheme.bodySmall?.copyWith(
                   color: Theme.of(context).colorScheme.onSurfaceVariant,
                 ),
+                textAlign: TextAlign.center,
               ),
           ],
         ),

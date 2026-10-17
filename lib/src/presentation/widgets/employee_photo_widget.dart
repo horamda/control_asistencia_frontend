@@ -32,6 +32,15 @@ class EmployeePhotoWidget extends StatelessWidget {
   Widget build(BuildContext context) {
     final local = (localPhotoPath ?? '').trim();
     final remote = (photoUrl ?? '').trim();
+    final remoteUri = Uri.tryParse(remote);
+    final backendUri = Uri.tryParse(AppConfig.current.apiBaseUrl);
+    final publicEmployeePhoto =
+        remoteUri != null &&
+        remoteUri.hasAuthority &&
+        backendUri != null &&
+        backendUri.hasAuthority &&
+        remoteUri.origin == backendUri.origin &&
+        remoteUri.path.startsWith('/empleados/imagen/');
 
     if (local.isNotEmpty) {
       return CircleAvatar(
@@ -55,7 +64,12 @@ class EmployeePhotoWidget extends StatelessWidget {
                     backend: Uri.parse(AppConfig.current.apiBaseUrl),
                     page: Uri.base,
                   ),
-                  headers: _headers(),
+                  // This specific backend route is public. HTML image fallback
+                  // supports local web previews without a CORS-enabled proxy.
+                  headers: publicEmployeePhoto ? null : _headers(),
+                  webHtmlElementStrategy: publicEmployeePhoto
+                      ? WebHtmlElementStrategy.fallback
+                      : WebHtmlElementStrategy.never,
                   width: radius * 2,
                   height: radius * 2,
                   fit: BoxFit.cover,
@@ -69,7 +83,7 @@ class EmployeePhotoWidget extends StatelessWidget {
                           ),
                         ),
                   errorBuilder: (_, __, ___) =>
-                      Icon(Icons.person_outline, size: iconSize),
+                      Icon(Icons.person_rounded, size: iconSize),
                 )
               : CachedNetworkImage(
                   imageUrl: remote,
@@ -84,7 +98,7 @@ class EmployeePhotoWidget extends StatelessWidget {
                     child: const CircularProgressIndicator(strokeWidth: 2),
                   ),
                   errorWidget: (_, __, ___) =>
-                      Icon(Icons.person_outline, size: iconSize),
+                      Icon(Icons.person_rounded, size: iconSize),
                 ),
         ),
       );
@@ -93,7 +107,7 @@ class EmployeePhotoWidget extends StatelessWidget {
     return CircleAvatar(
       radius: radius,
       backgroundColor: backgroundColor,
-      child: Icon(Icons.person_outline, size: iconSize),
+      child: Icon(Icons.person_rounded, size: iconSize),
     );
   }
 

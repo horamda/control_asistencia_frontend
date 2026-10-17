@@ -1,3 +1,6 @@
+import 'package:ficharqr/src/presentation/widgets/app_card.dart';
+import 'package:ficharqr/src/presentation/theme/app_palette.dart';
+import '../widgets/scrollable_error_state.dart';
 import 'package:flutter/material.dart';
 
 import '../../core/network/mobile_api_client.dart';
@@ -32,7 +35,7 @@ class _LegajoPageState extends State<LegajoPage>
   Widget build(BuildContext context) {
     return Scaffold(
       appBar: AppBar(
-        title: const Text('Legajo'),
+        title: const Text('Legajo', textAlign: TextAlign.center),
         bottom: TabBar(
           controller: _tabController,
           tabs: const [
@@ -117,25 +120,7 @@ class _ResumenTabState extends State<_ResumenTab>
     if (_loading) return const Center(child: CircularProgressIndicator());
 
     if (_error != null) {
-      return Center(
-        child: Padding(
-          padding: const EdgeInsets.all(24),
-          child: Column(
-            mainAxisSize: MainAxisSize.min,
-            children: [
-              Icon(Icons.error_outline, size: 48, color: Colors.red[300]),
-              const SizedBox(height: 12),
-              Text(_error!, textAlign: TextAlign.center),
-              const SizedBox(height: 16),
-              FilledButton.icon(
-                onPressed: _load,
-                icon: const Icon(Icons.refresh),
-                label: const Text('Reintentar'),
-              ),
-            ],
-          ),
-        ),
-      );
+      return ScrollableErrorState(message: _error!, onRetry: _load);
     }
 
     final resumen = _resumen!;
@@ -150,9 +135,10 @@ class _ResumenTabState extends State<_ResumenTab>
         padding: const EdgeInsets.all(16),
         children: [
           // ── Tarjetas de totales históricos ──
-          _SectionHeader('Historial completo'),
+          const _SectionHeader('Historial completo'),
           const SizedBox(height: 8),
           Row(
+            mainAxisAlignment: MainAxisAlignment.center,
             children: [
               Expanded(
                 child: _StatCard(
@@ -187,7 +173,7 @@ class _ResumenTabState extends State<_ResumenTab>
               'Período${resumen.periodo.desde != null ? ' (${resumen.periodo.desde} – ${resumen.periodo.hasta ?? 'hoy'})' : ''}',
             ),
             const SizedBox(height: 8),
-            Card(
+            AppCard(
               child: Padding(
                 padding: const EdgeInsets.symmetric(
                   horizontal: 16,
@@ -220,7 +206,7 @@ class _ResumenTabState extends State<_ResumenTab>
 
           // ── Por categoría ──
           if (_porTipo.isNotEmpty) ...[
-            _SectionHeader('Por categoría'),
+            const _SectionHeader('Por categoría'),
             const SizedBox(height: 8),
             ..._porTipo.map((item) => _TipoCard(item: item)),
             const SizedBox(height: 20),
@@ -228,7 +214,7 @@ class _ResumenTabState extends State<_ResumenTab>
 
           // ── Eventos recientes ──
           if (recientes.isNotEmpty) ...[
-            _SectionHeader('Eventos recientes'),
+            const _SectionHeader('Eventos recientes'),
             const SizedBox(height: 8),
             ...recientes.map((e) => _LegajoEventoCard(item: e, compact: true)),
           ],
@@ -265,10 +251,11 @@ class _StatCard extends StatelessWidget {
 
   @override
   Widget build(BuildContext context) {
-    return Card(
+    return AppCard(
       child: Padding(
         padding: const EdgeInsets.symmetric(vertical: 12, horizontal: 8),
         child: Column(
+          crossAxisAlignment: CrossAxisAlignment.center,
           children: [
             Text(
               value,
@@ -276,8 +263,9 @@ class _StatCard extends StatelessWidget {
               overflow: TextOverflow.ellipsis,
               style: Theme.of(context).textTheme.titleLarge?.copyWith(
                 fontWeight: FontWeight.w700,
-                color: color,
+                color: AppColors.of(context).foreground(color),
               ),
+              textAlign: TextAlign.center,
             ),
             const SizedBox(height: 2),
             Text(
@@ -309,6 +297,7 @@ class _SeveridadBadge extends StatelessWidget {
   @override
   Widget build(BuildContext context) {
     return Column(
+      crossAxisAlignment: CrossAxisAlignment.center,
       children: [
         Text(
           '$count',
@@ -316,15 +305,18 @@ class _SeveridadBadge extends StatelessWidget {
           overflow: TextOverflow.ellipsis,
           style: Theme.of(context).textTheme.titleMedium?.copyWith(
             fontWeight: FontWeight.w700,
-            color: color,
+            color: AppColors.of(context).foreground(color),
           ),
+          textAlign: TextAlign.center,
         ),
         Text(
           label,
           maxLines: 1,
           overflow: TextOverflow.ellipsis,
           textAlign: TextAlign.center,
-          style: Theme.of(context).textTheme.bodySmall?.copyWith(color: color),
+          style: Theme.of(context).textTheme.bodySmall?.copyWith(
+            color: AppColors.of(context).foreground(color),
+          ),
         ),
       ],
     );
@@ -340,29 +332,31 @@ class _TipoCard extends StatelessWidget {
     final cs = Theme.of(context).colorScheme;
     final tieneEventos = item.total > 0;
 
-    return Card(
+    return AppCard(
       margin: const EdgeInsets.only(bottom: 8),
       child: Padding(
         padding: const EdgeInsets.symmetric(horizontal: 16, vertical: 12),
         child: Row(
+          mainAxisAlignment: MainAxisAlignment.center,
           children: [
             Icon(
               tieneEventos
-                  ? Icons.description_outlined
-                  : Icons.check_circle_outline,
+                  ? Icons.description_rounded
+                  : Icons.check_circle_rounded,
               color: tieneEventos ? cs.primary : Colors.green,
               size: 22,
             ),
             const SizedBox(width: 12),
             Expanded(
               child: Column(
-                crossAxisAlignment: CrossAxisAlignment.start,
+                crossAxisAlignment: CrossAxisAlignment.center,
                 children: [
                   Text(
                     item.nombre,
                     maxLines: 2,
                     overflow: TextOverflow.ellipsis,
                     style: const TextStyle(fontWeight: FontWeight.w600),
+                    textAlign: TextAlign.center,
                   ),
                   if (item.ultimaFecha != null)
                     Text(
@@ -370,6 +364,7 @@ class _TipoCard extends StatelessWidget {
                       style: Theme.of(context).textTheme.bodySmall?.copyWith(
                         color: cs.onSurfaceVariant,
                       ),
+                      textAlign: TextAlign.center,
                     ),
                 ],
               ),
@@ -386,12 +381,14 @@ class _TipoCard extends StatelessWidget {
                       fontWeight: FontWeight.w700,
                       color: cs.primary,
                     ),
+                    textAlign: TextAlign.center,
                   ),
                   Text(
                     '${item.vigentes} vigente${item.vigentes != 1 ? 's' : ''}',
                     style: Theme.of(
                       context,
                     ).textTheme.bodySmall?.copyWith(color: cs.onSurfaceVariant),
+                    textAlign: TextAlign.center,
                   ),
                 ],
               )
@@ -401,6 +398,7 @@ class _TipoCard extends StatelessWidget {
                 style: Theme.of(
                   context,
                 ).textTheme.bodySmall?.copyWith(color: cs.onSurfaceVariant),
+                textAlign: TextAlign.center,
               ),
           ],
         ),
@@ -520,6 +518,7 @@ class _EventosTabState extends State<_EventosTab>
     super.build(context);
 
     return Column(
+      crossAxisAlignment: CrossAxisAlignment.center,
       children: [
         _buildFilters(),
         Expanded(child: _buildList()),
@@ -534,7 +533,7 @@ class _EventosTabState extends State<_EventosTab>
       return Padding(
         padding: const EdgeInsets.only(right: 6),
         child: FilterChip(
-          label: Text(label),
+          label: Text(label, textAlign: TextAlign.center),
           selected: selected,
           onSelected: (_) => onTap(),
           selectedColor: cs.primaryContainer,
@@ -550,14 +549,17 @@ class _EventosTabState extends State<_EventosTab>
     }
 
     return Container(
-      color: Theme.of(context).scaffoldBackgroundColor,
+      color: AppColors.of(
+        context,
+      ).surface(Theme.of(context).scaffoldBackgroundColor),
       padding: const EdgeInsets.symmetric(horizontal: 16, vertical: 8),
       child: Column(
-        crossAxisAlignment: CrossAxisAlignment.start,
+        crossAxisAlignment: CrossAxisAlignment.center,
         children: [
           SingleChildScrollView(
             scrollDirection: Axis.horizontal,
             child: Row(
+              mainAxisAlignment: MainAxisAlignment.center,
               children: [
                 chip('Todos', _filterEstado == null, () => _setEstado(null)),
                 chip(
@@ -605,25 +607,7 @@ class _EventosTabState extends State<_EventosTab>
     if (_loading) return const Center(child: CircularProgressIndicator());
 
     if (_error != null) {
-      return Center(
-        child: Padding(
-          padding: const EdgeInsets.all(24),
-          child: Column(
-            mainAxisSize: MainAxisSize.min,
-            children: [
-              Icon(Icons.error_outline, size: 48, color: Colors.red[300]),
-              const SizedBox(height: 12),
-              Text(_error!, textAlign: TextAlign.center),
-              const SizedBox(height: 16),
-              FilledButton.icon(
-                onPressed: _load,
-                icon: const Icon(Icons.refresh),
-                label: const Text('Reintentar'),
-              ),
-            ],
-          ),
-        ),
-      );
+      return ScrollableErrorState(message: _error!, onRetry: _load);
     }
 
     if (_items.isEmpty) {
@@ -634,7 +618,10 @@ class _EventosTabState extends State<_EventosTab>
           children: const [
             SizedBox(height: 80),
             Center(
-              child: Text('No hay eventos con los filtros seleccionados.'),
+              child: Text(
+                'No hay eventos con los filtros seleccionados.',
+                textAlign: TextAlign.center,
+              ),
             ),
           ],
         ),
@@ -689,20 +676,21 @@ class _LegajoEventoCard extends StatelessWidget {
     };
     final anulado = item.estado == 'anulado';
 
-    return Card(
+    return AppCard(
       margin: const EdgeInsets.only(bottom: 10),
       child: Padding(
         padding: const EdgeInsets.all(16),
         child: Column(
-          crossAxisAlignment: CrossAxisAlignment.start,
+          crossAxisAlignment: CrossAxisAlignment.center,
           children: [
             Row(
               crossAxisAlignment: CrossAxisAlignment.start,
+              mainAxisAlignment: MainAxisAlignment.center,
               children: [
                 Icon(
-                  Icons.description_outlined,
+                  Icons.description_rounded,
                   size: 20,
-                  color: severidadColor,
+                  color: AppColors.of(context).foreground(severidadColor),
                 ),
                 const SizedBox(width: 8),
                 Expanded(
@@ -713,6 +701,7 @@ class _LegajoEventoCard extends StatelessWidget {
                       decoration: anulado ? TextDecoration.lineThrough : null,
                       color: anulado ? cs.onSurfaceVariant : null,
                     ),
+                    textAlign: TextAlign.center,
                   ),
                 ),
                 if (item.fechaEvento != null)
@@ -721,6 +710,7 @@ class _LegajoEventoCard extends StatelessWidget {
                     style: Theme.of(
                       context,
                     ).textTheme.bodySmall?.copyWith(color: cs.onSurfaceVariant),
+                    textAlign: TextAlign.center,
                   ),
               ],
             ),
@@ -729,6 +719,7 @@ class _LegajoEventoCard extends StatelessWidget {
               Text(
                 item.titulo!,
                 style: const TextStyle(fontWeight: FontWeight.w500),
+                textAlign: TextAlign.center,
               ),
             ],
             if (!compact && item.descripcion != null) ...[
@@ -738,11 +729,13 @@ class _LegajoEventoCard extends StatelessWidget {
                 style: Theme.of(
                   context,
                 ).textTheme.bodySmall?.copyWith(color: cs.onSurfaceVariant),
+                textAlign: TextAlign.center,
               ),
             ],
             if (severidad != null || anulado) ...[
               const SizedBox(height: 8),
               Row(
+                mainAxisAlignment: MainAxisAlignment.center,
                 children: [
                   if (severidad != null)
                     Container(
@@ -751,7 +744,9 @@ class _LegajoEventoCard extends StatelessWidget {
                         vertical: 2,
                       ),
                       decoration: BoxDecoration(
-                        color: severidadColor.withValues(alpha: 0.12),
+                        color: AppColors.of(
+                          context,
+                        ).surface(severidadColor.withValues(alpha: 0.12)),
                         borderRadius: BorderRadius.circular(4),
                       ),
                       child: Text(
@@ -759,8 +754,11 @@ class _LegajoEventoCard extends StatelessWidget {
                         style: TextStyle(
                           fontSize: 13,
                           fontWeight: FontWeight.w600,
-                          color: severidadColor,
+                          color: AppColors.of(
+                            context,
+                          ).foreground(severidadColor),
                         ),
+                        textAlign: TextAlign.center,
                       ),
                     ),
                   if (anulado) ...[
@@ -771,6 +769,7 @@ class _LegajoEventoCard extends StatelessWidget {
                         fontSize: 13,
                         color: cs.onSurfaceVariant,
                       ),
+                      textAlign: TextAlign.center,
                     ),
                   ],
                 ],
@@ -784,6 +783,7 @@ class _LegajoEventoCard extends StatelessWidget {
                 style: Theme.of(
                   context,
                 ).textTheme.bodySmall?.copyWith(color: cs.onSurfaceVariant),
+                textAlign: TextAlign.center,
               ),
             ],
           ],

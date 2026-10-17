@@ -5,6 +5,75 @@ import 'package:flutter/material.dart';
 import 'package:flutter_test/flutter_test.dart';
 
 void main() {
+  for (final width in [320.0, 440.0, 800.0]) {
+    testWidgets('form remains usable at $width with large text and keyboard', (
+      tester,
+    ) async {
+      await tester.binding.setSurfaceSize(Size(width, 900));
+      addTearDown(() => tester.binding.setSurfaceSize(null));
+      final api = _FakeFeedbackApiClient();
+      addTearDown(api.dispose);
+      await tester.pumpWidget(
+        MaterialApp(
+          builder: (context, child) => MediaQuery(
+            data: MediaQuery.of(context).copyWith(
+              textScaler: const TextScaler.linear(2),
+              viewInsets: const EdgeInsets.only(bottom: 240),
+            ),
+            child: child!,
+          ),
+          home: Scaffold(
+            body: FeedbackCreateSheet(apiClient: api, token: 'token'),
+          ),
+        ),
+      );
+      await tester.pumpAndSettle();
+      expect(tester.takeException(), isNull);
+      await tester.scrollUntilVisible(
+        find.text('Crear feedback'),
+        180,
+        scrollable: find.byType(Scrollable).first,
+        maxScrolls: 60,
+      );
+      await tester.pumpAndSettle();
+      expect(find.text('Crear feedback').hitTestable(), findsOneWidget);
+      expect(tester.takeException(), isNull);
+    });
+  }
+  testWidgets('choosing a client collapses results and allows changing it', (
+    tester,
+  ) async {
+    final api = _FakeFeedbackApiClient();
+    addTearDown(api.dispose);
+    await tester.pumpWidget(
+      MaterialApp(
+        home: Scaffold(
+          body: FeedbackCreateSheet(apiClient: api, token: 'token'),
+        ),
+      ),
+    );
+    await tester.pumpAndSettle();
+    final search = find.byWidgetPredicate(
+      (widget) =>
+          widget is TextField &&
+          widget.decoration?.labelText == 'Buscar cliente',
+    );
+    final searchController = tester.widget<TextField>(search).controller!;
+    final chosen = find.text('ALFA LOGISTICA').last;
+    await Scrollable.ensureVisible(tester.element(chosen), alignment: .5);
+    await tester.pumpAndSettle();
+    await tester.tap(chosen);
+    await tester.pumpAndSettle();
+    expect(find.text('OLIMPIADAS UNIVERSITARIAS'), findsNothing);
+    expect(find.text('Cambiar cliente'), findsOneWidget);
+    expect(searchController.text, 'ALFA LOGISTICA');
+    await tester.ensureVisible(find.text('Cambiar cliente'));
+    await tester.pumpAndSettle();
+    await tester.tap(find.text('Cambiar cliente'));
+    await tester.pumpAndSettle();
+    expect(find.text('OLIMPIADAS UNIVERSITARIAS'), findsWidgets);
+    expect(tester.takeException(), isNull);
+  });
   testWidgets('filters visible clients while typing', (tester) async {
     final apiClient = _FakeFeedbackApiClient();
 
@@ -60,7 +129,7 @@ void main() {
     );
 
     await tester.enterText(searchField, 'delta');
-    await tester.tap(find.byIcon(Icons.search));
+    await tester.tap(find.byIcon(Icons.search_rounded));
     await tester.pump();
     await tester.pumpAndSettle();
 
@@ -156,7 +225,7 @@ void main() {
     );
 
     await tester.enterText(searchField, 'super');
-    await tester.tap(find.byIcon(Icons.search));
+    await tester.tap(find.byIcon(Icons.search_rounded));
     await tester.pump();
     await tester.pumpAndSettle();
 

@@ -1,3 +1,6 @@
+import 'package:ficharqr/src/presentation/widgets/app_card.dart';
+import 'package:ficharqr/src/presentation/theme/app_palette.dart';
+import '../widgets/scrollable_error_state.dart';
 import 'package:flutter/material.dart';
 
 import '../../core/network/mobile_api_client.dart';
@@ -24,8 +27,19 @@ class _AdelantosPageState extends State<AdelantosPage> {
   AdelantoResumenResponse? _estado;
 
   static const _meses = [
-    '', 'Enero', 'Febrero', 'Marzo', 'Abril', 'Mayo', 'Junio',
-    'Julio', 'Agosto', 'Septiembre', 'Octubre', 'Noviembre', 'Diciembre',
+    '',
+    'Enero',
+    'Febrero',
+    'Marzo',
+    'Abril',
+    'Mayo',
+    'Junio',
+    'Julio',
+    'Agosto',
+    'Septiembre',
+    'Octubre',
+    'Noviembre',
+    'Diciembre',
   ];
 
   @override
@@ -79,18 +93,19 @@ class _AdelantosPageState extends State<AdelantosPage> {
     final confirmed = await showDialog<bool>(
       context: context,
       builder: (ctx) => AlertDialog(
-        title: const Text('Solicitar adelanto'),
+        title: const Text('Solicitar adelanto', textAlign: TextAlign.center),
         content: Text(
           '¿Confirmás la solicitud de adelanto de sueldo para $mes?',
+          textAlign: TextAlign.center,
         ),
         actions: [
           TextButton(
             onPressed: () => Navigator.of(ctx).pop(false),
-            child: const Text('Cancelar'),
+            child: const Text('Cancelar', textAlign: TextAlign.center),
           ),
           FilledButton(
             onPressed: () => Navigator.of(ctx).pop(true),
-            child: const Text('Solicitar'),
+            child: const Text('Solicitar', textAlign: TextAlign.center),
           ),
         ],
       ),
@@ -118,22 +133,35 @@ class _AdelantosPageState extends State<AdelantosPage> {
       });
       if (mounted) {
         ScaffoldMessenger.of(context).showSnackBar(
-          const SnackBar(content: Text('Adelanto solicitado correctamente.')),
+          const SnackBar(
+            content: Text(
+              'Adelanto solicitado correctamente.',
+              textAlign: TextAlign.center,
+            ),
+          ),
         );
       }
     } on ApiException catch (e) {
       if (!mounted) return;
       setState(() => _requesting = false);
       ScaffoldMessenger.of(context).showSnackBar(
-        SnackBar(content: Text(e.message), backgroundColor: Colors.red[700]),
+        SnackBar(
+          content: Text(e.message, textAlign: TextAlign.center),
+          backgroundColor: AppColors.of(
+            context,
+          ).optionalSurface(Colors.red[700]),
+        ),
       );
     } catch (_) {
       if (!mounted) return;
       setState(() => _requesting = false);
       ScaffoldMessenger.of(context).showSnackBar(
-        const SnackBar(
-          content: Text('No se pudo solicitar el adelanto.'),
-          backgroundColor: Colors.red,
+        SnackBar(
+          content: const Text(
+            'No se pudo solicitar el adelanto.',
+            textAlign: TextAlign.center,
+          ),
+          backgroundColor: AppColors.of(context).surface(Colors.red),
         ),
       );
     }
@@ -148,7 +176,7 @@ class _AdelantosPageState extends State<AdelantosPage> {
   Widget build(BuildContext context) {
     return Scaffold(
       appBar: AppBar(
-        title: const Text('Adelantos'),
+        title: const Text('Adelantos', textAlign: TextAlign.center),
         actions: [
           if (_loading)
             const Padding(
@@ -161,16 +189,13 @@ class _AdelantosPageState extends State<AdelantosPage> {
             )
           else
             IconButton(
-              icon: const Icon(Icons.refresh),
+              icon: const Icon(Icons.refresh_rounded),
               tooltip: 'Actualizar',
               onPressed: _load,
             ),
         ],
       ),
-      body: RefreshIndicator(
-        onRefresh: _load,
-        child: _buildBody(),
-      ),
+      body: RefreshIndicator(onRefresh: _load, child: _buildBody()),
     );
   }
 
@@ -180,30 +205,14 @@ class _AdelantosPageState extends State<AdelantosPage> {
     }
 
     if (_error != null) {
-      return Center(
-        child: Padding(
-          padding: const EdgeInsets.all(24),
-          child: Column(
-            mainAxisSize: MainAxisSize.min,
-            children: [
-              Icon(Icons.error_outline, size: 48, color: Colors.red[300]),
-              const SizedBox(height: 12),
-              Text(_error!, textAlign: TextAlign.center),
-              const SizedBox(height: 16),
-              FilledButton.icon(
-                onPressed: _load,
-                icon: const Icon(Icons.refresh),
-                label: const Text('Reintentar'),
-              ),
-            ],
-          ),
-        ),
-      );
+      return ScrollableErrorState(message: _error!, onRetry: _load);
     }
 
     final estado = _estado;
     if (estado == null) {
-      return const Center(child: Text('Sin datos.'));
+      return const Center(
+        child: Text('Sin datos.', textAlign: TextAlign.center),
+      );
     }
 
     return SingleChildScrollView(
@@ -259,16 +268,16 @@ class _PeriodoHeader extends StatelessWidget {
     return Row(
       children: [
         Icon(
-          Icons.calendar_month_outlined,
+          Icons.calendar_month_rounded,
           size: 18,
           color: Theme.of(context).colorScheme.primary,
         ),
         const SizedBox(width: 8),
         Text(
           label,
-          style: Theme.of(context).textTheme.titleMedium?.copyWith(
-            fontWeight: FontWeight.w600,
-          ),
+          style: Theme.of(
+            context,
+          ).textTheme.titleMedium?.copyWith(fontWeight: FontWeight.w600),
         ),
       ],
     );
@@ -291,7 +300,7 @@ class _SinSolicitudCard extends StatelessWidget {
   @override
   Widget build(BuildContext context) {
     final cs = Theme.of(context).colorScheme;
-    return Card(
+    return AppCard(
       margin: EdgeInsets.zero,
       child: Padding(
         padding: const EdgeInsets.all(20),
@@ -299,25 +308,25 @@ class _SinSolicitudCard extends StatelessWidget {
           crossAxisAlignment: CrossAxisAlignment.stretch,
           children: [
             Icon(
-              Icons.payments_outlined,
+              Icons.payments_rounded,
               size: 48,
               color: cs.primary.withValues(alpha: 0.8),
             ),
             const SizedBox(height: 16),
             Text(
               'Sin solicitud este mes',
-              style: Theme.of(context).textTheme.titleMedium?.copyWith(
-                fontWeight: FontWeight.w600,
-              ),
+              style: Theme.of(
+                context,
+              ).textTheme.titleMedium?.copyWith(fontWeight: FontWeight.w600),
               textAlign: TextAlign.center,
             ),
             const SizedBox(height: 8),
             Text(
               'Podés solicitar un adelanto de sueldo para $mes. '
               'Solo se permite una solicitud por mes.',
-              style: Theme.of(context).textTheme.bodyMedium?.copyWith(
-                color: cs.onSurfaceVariant,
-              ),
+              style: Theme.of(
+                context,
+              ).textTheme.bodyMedium?.copyWith(color: cs.onSurfaceVariant),
               textAlign: TextAlign.center,
             ),
             const SizedBox(height: 24),
@@ -331,10 +340,11 @@ class _SinSolicitudCard extends StatelessWidget {
                         height: 18,
                         child: CircularProgressIndicator(strokeWidth: 2),
                       )
-                    : const Icon(Icons.send_outlined),
+                    : const Icon(Icons.send_rounded),
                 label: Text(
                   requesting ? 'Solicitando...' : 'Solicitar adelanto',
                   style: const TextStyle(fontWeight: FontWeight.w600),
+                  textAlign: TextAlign.center,
                 ),
               ),
             ),
@@ -359,28 +369,20 @@ class _AdelantoCard extends StatelessWidget {
 
     final (label, color, icon) = switch (estado) {
       'aprobado' => (
-          'Aprobado',
-          Colors.green[700]!,
-          Icons.check_circle_outline,
-        ),
-      'rechazado' => (
-          'Rechazado',
-          Colors.red[700]!,
-          Icons.cancel_outlined,
-        ),
-      'cancelado' => (
-          'Cancelado',
-          Colors.grey[600]!,
-          Icons.block_outlined,
-        ),
+        'Aprobado',
+        Colors.green[700]!,
+        Icons.check_circle_outline,
+      ),
+      'rechazado' => ('Rechazado', Colors.red[700]!, Icons.cancel_outlined),
+      'cancelado' => ('Cancelado', Colors.grey[600]!, Icons.block_outlined),
       _ => (
-          'Pendiente de aprobación',
-          Colors.amber[700]!,
-          Icons.hourglass_empty_outlined,
-        ),
+        'Pendiente de aprobación',
+        Colors.amber[700]!,
+        Icons.hourglass_empty_outlined,
+      ),
     };
 
-    return Card(
+    return AppCard(
       margin: EdgeInsets.zero,
       child: Padding(
         padding: const EdgeInsets.all(20),
@@ -388,20 +390,26 @@ class _AdelantoCard extends StatelessWidget {
           crossAxisAlignment: CrossAxisAlignment.stretch,
           children: [
             Row(
+              mainAxisAlignment: MainAxisAlignment.center,
               children: [
-                Icon(icon, color: color, size: 28),
+                Icon(
+                  icon,
+                  color: AppColors.of(context).foreground(color),
+                  size: 28,
+                ),
                 const SizedBox(width: 12),
                 Expanded(
                   child: Column(
-                    crossAxisAlignment: CrossAxisAlignment.start,
+                    crossAxisAlignment: CrossAxisAlignment.center,
                     children: [
                       Text(
                         label,
                         style: Theme.of(context).textTheme.titleMedium
                             ?.copyWith(
                               fontWeight: FontWeight.w700,
-                              color: color,
+                              color: AppColors.of(context).foreground(color),
                             ),
+                        textAlign: TextAlign.center,
                       ),
                       if (fecha != null) ...[
                         const SizedBox(height: 2),
@@ -413,6 +421,7 @@ class _AdelantoCard extends StatelessWidget {
                                   context,
                                 ).colorScheme.onSurfaceVariant,
                               ),
+                          textAlign: TextAlign.center,
                         ),
                       ],
                     ],
@@ -422,14 +431,9 @@ class _AdelantoCard extends StatelessWidget {
             ),
             const SizedBox(height: 16),
             Container(
-              padding: const EdgeInsets.symmetric(
-                horizontal: 14,
-                vertical: 10,
-              ),
+              padding: const EdgeInsets.symmetric(horizontal: 14, vertical: 10),
               decoration: BoxDecoration(
-                color: Theme.of(
-                  context,
-                ).colorScheme.surfaceContainerHighest,
+                color: Theme.of(context).colorScheme.surfaceContainerHighest,
                 borderRadius: BorderRadius.circular(10),
               ),
               child: Text(
@@ -437,6 +441,7 @@ class _AdelantoCard extends StatelessWidget {
                 style: Theme.of(context).textTheme.bodySmall?.copyWith(
                   color: Theme.of(context).colorScheme.onSurfaceVariant,
                 ),
+                textAlign: TextAlign.center,
               ),
             ),
           ],
@@ -451,8 +456,7 @@ class _AdelantoCard extends StatelessWidget {
         'Tu solicitud fue aprobada. El adelanto será acreditado según la política de la empresa.',
       'rechazado' =>
         'Tu solicitud fue rechazada. Podés consultar con RRHH para más información.',
-      'cancelado' =>
-        'La solicitud fue cancelada.',
+      'cancelado' => 'La solicitud fue cancelada.',
       _ =>
         'Tu solicitud está siendo revisada por el área de RRHH. Te notificarán cuando haya una respuesta.',
     };
@@ -467,8 +471,19 @@ class _UltimoAdelantoCard extends StatelessWidget {
   final AdelantoItem adelanto;
 
   static const _meses = [
-    '', 'Enero', 'Febrero', 'Marzo', 'Abril', 'Mayo', 'Junio',
-    'Julio', 'Agosto', 'Septiembre', 'Octubre', 'Noviembre', 'Diciembre',
+    '',
+    'Enero',
+    'Febrero',
+    'Marzo',
+    'Abril',
+    'Mayo',
+    'Junio',
+    'Julio',
+    'Agosto',
+    'Septiembre',
+    'Octubre',
+    'Noviembre',
+    'Diciembre',
   ];
 
   String _mesLabel(int month, int year) {
@@ -493,37 +508,48 @@ class _UltimoAdelantoCard extends StatelessWidget {
     };
 
     return Column(
-      crossAxisAlignment: CrossAxisAlignment.start,
+      crossAxisAlignment: CrossAxisAlignment.center,
       children: [
         Text(
           'Último adelanto',
           style: Theme.of(context).textTheme.labelMedium?.copyWith(
-                color: cs.onSurfaceVariant,
-                fontWeight: FontWeight.w600,
-              ),
+            color: cs.onSurfaceVariant,
+            fontWeight: FontWeight.w600,
+          ),
+          textAlign: TextAlign.center,
         ),
         const SizedBox(height: 8),
-        Card(
+        AppCard(
           margin: EdgeInsets.zero,
           child: Padding(
             padding: const EdgeInsets.symmetric(horizontal: 16, vertical: 12),
             child: Row(
+              mainAxisAlignment: MainAxisAlignment.center,
               children: [
-                Icon(icon, color: color, size: 22),
+                Icon(
+                  icon,
+                  color: AppColors.of(context).foreground(color),
+                  size: 22,
+                ),
                 const SizedBox(width: 12),
                 Expanded(
                   child: Text(
                     _mesLabel(adelanto.periodoMonth, adelanto.periodoYear),
                     style: Theme.of(context).textTheme.bodyMedium?.copyWith(
-                          fontWeight: FontWeight.w600,
-                        ),
+                      fontWeight: FontWeight.w600,
+                    ),
+                    textAlign: TextAlign.center,
                   ),
                 ),
                 Container(
-                  padding:
-                      const EdgeInsets.symmetric(horizontal: 10, vertical: 4),
+                  padding: const EdgeInsets.symmetric(
+                    horizontal: 10,
+                    vertical: 4,
+                  ),
                   decoration: BoxDecoration(
-                    color: color.withValues(alpha: 0.12),
+                    color: AppColors.of(
+                      context,
+                    ).surface(color.withValues(alpha: 0.12)),
                     borderRadius: BorderRadius.circular(20),
                   ),
                   child: Text(
@@ -531,8 +557,9 @@ class _UltimoAdelantoCard extends StatelessWidget {
                     style: TextStyle(
                       fontSize: 13,
                       fontWeight: FontWeight.w700,
-                      color: color,
+                      color: AppColors.of(context).foreground(color),
                     ),
+                    textAlign: TextAlign.center,
                   ),
                 ),
               ],
@@ -565,6 +592,7 @@ class _HistorialLink extends StatelessWidget {
           borderRadius: BorderRadius.circular(12),
         ),
         child: Row(
+          mainAxisAlignment: MainAxisAlignment.center,
           children: [
             Icon(Icons.history, color: cs.primary, size: 22),
             const SizedBox(width: 12),
@@ -574,9 +602,10 @@ class _HistorialLink extends StatelessWidget {
                     ? 'Ver historial ($total adelanto${total == 1 ? '' : 's'})'
                     : 'Ver historial de adelantos',
                 style: Theme.of(context).textTheme.bodyMedium?.copyWith(
-                      color: cs.primary,
-                      fontWeight: FontWeight.w600,
-                    ),
+                  color: cs.primary,
+                  fontWeight: FontWeight.w600,
+                ),
+                textAlign: TextAlign.center,
               ),
             ),
             Icon(Icons.chevron_right, color: cs.primary, size: 20),

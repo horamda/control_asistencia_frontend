@@ -1,7 +1,10 @@
+import 'package:ficharqr/src/presentation/widgets/app_card.dart';
+import 'package:ficharqr/src/presentation/theme/app_palette.dart';
 import 'dart:async';
 import 'dart:typed_data';
 
 import 'package:flutter/material.dart';
+import '../widgets/app_page_layout.dart';
 import 'package:image_picker/image_picker.dart';
 
 import '../../core/network/feedback_api_models.dart';
@@ -9,148 +12,6 @@ import '../../core/network/mobile_api_client.dart';
 import '../../core/utils/date_formatter.dart';
 import '../widgets/croppable_image.dart';
 import 'widgets/feedback_summary_dashboard.dart';
-
-const Color _facebookBlue = Color(0xFF1877F2);
-const Color _facebookBlueDark = Color(0xFF145DBF);
-const Color _facebookBackground = Color(0xFFF0F2F5);
-const Color _facebookSurface = Colors.white;
-const Color _facebookPaleBlue = Color(0xFFE7F3FF);
-const Color _facebookMuted = Color(0xFF65676B);
-const Color _facebookText = Color(0xFF050505);
-const Color _facebookBorder = Color(0xFFDADDE1);
-
-ThemeData _buildFacebookFeedbackTheme(ThemeData base) {
-  final colorScheme =
-      ColorScheme.fromSeed(
-        seedColor: _facebookBlue,
-        brightness: Brightness.light,
-      ).copyWith(
-        primary: _facebookBlue,
-        secondary: _facebookBlue,
-        surface: _facebookSurface,
-        onPrimary: Colors.white,
-        onSurface: _facebookText,
-        onSurfaceVariant: _facebookMuted,
-        outline: _facebookBorder,
-        outlineVariant: _facebookBorder,
-        primaryContainer: _facebookPaleBlue,
-        onPrimaryContainer: _facebookBlueDark,
-        secondaryContainer: _facebookPaleBlue,
-        onSecondaryContainer: _facebookBlueDark,
-        surfaceContainerLow: _facebookSurface,
-        surfaceContainerHighest: const Color(0xFFF7F8FA),
-      );
-
-  return base.copyWith(
-    colorScheme: colorScheme,
-    scaffoldBackgroundColor: _facebookBackground,
-    textTheme: base.textTheme.apply(
-      fontFamily: 'Segoe UI',
-      bodyColor: _facebookText,
-      displayColor: _facebookText,
-    ),
-    appBarTheme: base.appBarTheme.copyWith(
-      backgroundColor: _facebookSurface,
-      foregroundColor: _facebookText,
-      elevation: 0,
-      centerTitle: false,
-      surfaceTintColor: Colors.transparent,
-      iconTheme: const IconThemeData(color: _facebookText),
-      actionsIconTheme: const IconThemeData(color: _facebookText),
-      titleTextStyle: const TextStyle(
-        color: _facebookText,
-        fontFamily: 'Segoe UI',
-        fontSize: 18,
-        fontWeight: FontWeight.w700,
-      ),
-    ),
-    tabBarTheme: base.tabBarTheme.copyWith(
-      labelColor: _facebookBlue,
-      unselectedLabelColor: _facebookMuted,
-      indicatorColor: _facebookBlue,
-      dividerColor: _facebookBorder,
-      labelStyle: const TextStyle(
-        fontFamily: 'Segoe UI',
-        fontSize: 13,
-        fontWeight: FontWeight.w700,
-      ),
-      unselectedLabelStyle: const TextStyle(
-        fontFamily: 'Segoe UI',
-        fontSize: 13,
-        fontWeight: FontWeight.w600,
-      ),
-    ),
-    inputDecorationTheme: base.inputDecorationTheme.copyWith(
-      filled: true,
-      fillColor: _facebookSurface,
-      contentPadding: const EdgeInsets.symmetric(horizontal: 14, vertical: 14),
-      border: OutlineInputBorder(
-        borderRadius: BorderRadius.circular(12),
-        borderSide: const BorderSide(color: _facebookBorder),
-      ),
-      enabledBorder: OutlineInputBorder(
-        borderRadius: BorderRadius.circular(12),
-        borderSide: const BorderSide(color: _facebookBorder),
-      ),
-      focusedBorder: OutlineInputBorder(
-        borderRadius: BorderRadius.circular(12),
-        borderSide: const BorderSide(color: _facebookBlue, width: 1.5),
-      ),
-      labelStyle: const TextStyle(
-        color: _facebookMuted,
-        fontFamily: 'Segoe UI',
-      ),
-      hintStyle: const TextStyle(color: _facebookMuted, fontFamily: 'Segoe UI'),
-    ),
-    cardTheme: base.cardTheme.copyWith(
-      color: _facebookSurface,
-      surfaceTintColor: Colors.transparent,
-      elevation: 0,
-      margin: EdgeInsets.zero,
-      shape: RoundedRectangleBorder(
-        borderRadius: BorderRadius.circular(16),
-        side: const BorderSide(color: _facebookBorder),
-      ),
-    ),
-    chipTheme: base.chipTheme.copyWith(
-      backgroundColor: _facebookPaleBlue,
-      labelStyle: const TextStyle(
-        color: _facebookBlueDark,
-        fontFamily: 'Segoe UI',
-        fontSize: 13,
-        fontWeight: FontWeight.w700,
-      ),
-      side: const BorderSide(color: Color(0xFFB7D7FF)),
-      shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(999)),
-    ),
-    filledButtonTheme: FilledButtonThemeData(
-      style: FilledButton.styleFrom(
-        backgroundColor: _facebookBlue,
-        foregroundColor: Colors.white,
-        textStyle: const TextStyle(
-          fontFamily: 'Segoe UI',
-          fontWeight: FontWeight.w700,
-        ),
-        shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(12)),
-      ),
-    ),
-    outlinedButtonTheme: OutlinedButtonThemeData(
-      style: OutlinedButton.styleFrom(
-        foregroundColor: _facebookBlue,
-        side: const BorderSide(color: _facebookBorder),
-        textStyle: const TextStyle(
-          fontFamily: 'Segoe UI',
-          fontWeight: FontWeight.w600,
-        ),
-        shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(12)),
-      ),
-    ),
-    floatingActionButtonTheme: const FloatingActionButtonThemeData(
-      backgroundColor: _facebookBlue,
-      foregroundColor: Colors.white,
-    ),
-  );
-}
 
 class FeedbackPage extends StatefulWidget {
   const FeedbackPage({super.key, required this.apiClient, required this.token});
@@ -186,7 +47,7 @@ class _FeedbackPageState extends State<FeedbackPage> {
   int _bandejaTotal = 0;
 
   ThemeData _feedbackTheme(BuildContext context) {
-    return _buildFacebookFeedbackTheme(Theme.of(context));
+    return Theme.of(context);
   }
 
   @override
@@ -373,9 +234,17 @@ class _FeedbackPageState extends State<FeedbackPage> {
         length: 3,
         child: Scaffold(
           appBar: AppBar(
-            title: const Text('Feedback de calle'),
-            bottom: const TabBar(
-              tabs: [
+            title: const Text('Feedback de calle', textAlign: TextAlign.center),
+            bottom: TabBar(
+              isScrollable:
+                  MediaQuery.sizeOf(context).width < 380 ||
+                  MediaQuery.textScalerOf(context).scale(1) > 1.3,
+              tabAlignment:
+                  MediaQuery.sizeOf(context).width < 380 ||
+                      MediaQuery.textScalerOf(context).scale(1) > 1.3
+                  ? TabAlignment.start
+                  : TabAlignment.fill,
+              tabs: const [
                 Tab(text: 'Resumen'),
                 Tab(text: 'Historial'),
                 Tab(text: 'Bandeja'),
@@ -385,12 +254,7 @@ class _FeedbackPageState extends State<FeedbackPage> {
               IconButton(
                 tooltip: 'Actualizar',
                 onPressed: _loading ? null : _refresh,
-                icon: const Icon(Icons.refresh),
-              ),
-              IconButton(
-                tooltip: 'Nuevo feedback',
-                onPressed: _loading ? null : _openCreateSheet,
-                icon: const Icon(Icons.add_circle_outline),
+                icon: const Icon(Icons.refresh_rounded),
               ),
             ],
           ),
@@ -405,10 +269,10 @@ class _FeedbackPageState extends State<FeedbackPage> {
                 ),
           floatingActionButton: _loading
               ? null
-              : FloatingActionButton.extended(
+              : AppFloatingActionButton(
                   onPressed: _openCreateSheet,
-                  icon: const Icon(Icons.add),
-                  label: const Text('Crear'),
+                  icon: const Icon(Icons.add_rounded),
+                  label: const Text('Crear', textAlign: TextAlign.center),
                 ),
         ),
       ),
@@ -427,7 +291,7 @@ class _FeedbackPageState extends State<FeedbackPage> {
           ],
           if (dashboard == null) ...[
             const _EmptyStateCard(
-              icon: Icons.campaign_outlined,
+              icon: Icons.campaign_rounded,
               title: 'Sin datos de feedback',
               subtitle:
                   'Todavía no hay información disponible para mostrar en este módulo.',
@@ -437,7 +301,7 @@ class _FeedbackPageState extends State<FeedbackPage> {
             const SizedBox(height: 16),
             _SectionCard(
               title: 'Top motivos',
-              icon: Icons.label_important_outline,
+              icon: Icons.label_important_rounded,
               child: dashboard.topMotivos.isEmpty
                   ? const _EmptyInline(text: 'No hay motivos para mostrar.')
                   : FeedbackMotivosChart(
@@ -448,10 +312,11 @@ class _FeedbackPageState extends State<FeedbackPage> {
             const SizedBox(height: 12),
             _SectionCard(
               title: 'Ranking de carga',
-              icon: Icons.bar_chart_outlined,
+              icon: Icons.bar_chart_rounded,
               child: dashboard.ranking.isEmpty
                   ? const _EmptyInline(text: 'Aún no hay ranking disponible.')
                   : Column(
+                      crossAxisAlignment: CrossAxisAlignment.center,
                       children: [
                         for (final item in dashboard.ranking.take(5))
                           Padding(
@@ -465,8 +330,8 @@ class _FeedbackPageState extends State<FeedbackPage> {
           const SizedBox(height: 24),
           OutlinedButton.icon(
             onPressed: _refresh,
-            icon: const Icon(Icons.refresh),
-            label: const Text('Actualizar datos'),
+            icon: const Icon(Icons.refresh_rounded),
+            label: const Text('Actualizar datos', textAlign: TextAlign.center),
           ),
         ],
       ),
@@ -497,7 +362,7 @@ class _FeedbackPageState extends State<FeedbackPage> {
           const SizedBox(height: 12),
           if (_historialItems.isEmpty)
             const _EmptyStateCard(
-              icon: Icons.inbox_outlined,
+              icon: Icons.inbox_rounded,
               title: 'Sin historial',
               subtitle:
                   'Los feedbacks originados en tu sector van a aparecer aca.',
@@ -552,7 +417,7 @@ class _FeedbackPageState extends State<FeedbackPage> {
           const SizedBox(height: 12),
           if (_bandejaItems.isEmpty)
             const _EmptyStateCard(
-              icon: Icons.task_outlined,
+              icon: Icons.task_rounded,
               title: 'Bandeja vacia',
               subtitle:
                   'No tenes feedbacks asignados como responsable de sector.',
@@ -694,7 +559,9 @@ class _FeedbackDetailSheetState extends State<FeedbackDetailSheet> {
     final bottomInset = MediaQuery.viewInsetsOf(context).bottom;
 
     return Padding(
-      padding: EdgeInsets.only(bottom: bottomInset),
+      padding: EdgeInsets.only(
+        bottom: bottomInset + MediaQuery.paddingOf(context).bottom,
+      ),
       child: DraggableScrollableSheet(
         expand: false,
         initialChildSize: 0.72,
@@ -704,6 +571,7 @@ class _FeedbackDetailSheetState extends State<FeedbackDetailSheet> {
           return Material(
             color: Theme.of(context).colorScheme.surface,
             child: Column(
+              crossAxisAlignment: CrossAxisAlignment.center,
               children: [
                 const SizedBox(height: 10),
                 Container(
@@ -722,6 +590,8 @@ class _FeedbackDetailSheetState extends State<FeedbackDetailSheet> {
                             constraints: const BoxConstraints(maxWidth: 640),
                             child: ListView(
                               controller: scrollController,
+                              keyboardDismissBehavior:
+                                  ScrollViewKeyboardDismissBehavior.onDrag,
                               padding: const EdgeInsets.fromLTRB(
                                 16,
                                 14,
@@ -730,27 +600,30 @@ class _FeedbackDetailSheetState extends State<FeedbackDetailSheet> {
                               ),
                               children: [
                                 Row(
+                                  mainAxisAlignment: MainAxisAlignment.center,
                                   children: [
                                     Container(
                                       padding: const EdgeInsets.all(10),
                                       decoration: BoxDecoration(
-                                        color: statusColor.withValues(
-                                          alpha: 0.12,
+                                        color: AppColors.of(context).surface(
+                                          statusColor.withValues(alpha: 0.12),
                                         ),
                                         shape: BoxShape.circle,
                                       ),
                                       child: Icon(
                                         item.isResolved
-                                            ? Icons.check_circle_outline
-                                            : Icons.campaign_outlined,
-                                        color: statusColor,
+                                            ? Icons.check_circle_rounded
+                                            : Icons.campaign_rounded,
+                                        color: AppColors.of(
+                                          context,
+                                        ).foreground(statusColor),
                                       ),
                                     ),
                                     const SizedBox(width: 12),
                                     Expanded(
                                       child: Column(
                                         crossAxisAlignment:
-                                            CrossAxisAlignment.start,
+                                            CrossAxisAlignment.center,
                                         children: [
                                           Text(
                                             'Feedback #${item.id ?? widget.feedbackId}',
@@ -762,11 +635,13 @@ class _FeedbackDetailSheetState extends State<FeedbackDetailSheet> {
                                                 ?.copyWith(
                                                   fontWeight: FontWeight.w700,
                                                 ),
+                                            textAlign: TextAlign.center,
                                           ),
                                           const SizedBox(height: 4),
                                           Wrap(
                                             spacing: 8,
                                             runSpacing: 8,
+                                            alignment: WrapAlignment.center,
                                             children: [
                                               _StatusChip(
                                                 label: statusLabel,
@@ -789,7 +664,7 @@ class _FeedbackDetailSheetState extends State<FeedbackDetailSheet> {
                                     IconButton(
                                       onPressed: () =>
                                           Navigator.of(context).pop(),
-                                      icon: const Icon(Icons.close),
+                                      icon: const Icon(Icons.close_rounded),
                                     ),
                                   ],
                                 ),
@@ -800,18 +675,19 @@ class _FeedbackDetailSheetState extends State<FeedbackDetailSheet> {
                                 const SizedBox(height: 16),
                                 _SectionCard(
                                   title: 'Descripción',
-                                  icon: Icons.description_outlined,
+                                  icon: Icons.description_rounded,
                                   child: Text(
                                     item.descripcion?.trim().isNotEmpty == true
                                         ? item.descripcion!.trim()
                                         : 'Sin descripcion.',
+                                    textAlign: TextAlign.center,
                                   ),
                                 ),
                                 if (item.evidencia != null) ...[
                                   const SizedBox(height: 12),
                                   _SectionCard(
                                     title: 'Evidencia',
-                                    icon: Icons.image_outlined,
+                                    icon: Icons.image_rounded,
                                     child: _FeedbackEvidenceCard(
                                       evidencia: item.evidencia!,
                                     ),
@@ -820,8 +696,10 @@ class _FeedbackDetailSheetState extends State<FeedbackDetailSheet> {
                                 const SizedBox(height: 12),
                                 _SectionCard(
                                   title: 'Datos',
-                                  icon: Icons.info_outline,
+                                  icon: Icons.info_rounded,
                                   child: Column(
+                                    crossAxisAlignment:
+                                        CrossAxisAlignment.center,
                                     children: [
                                       _DetailRow(
                                         label: 'Cliente',
@@ -907,11 +785,12 @@ class _FeedbackDetailSheetState extends State<FeedbackDetailSheet> {
                                   const SizedBox(height: 12),
                                   _SectionCard(
                                     title: 'SLA',
-                                    icon: Icons.timer_outlined,
+                                    icon: Icons.timer_rounded,
                                     child: Text(
                                       item.diasRestantes! >= 0
                                           ? 'Quedan ${item.diasRestantes} dias'
                                           : 'Vencido hace ${item.diasRestantes!.abs()} dias',
+                                      textAlign: TextAlign.center,
                                     ),
                                   ),
                                 ],
@@ -920,7 +799,7 @@ class _FeedbackDetailSheetState extends State<FeedbackDetailSheet> {
                                   const SizedBox(height: 12),
                                   _SectionCard(
                                     title: 'Acciones',
-                                    icon: Icons.manage_search_outlined,
+                                    icon: Icons.manage_search_rounded,
                                     child: Column(
                                       crossAxisAlignment:
                                           CrossAxisAlignment.stretch,
@@ -936,8 +815,13 @@ class _FeedbackDetailSheetState extends State<FeedbackDetailSheet> {
                                                         strokeWidth: 2,
                                                       ),
                                                 )
-                                              : const Icon(Icons.check_circle),
-                                          label: const Text('Resolver'),
+                                              : const Icon(
+                                                  Icons.check_circle_rounded,
+                                                ),
+                                          label: const Text(
+                                            'Resolver',
+                                            textAlign: TextAlign.center,
+                                          ),
                                         ),
                                       ],
                                     ),
@@ -989,13 +873,8 @@ class _ResolveFeedbackDialog extends StatelessWidget {
 
   @override
   Widget build(BuildContext context) {
-    final inheritedTextScale = MediaQuery.textScalerOf(context).scale(1);
-    final textScale = inheritedTextScale.clamp(1.0, 1.18).toDouble();
-
     return MediaQuery(
-      data: MediaQuery.of(
-        context,
-      ).copyWith(textScaler: TextScaler.linear(textScale)),
+      data: MediaQuery.of(context),
       child: Dialog(
         insetPadding: const EdgeInsets.symmetric(horizontal: 20, vertical: 24),
         shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(20)),
@@ -1083,13 +962,19 @@ class _ResolveFeedbackActions extends StatelessWidget {
       child: const Text('Resolver'),
     );
 
-    if (stacked) {
+    if (stacked || MediaQuery.textScalerOf(context).scale(1) > 1.3) {
       return Column(
         crossAxisAlignment: CrossAxisAlignment.stretch,
         children: [
-          SizedBox(height: 48, child: resolveButton),
+          ConstrainedBox(
+            constraints: const BoxConstraints(minHeight: 48),
+            child: resolveButton,
+          ),
           const SizedBox(height: 8),
-          SizedBox(height: 44, child: cancelButton),
+          ConstrainedBox(
+            constraints: const BoxConstraints(minHeight: 48),
+            child: cancelButton,
+          ),
         ],
       );
     }
@@ -1143,6 +1028,7 @@ class _FeedbackCreateSheetState extends State<FeedbackCreateSheet> {
   List<FeedbackCliente> _clientes = const [];
   FeedbackMotivo? _selectedMotivo;
   FeedbackCliente? _selectedCliente;
+  bool _clienteConfirmed = false;
   XFile? _evidencia;
 
   @override
@@ -1196,6 +1082,8 @@ class _FeedbackCreateSheetState extends State<FeedbackCreateSheet> {
   }
 
   void _onSearchChanged(String query) {
+    _searchRequestVersion++;
+    _clienteConfirmed = false;
     _applyLocalSearch(query);
     _searchDebounce?.cancel();
 
@@ -1262,6 +1150,7 @@ class _FeedbackCreateSheetState extends State<FeedbackCreateSheet> {
       return;
     }
     setState(() {
+      _clienteConfirmed = false;
       _searching = true;
       _error = null;
     });
@@ -1290,10 +1179,10 @@ class _FeedbackCreateSheetState extends State<FeedbackCreateSheet> {
         );
       });
     } on ApiException catch (e) {
-      if (!mounted) return;
+      if (!mounted || requestVersion != _searchRequestVersion) return;
       setState(() => _error = e.message);
     } catch (_) {
-      if (!mounted) return;
+      if (!mounted || requestVersion != _searchRequestVersion) return;
       setState(() => _error = 'No se pudieron buscar clientes.');
     } finally {
       if (mounted && requestVersion == _searchRequestVersion) {
@@ -1588,7 +1477,9 @@ class _FeedbackCreateSheetState extends State<FeedbackCreateSheet> {
   Widget build(BuildContext context) {
     final bottomInset = MediaQuery.viewInsetsOf(context).bottom;
     return Padding(
-      padding: EdgeInsets.only(bottom: bottomInset),
+      padding: EdgeInsets.only(
+        bottom: bottomInset + MediaQuery.paddingOf(context).bottom,
+      ),
       child: DraggableScrollableSheet(
         expand: false,
         initialChildSize: 0.9,
@@ -1598,6 +1489,7 @@ class _FeedbackCreateSheetState extends State<FeedbackCreateSheet> {
           return Material(
             color: Theme.of(context).colorScheme.surface,
             child: Column(
+              crossAxisAlignment: CrossAxisAlignment.center,
               children: [
                 const SizedBox(height: 10),
                 Container(
@@ -1616,6 +1508,8 @@ class _FeedbackCreateSheetState extends State<FeedbackCreateSheet> {
                             constraints: const BoxConstraints(maxWidth: 640),
                             child: ListView(
                               controller: scrollController,
+                              keyboardDismissBehavior:
+                                  ScrollViewKeyboardDismissBehavior.onDrag,
                               padding: const EdgeInsets.fromLTRB(
                                 16,
                                 14,
@@ -1624,6 +1518,7 @@ class _FeedbackCreateSheetState extends State<FeedbackCreateSheet> {
                               ),
                               children: [
                                 Row(
+                                  mainAxisAlignment: MainAxisAlignment.center,
                                   children: [
                                     Expanded(
                                       child: Text(
@@ -1636,12 +1531,13 @@ class _FeedbackCreateSheetState extends State<FeedbackCreateSheet> {
                                             ?.copyWith(
                                               fontWeight: FontWeight.w700,
                                             ),
+                                        textAlign: TextAlign.center,
                                       ),
                                     ),
                                     IconButton(
                                       onPressed: () =>
                                           Navigator.of(context).pop(),
-                                      icon: const Icon(Icons.close),
+                                      icon: const Icon(Icons.close_rounded),
                                     ),
                                   ],
                                 ),
@@ -1654,6 +1550,7 @@ class _FeedbackCreateSheetState extends State<FeedbackCreateSheet> {
                                         context,
                                       ).colorScheme.error,
                                     ),
+                                    textAlign: TextAlign.center,
                                   ),
                                 ],
                                 const SizedBox(height: 12),
@@ -1681,28 +1578,31 @@ class _FeedbackCreateSheetState extends State<FeedbackCreateSheet> {
                                                 strokeWidth: 2,
                                               ),
                                             )
-                                          : const Icon(Icons.search),
+                                          : const Icon(Icons.search_rounded),
                                     ),
                                   ),
                                 ),
                                 const SizedBox(height: 14),
                                 _SectionCard(
                                   title: 'Motivo',
-                                  icon: Icons.label_outlined,
+                                  icon: Icons.label_rounded,
                                   child: Column(
                                     crossAxisAlignment:
                                         CrossAxisAlignment.stretch,
                                     children: [
                                       DropdownButtonFormField<FeedbackMotivo>(
                                         initialValue: _selectedMotivo,
+                                        alignment: Alignment.center,
                                         isExpanded: true,
+                                        itemHeight: null,
                                         items: [
                                           for (final motivo in _motivos)
                                             DropdownMenuItem(
                                               value: motivo,
+                                              alignment: Alignment.center,
                                               child: Text(
                                                 motivo.displayName,
-                                                overflow: TextOverflow.ellipsis,
+                                                textAlign: TextAlign.center,
                                               ),
                                             ),
                                         ],
@@ -1725,7 +1625,7 @@ class _FeedbackCreateSheetState extends State<FeedbackCreateSheet> {
                                 const SizedBox(height: 14),
                                 _SectionCard(
                                   title: 'Cliente',
-                                  icon: Icons.storefront_outlined,
+                                  icon: Icons.storefront_rounded,
                                   child: Column(
                                     crossAxisAlignment:
                                         CrossAxisAlignment.stretch,
@@ -1735,7 +1635,19 @@ class _FeedbackCreateSheetState extends State<FeedbackCreateSheet> {
                                           cliente: _selectedCliente!,
                                         ),
                                       const SizedBox(height: 8),
-                                      if (_clientes.isEmpty)
+                                      if (_clienteConfirmed)
+                                        TextButton.icon(
+                                          icon: const Icon(Icons.edit_rounded),
+                                          label: const Text(
+                                            'Cambiar cliente',
+                                            textAlign: TextAlign.center,
+                                          ),
+                                          onPressed: () {
+                                            _searchCtrl.clear();
+                                            _onSearchChanged('');
+                                          },
+                                        )
+                                      else if (_clientes.isEmpty)
                                         _EmptyInline(
                                           text: _clientEmptyMessage(),
                                         )
@@ -1751,8 +1663,18 @@ class _FeedbackCreateSheetState extends State<FeedbackCreateSheet> {
                                                   _selectedCliente?.id ==
                                                   cliente.id,
                                               onTap: () {
+                                                _searchDebounce?.cancel();
+                                                _searchRequestVersion++;
+                                                FocusScope.of(
+                                                  context,
+                                                ).unfocus();
                                                 setState(() {
                                                   _selectedCliente = cliente;
+                                                  _clienteConfirmed = true;
+                                                  _searching = false;
+                                                  _error = null;
+                                                  _searchCtrl.text =
+                                                      cliente.displayName;
                                                 });
                                               },
                                             ),
@@ -1764,7 +1686,7 @@ class _FeedbackCreateSheetState extends State<FeedbackCreateSheet> {
                                 const SizedBox(height: 14),
                                 _SectionCard(
                                   title: 'Descripción',
-                                  icon: Icons.description_outlined,
+                                  icon: Icons.description_rounded,
                                   child: TextField(
                                     controller: _descripcionCtrl,
                                     maxLines: 5,
@@ -1780,7 +1702,7 @@ class _FeedbackCreateSheetState extends State<FeedbackCreateSheet> {
                                 const SizedBox(height: 14),
                                 _SectionCard(
                                   title: 'Evidencia',
-                                  icon: Icons.photo_camera_outlined,
+                                  icon: Icons.photo_camera_rounded,
                                   child: _EvidencePickerCard(
                                     evidencia: _evidencia,
                                     requiredByMotivo:
@@ -1811,8 +1733,11 @@ class _FeedbackCreateSheetState extends State<FeedbackCreateSheet> {
                                             strokeWidth: 2,
                                           ),
                                         )
-                                      : const Icon(Icons.send),
-                                  label: const Text('Crear feedback'),
+                                      : const Icon(Icons.send_rounded),
+                                  label: const Text(
+                                    'Crear feedback',
+                                    textAlign: TextAlign.center,
+                                  ),
                                 ),
                               ],
                             ),
@@ -1853,7 +1778,7 @@ class _MotivoRules extends StatelessWidget {
       children: [
         for (final rule in rules)
           Chip(
-            label: Text(rule),
+            label: Text(rule, textAlign: TextAlign.center),
             backgroundColor: cs.surfaceContainerHighest,
             side: BorderSide(color: cs.outlineVariant),
           ),
@@ -1890,6 +1815,7 @@ class _EvidencePickerCard extends StatelessWidget {
             style: Theme.of(
               context,
             ).textTheme.bodySmall?.copyWith(color: cs.error),
+            textAlign: TextAlign.center,
           )
         else if (evidencia == null)
           Text(
@@ -1897,6 +1823,7 @@ class _EvidencePickerCard extends StatelessWidget {
             style: Theme.of(
               context,
             ).textTheme.bodySmall?.copyWith(color: cs.onSurfaceVariant),
+            textAlign: TextAlign.center,
           )
         else
           Container(
@@ -1907,8 +1834,9 @@ class _EvidencePickerCard extends StatelessWidget {
               border: Border.all(color: cs.outlineVariant),
             ),
             child: Row(
+              mainAxisAlignment: MainAxisAlignment.center,
               children: [
-                Icon(Icons.image_outlined, color: cs.primary),
+                Icon(Icons.image_rounded, color: cs.primary),
                 const SizedBox(width: 10),
                 Expanded(
                   child: Text(
@@ -1920,12 +1848,13 @@ class _EvidencePickerCard extends StatelessWidget {
                     style: Theme.of(context).textTheme.bodyMedium?.copyWith(
                       fontWeight: FontWeight.w600,
                     ),
+                    textAlign: TextAlign.center,
                   ),
                 ),
                 IconButton(
                   tooltip: 'Quitar evidencia',
                   onPressed: onRemove,
-                  icon: const Icon(Icons.close),
+                  icon: const Icon(Icons.close_rounded),
                 ),
               ],
             ),
@@ -1934,16 +1863,17 @@ class _EvidencePickerCard extends StatelessWidget {
         Wrap(
           spacing: 8,
           runSpacing: 8,
+          alignment: WrapAlignment.center,
           children: [
             OutlinedButton.icon(
               onPressed: onCamera,
-              icon: const Icon(Icons.photo_camera_outlined),
-              label: const Text('Cámara'),
+              icon: const Icon(Icons.photo_camera_rounded),
+              label: const Text('Cámara', textAlign: TextAlign.center),
             ),
             OutlinedButton.icon(
               onPressed: onGallery,
-              icon: const Icon(Icons.photo_library_outlined),
-              label: const Text('Galería'),
+              icon: const Icon(Icons.photo_library_rounded),
+              label: const Text('Galería', textAlign: TextAlign.center),
             ),
           ],
         ),
@@ -1983,12 +1913,13 @@ class _FeedbackEvidenceCard extends StatelessWidget {
       ),
       child: Row(
         crossAxisAlignment: CrossAxisAlignment.start,
+        mainAxisAlignment: MainAxisAlignment.center,
         children: [
-          Icon(Icons.image_outlined, color: cs.primary),
+          Icon(Icons.image_rounded, color: cs.primary),
           const SizedBox(width: 10),
           Expanded(
             child: Column(
-              crossAxisAlignment: CrossAxisAlignment.start,
+              crossAxisAlignment: CrossAxisAlignment.center,
               children: [
                 Text(
                   filename == null || filename.isEmpty
@@ -1999,6 +1930,7 @@ class _FeedbackEvidenceCard extends StatelessWidget {
                   style: Theme.of(
                     context,
                   ).textTheme.bodyMedium?.copyWith(fontWeight: FontWeight.w700),
+                  textAlign: TextAlign.center,
                 ),
                 const SizedBox(height: 3),
                 Text(
@@ -2011,6 +1943,7 @@ class _FeedbackEvidenceCard extends StatelessWidget {
                   style: Theme.of(
                     context,
                   ).textTheme.bodySmall?.copyWith(color: cs.onSurfaceVariant),
+                  textAlign: TextAlign.center,
                 ),
                 if (url != null && url.isNotEmpty) ...[
                   const SizedBox(height: 3),
@@ -2021,6 +1954,7 @@ class _FeedbackEvidenceCard extends StatelessWidget {
                     style: Theme.of(context).textTheme.labelSmall?.copyWith(
                       color: cs.onSurfaceVariant,
                     ),
+                    textAlign: TextAlign.center,
                   ),
                 ],
               ],
@@ -2048,6 +1982,7 @@ class _RankingTile extends StatelessWidget {
       ),
       padding: const EdgeInsets.all(14),
       child: Row(
+        mainAxisAlignment: MainAxisAlignment.center,
         children: [
           CircleAvatar(
             backgroundColor: cs.primaryContainer,
@@ -2055,12 +1990,13 @@ class _RankingTile extends StatelessWidget {
             child: Text(
               '${item.total ?? 0}',
               style: const TextStyle(fontWeight: FontWeight.w700),
+              textAlign: TextAlign.center,
             ),
           ),
           const SizedBox(width: 12),
           Expanded(
             child: Column(
-              crossAxisAlignment: CrossAxisAlignment.start,
+              crossAxisAlignment: CrossAxisAlignment.center,
               children: [
                 Text(
                   item.displayName,
@@ -2069,11 +2005,13 @@ class _RankingTile extends StatelessWidget {
                   style: Theme.of(
                     context,
                   ).textTheme.bodyMedium?.copyWith(fontWeight: FontWeight.w700),
+                  textAlign: TextAlign.center,
                 ),
                 const SizedBox(height: 4),
                 Text(
                   'Feedback cargados: ${item.total ?? 0}',
                   style: Theme.of(context).textTheme.bodySmall,
+                  textAlign: TextAlign.center,
                 ),
               ],
             ),
@@ -2100,7 +2038,7 @@ class _FeedbackListTile extends StatelessWidget {
       if ((item.descripcion ?? '').trim().isNotEmpty) item.descripcion!.trim(),
     ].join(' - ');
 
-    return Card(
+    return AppCard(
       child: InkWell(
         onTap: onTap,
         borderRadius: BorderRadius.circular(16),
@@ -2108,20 +2046,23 @@ class _FeedbackListTile extends StatelessWidget {
           padding: const EdgeInsets.all(12),
           child: Row(
             crossAxisAlignment: CrossAxisAlignment.start,
+            mainAxisAlignment: MainAxisAlignment.center,
             children: [
               CircleAvatar(
-                backgroundColor: statusColor.withValues(alpha: 0.12),
-                foregroundColor: statusColor,
+                backgroundColor: AppColors.of(
+                  context,
+                ).surface(statusColor.withValues(alpha: 0.12)),
+                foregroundColor: AppColors.of(context).surface(statusColor),
                 child: Icon(
                   item.isResolved
-                      ? Icons.check_circle_outline
-                      : Icons.campaign_outlined,
+                      ? Icons.check_circle_rounded
+                      : Icons.campaign_rounded,
                 ),
               ),
               const SizedBox(width: 12),
               Expanded(
                 child: Column(
-                  crossAxisAlignment: CrossAxisAlignment.start,
+                  crossAxisAlignment: CrossAxisAlignment.center,
                   children: [
                     Text(
                       item.cliente?.displayName ??
@@ -2131,6 +2072,7 @@ class _FeedbackListTile extends StatelessWidget {
                       style: Theme.of(context).textTheme.bodyLarge?.copyWith(
                         fontWeight: FontWeight.w700,
                       ),
+                      textAlign: TextAlign.center,
                     ),
                     const SizedBox(height: 4),
                     Text(
@@ -2140,12 +2082,14 @@ class _FeedbackListTile extends StatelessWidget {
                       style: Theme.of(context).textTheme.bodySmall?.copyWith(
                         color: Theme.of(context).colorScheme.onSurfaceVariant,
                       ),
+                      textAlign: TextAlign.center,
                     ),
                     const SizedBox(height: 8),
                     Wrap(
                       spacing: 8,
                       runSpacing: 6,
                       crossAxisAlignment: WrapCrossAlignment.center,
+                      alignment: WrapAlignment.center,
                       children: [
                         _StatusChip(
                           label: _statusLabel(status),
@@ -2156,6 +2100,7 @@ class _FeedbackListTile extends StatelessWidget {
                             item.fechaLimite ?? item.fechaVencimiento,
                           ),
                           style: Theme.of(context).textTheme.bodySmall,
+                          textAlign: TextAlign.center,
                         ),
                       ],
                     ),
@@ -2164,7 +2109,7 @@ class _FeedbackListTile extends StatelessWidget {
               ),
               const SizedBox(width: 8),
               Icon(
-                Icons.chevron_right,
+                Icons.chevron_right_rounded,
                 color: Theme.of(context).colorScheme.onSurfaceVariant,
               ),
             ],
@@ -2198,7 +2143,7 @@ class _ClientResultTile extends StatelessWidget {
       if ((cliente.localidad ?? '').trim().isNotEmpty)
         cliente.localidad!.trim(),
     ].join(' - ');
-    return Card(
+    return AppCard(
       color: selected ? cs.primaryContainer : null,
       child: InkWell(
         onTap: onTap,
@@ -2207,15 +2152,16 @@ class _ClientResultTile extends StatelessWidget {
           padding: const EdgeInsets.all(12),
           child: Row(
             crossAxisAlignment: CrossAxisAlignment.start,
+            mainAxisAlignment: MainAxisAlignment.center,
             children: [
               Icon(
-                Icons.storefront_outlined,
+                Icons.storefront_rounded,
                 color: selected ? cs.onPrimaryContainer : cs.primary,
               ),
               const SizedBox(width: 10),
               Expanded(
                 child: Column(
-                  crossAxisAlignment: CrossAxisAlignment.start,
+                  crossAxisAlignment: CrossAxisAlignment.center,
                   children: [
                     Text(
                       cliente.displayName,
@@ -2225,6 +2171,7 @@ class _ClientResultTile extends StatelessWidget {
                         color: selected ? cs.onPrimaryContainer : null,
                         fontWeight: FontWeight.w700,
                       ),
+                      textAlign: TextAlign.center,
                     ),
                     if (subtitle.isNotEmpty) ...[
                       const SizedBox(height: 3),
@@ -2237,6 +2184,7 @@ class _ClientResultTile extends StatelessWidget {
                               ? cs.onPrimaryContainer
                               : cs.onSurfaceVariant,
                         ),
+                        textAlign: TextAlign.center,
                       ),
                     ],
                   ],
@@ -2244,7 +2192,7 @@ class _ClientResultTile extends StatelessWidget {
               ),
               if (selected) ...[
                 const SizedBox(width: 8),
-                Icon(Icons.check_circle, color: cs.onPrimaryContainer),
+                Icon(Icons.check_circle_rounded, color: cs.onPrimaryContainer),
               ],
             ],
           ),
@@ -2269,8 +2217,9 @@ class _SelectedClientCard extends StatelessWidget {
         borderRadius: BorderRadius.circular(14),
       ),
       child: Row(
+        mainAxisAlignment: MainAxisAlignment.center,
         children: [
-          Icon(Icons.verified_outlined, color: cs.onSecondaryContainer),
+          Icon(Icons.verified_rounded, color: cs.onSecondaryContainer),
           const SizedBox(width: 10),
           Expanded(
             child: Text(
@@ -2286,6 +2235,7 @@ class _SelectedClientCard extends StatelessWidget {
                 color: cs.onSecondaryContainer,
                 fontWeight: FontWeight.w700,
               ),
+              textAlign: TextAlign.center,
             ),
           ),
         ],
@@ -2322,7 +2272,12 @@ class _ResponsiveTabList extends StatelessWidget {
             constraints: BoxConstraints(maxWidth: maxWidth),
             child: ListView(
               physics: const AlwaysScrollableScrollPhysics(),
-              padding: EdgeInsets.fromLTRB(hPad, hPad, hPad, 96),
+              padding: EdgeInsets.fromLTRB(
+                hPad,
+                hPad,
+                hPad,
+                AppFloatingActionButton.bottomPadding(context),
+              ),
               children: children,
             ),
           ),
@@ -2341,19 +2296,23 @@ class _ErrorCard extends StatelessWidget {
   @override
   Widget build(BuildContext context) {
     final cs = Theme.of(context).colorScheme;
-    return Card(
+    return AppCard(
       color: cs.errorContainer,
       child: Padding(
         padding: const EdgeInsets.all(14),
         child: Column(
-          crossAxisAlignment: CrossAxisAlignment.start,
+          crossAxisAlignment: CrossAxisAlignment.center,
           children: [
-            Text(message, style: TextStyle(color: cs.onErrorContainer)),
+            Text(
+              message,
+              style: TextStyle(color: cs.onErrorContainer),
+              textAlign: TextAlign.center,
+            ),
             const SizedBox(height: 8),
             OutlinedButton.icon(
               onPressed: () => onRetry(),
-              icon: const Icon(Icons.refresh, size: 16),
-              label: const Text('Reintentar'),
+              icon: const Icon(Icons.refresh_rounded, size: 16),
+              label: const Text('Reintentar', textAlign: TextAlign.center),
             ),
           ],
         ),
@@ -2375,13 +2334,14 @@ class _SectionCard extends StatelessWidget {
 
   @override
   Widget build(BuildContext context) {
-    return Card(
+    return AppCard(
       child: Padding(
         padding: const EdgeInsets.all(14),
         child: Column(
-          crossAxisAlignment: CrossAxisAlignment.start,
+          crossAxisAlignment: CrossAxisAlignment.center,
           children: [
             Row(
+              mainAxisAlignment: MainAxisAlignment.center,
               children: [
                 Icon(icon),
                 const SizedBox(width: 8),
@@ -2393,6 +2353,7 @@ class _SectionCard extends StatelessWidget {
                     style: Theme.of(context).textTheme.titleSmall?.copyWith(
                       fontWeight: FontWeight.w700,
                     ),
+                    textAlign: TextAlign.center,
                   ),
                 ),
               ],
@@ -2417,7 +2378,9 @@ class _DetailRow extends StatelessWidget {
     final cs = Theme.of(context).colorScheme;
     return LayoutBuilder(
       builder: (context, constraints) {
-        final stack = constraints.maxWidth < 360;
+        final stack =
+            constraints.maxWidth < 360 ||
+            MediaQuery.textScalerOf(context).scale(1) > 1.3;
         final labelStyle = Theme.of(context).textTheme.bodySmall?.copyWith(
           color: cs.onSurfaceVariant,
           fontWeight: FontWeight.w600,
@@ -2469,19 +2432,21 @@ class _PaginationRow extends StatelessWidget {
 
   @override
   Widget build(BuildContext context) {
-    final stacked = MediaQuery.sizeOf(context).width < 430;
+    final stacked =
+        MediaQuery.sizeOf(context).width < 430 ||
+        MediaQuery.textScalerOf(context).scale(1) > 1.3;
     final prevButton = OutlinedButton.icon(
       onPressed: onPrev,
-      icon: const Icon(Icons.chevron_left),
+      icon: const Icon(Icons.chevron_left_rounded),
       label: const Text('Anterior'),
     );
     final nextButton = OutlinedButton.icon(
       onPressed: onNext,
-      icon: const Icon(Icons.chevron_right),
+      icon: const Icon(Icons.chevron_right_rounded),
       label: const Text('Siguiente'),
     );
 
-    if (stacked) {
+    if (stacked || MediaQuery.textScalerOf(context).scale(1) > 1.3) {
       return Column(
         crossAxisAlignment: CrossAxisAlignment.stretch,
         children: [prevButton, const SizedBox(height: 8), nextButton],
@@ -2545,15 +2510,14 @@ class _StatusChip extends StatelessWidget {
     return Container(
       padding: const EdgeInsets.symmetric(horizontal: 10, vertical: 5),
       decoration: BoxDecoration(
-        color: color.withValues(alpha: 0.12),
+        color: AppColors.of(context).surface(color.withValues(alpha: 0.12)),
         borderRadius: BorderRadius.circular(999),
       ),
       child: Text(
         label,
-        maxLines: 1,
-        overflow: TextOverflow.ellipsis,
+        textAlign: TextAlign.center,
         style: TextStyle(
-          color: color,
+          color: AppColors.of(context).foreground(color),
           fontSize: 13,
           fontWeight: FontWeight.w700,
         ),
@@ -2590,10 +2554,11 @@ class _EmptyStateCard extends StatelessWidget {
   @override
   Widget build(BuildContext context) {
     final cs = Theme.of(context).colorScheme;
-    return Card(
+    return AppCard(
       child: Padding(
         padding: const EdgeInsets.all(18),
         child: Column(
+          crossAxisAlignment: CrossAxisAlignment.center,
           children: [
             Icon(icon, size: 40, color: cs.primary),
             const SizedBox(height: 12),
@@ -2602,6 +2567,7 @@ class _EmptyStateCard extends StatelessWidget {
               style: Theme.of(
                 context,
               ).textTheme.titleMedium?.copyWith(fontWeight: FontWeight.w700),
+              textAlign: TextAlign.center,
             ),
             const SizedBox(height: 4),
             Text(subtitle, textAlign: TextAlign.center),
