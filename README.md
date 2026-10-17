@@ -83,15 +83,15 @@ Referencia: [recepción FCM en Flutter](https://firebase.google.com/docs/cloud-m
 
 ## Apariencia y tarjetas
 
-- **M?s opciones ? Apariencia** permite elegir **Claro**, **Oscuro** o **Seg?n el sistema**.
-  También se accede desde el bot?n de paleta en el inicio de sesi?n. La preferencia se
+- **Más opciones → Apariencia** permite elegir **Claro**, **Oscuro** o **Según el sistema**.
+  También se accede desde el botón de paleta en el inicio de sesión. La preferencia se
   guarda en el dispositivo y se conserva entre sesiones; por defecto sigue al sistema.
 - Paleta tomada de `../backend/static/css/panel.css` y `panel-theme.css`: azul `#0866FF`,
   fondo claro `#F0F2F5`, fondo oscuro `#18191A`, tarjetas oscuras `#242526` y acento
-  oscuro `#4599FF`. Los estados y las series de gr?ficos conservan su significado.
+  oscuro `#4599FF`. Los estados y las series de gráficos conservan su significado.
 - `buildAppTheme`, `AppPalette` y `AppColors` centralizan superficies, texto y contraste.
-  `AppCard` centra el texto heredado; las tarjetas de indicadores usan alineaci?n centrada
-  expl?cita y altura adaptable. Los códigos QR mantienen su contraste para lectura.
+  `AppCard` centra el texto heredado; las tarjetas de indicadores usan alineación centrada
+  explícita y altura adaptable. Los códigos QR mantienen su contraste para lectura.
 - Pruebas: `theme_preferences_test.dart`, `appearance_cards_test.dart`,
   `project_responsive_test.dart` y `reuniones_responsive_test.dart`. Incluyen ambos temas,
   persistencia, seguimiento del sistema, celulares/tablets y texto ampliado hasta 200 %.
