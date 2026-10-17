@@ -42,6 +42,35 @@ const _fichayaChannelDescription =
     'Avisos, comunicados y recordatorios de FichaYa';
 const _fichayaSound = RawResourceAndroidNotificationSound('fichaya');
 
+// Canal de urgentes (salida sin fichar, reunion por empezar): prioridad maxima y
+// vibracion mas larga. Debe coincidir con CANAL_ANDROID_URGENTE del backend.
+const fichayaUrgentChannelId = 'fichaya_urgente';
+const _urgentChannelName = 'Avisos urgentes de FichaYa';
+const _urgentChannelDescription = 'Salida sin fichar y reunión por empezar';
+const urgentPushTypes = {'salida_pendiente', 'recordatorio'};
+
+// Vibracion propia (ms: espera, vibra, pausa, vibra...). Como el sonido, queda
+// fija al crear el canal: avisos, dos pulsos cortos; urgentes, tres largos.
+final _fichayaVibration = Int64List.fromList([0, 180, 120, 180]);
+final _urgentVibration = Int64List.fromList([0, 450, 200, 450, 200, 450]);
+
+NotificationDetails _details({required bool urgent}) => NotificationDetails(
+  android: AndroidNotificationDetails(
+    urgent ? fichayaUrgentChannelId : fichayaChannelId,
+    urgent ? _urgentChannelName : _fichayaChannelName,
+    channelDescription: urgent
+        ? _urgentChannelDescription
+        : _fichayaChannelDescription,
+    importance: urgent ? Importance.max : Importance.high,
+    priority: urgent ? Priority.max : Priority.high,
+    sound: _fichayaSound,
+    enableVibration: true,
+    vibrationPattern: urgent ? _urgentVibration : _fichayaVibration,
+    category: urgent ? AndroidNotificationCategory.reminder : null,
+  ),
+  iOS: const DarwinNotificationDetails(),
+);
+
 class ReunionReminders {
   ReunionReminders._();
   static final instance = ReunionReminders._();
@@ -61,19 +90,32 @@ class ReunionReminders {
   Future<void> prepareChannel() async {
     if (!supported) return;
     await _initialize();
-    await _plugin
+    final android = _plugin
         .resolvePlatformSpecificImplementation<
           AndroidFlutterLocalNotificationsPlugin
-        >()
-        ?.createNotificationChannel(
-          const AndroidNotificationChannel(
-            fichayaChannelId,
-            _fichayaChannelName,
-            description: _fichayaChannelDescription,
-            importance: Importance.high,
-            sound: _fichayaSound,
-          ),
-        );
+        >();
+    await android?.createNotificationChannel(
+      AndroidNotificationChannel(
+        fichayaChannelId,
+        _fichayaChannelName,
+        description: _fichayaChannelDescription,
+        importance: Importance.high,
+        sound: _fichayaSound,
+        enableVibration: true,
+        vibrationPattern: _fichayaVibration,
+      ),
+    );
+    await android?.createNotificationChannel(
+      AndroidNotificationChannel(
+        fichayaUrgentChannelId,
+        _urgentChannelName,
+        description: _urgentChannelDescription,
+        importance: Importance.max,
+        sound: _fichayaSound,
+        enableVibration: true,
+        vibrationPattern: _urgentVibration,
+      ),
+    );
   }
 
   Future<void> showPush(
@@ -82,6 +124,7 @@ class ReunionReminders {
     String body,
     int? meetingId, {
     String? route,
+    bool urgent = false,
   }) async {
     if (!supported) return;
     await prepareChannel();
@@ -89,16 +132,7 @@ class ReunionReminders {
       id,
       title,
       body,
-      const NotificationDetails(
-        android: AndroidNotificationDetails(
-          fichayaChannelId,
-          _fichayaChannelName,
-          channelDescription: _fichayaChannelDescription,
-          importance: Importance.high,
-          priority: Priority.high,
-          sound: _fichayaSound,
-        ),
-      ),
+      _details(urgent: urgent),
       payload: RegExp(r'^/comunicados/[1-9][0-9]*/?$').hasMatch(route ?? '')
           ? 'comunicado:$_owner:${route!.split('/')[2]}:push'
           : meetingId == null
@@ -208,17 +242,8 @@ class ReunionReminders {
           reminder.occurrence.nombre,
           'En 30 minutos${reminder.occurrence.location.isEmpty ? '' : ' · ${reminder.occurrence.location}'}',
           tz.TZDateTime.from(reminder.at, tz.UTC),
-          const NotificationDetails(
-            android: AndroidNotificationDetails(
-              fichayaChannelId,
-              _fichayaChannelName,
-              channelDescription: _fichayaChannelDescription,
-              importance: Importance.high,
-              priority: Priority.high,
-              sound: _fichayaSound,
-            ),
-            iOS: DarwinNotificationDetails(),
-          ),
+          // La reunion empieza en 30 minutos: canal de urgentes.
+          _details(urgent: true),
           androidScheduleMode: AndroidScheduleMode.inexactAllowWhileIdle,
           payload: '$_prefix$_owner:${reminder.occurrence.key}',
         );

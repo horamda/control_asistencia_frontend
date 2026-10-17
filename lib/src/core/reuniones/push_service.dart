@@ -36,6 +36,9 @@ const pushTypes = {
   'trivia_nueva',
   'trivia_recordatorio',
   'revision_pendiente',
+  // Contrato 1.49.0: Seguridad e Higiene.
+  'seguridad_resultado',
+  'seguridad_accion',
 };
 
 /// Contrato 1.47.0: avisa al servidor que el push llego (`recibido`) o que lo
@@ -270,6 +273,7 @@ class PushService {
               message.notification?.body ?? '',
               meetingIdFromRoute(message.data['ruta'] as String?),
               route: message.data['ruta'] as String?,
+              urgent: urgentPushTypes.contains(message.data['tipo']),
             )
             .catchError((Object _) {}),
       );
