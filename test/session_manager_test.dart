@@ -1,3 +1,4 @@
+import 'dart:async';
 import 'package:flutter_test/flutter_test.dart';
 import 'package:ficharqr/src/core/auth/biometric_auth_service.dart';
 import 'package:ficharqr/src/core/auth/session_manager.dart';
@@ -7,6 +8,56 @@ import 'package:ficharqr/src/core/network/mobile_api_client.dart';
 import 'package:http/http.dart' as http;
 
 void main() {
+  for (final action in ['logout', 'switch', 'lock', 'dispose']) {
+    test('late token refresh cannot override $action', () async {
+      final api = _DelayedApi();
+      final storage = _FakeSessionStorage();
+      final manager = SessionManager(
+        apiClient: api,
+        sessionStorage: storage,
+        biometricAuthService: _FakeBiometricAuthService(
+          available: true,
+          authenticateResult: true,
+        ),
+      );
+      await manager.bootstrap();
+      final employee = EmployeeSummary(
+        id: 10,
+        dni: '00000000',
+        nombre: 'Audit',
+        apellido: null,
+        empresaId: 1,
+      );
+      await manager.onLoginSuccess(
+        LoginResponse(token: 'old', empleado: employee),
+      );
+      final refresh = manager.refreshSession();
+      if (action == 'logout') await manager.logout();
+      if (action == 'switch') {
+        await manager.onLoginSuccess(
+          LoginResponse(token: 'other', empleado: employee),
+        );
+      }
+      if (action == 'lock') await manager.lockSession();
+      if (action == 'dispose') manager.dispose();
+      api.pending.complete('late');
+      expect(await refresh, isFalse);
+      if (action == 'logout') {
+        expect(manager.session, isNull);
+        expect(storage.envelope, isNull);
+      }
+      if (action == 'switch') {
+        expect(manager.token, 'other');
+        expect(storage.envelope!.session.token, 'other');
+      }
+      if (action == 'lock') {
+        expect(manager.isLocked, isTrue);
+        expect(manager.currentTokenFromProvider(), isNull);
+      }
+      if (action != 'dispose') manager.dispose();
+      api.dispose();
+    });
+  }
   group('SessionManager bootstrap', () {
     test('bloquea la sesion restaurada antes de habilitar el token', () async {
       final session = LoginResponse(
@@ -55,10 +106,7 @@ void main() {
 }
 
 class _FakeSessionStorage extends SessionStorage {
-  _FakeSessionStorage({
-    this.envelope,
-    this.biometricEnabled = true,
-  });
+  _FakeSessionStorage({this.envelope, this.biometricEnabled = true});
 
   StoredSessionEnvelope? envelope;
   bool biometricEnabled;
@@ -136,4 +184,10 @@ class _NoopHttpClient extends http.BaseClient {
   Future<http.StreamedResponse> send(http.BaseRequest request) {
     throw UnimplementedError('No deberia ejecutar requests HTTP en este test.');
   }
+}
+
+class _DelayedApi extends _FakeMobileApiClient {
+  final pending = Completer<String>();
+  @override
+  Future<String> refreshToken({required String token}) => pending.future;
 }

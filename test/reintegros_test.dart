@@ -351,64 +351,73 @@ void main() {
       );
     },
   );
-  for (final width in [320.0, 1280.0]) {
-    testWidgets('monthly list and editor fit $width with enlarged text', (
-      tester,
-    ) async {
-      await tester.binding.setSurfaceSize(Size(width, 900));
-      addTearDown(() => tester.binding.setSurfaceSize(null));
-      final api = _Api();
-      addTearDown(api.dispose);
-      await tester.pumpWidget(
-        MaterialApp(
-          builder: (context, child) => MediaQuery(
-            data: MediaQuery.of(
-              context,
-            ).copyWith(textScaler: const TextScaler.linear(1.6)),
-            child: child!,
-          ),
-          home: ReintegrosPage(api: api, token: 'token'),
-        ),
+  for (final size in [
+    const Size(320, 640),
+    const Size(740, 360),
+    const Size(800, 1024),
+    const Size(1280, 900),
+  ]) {
+    for (final brightness in Brightness.values) {
+      testWidgets(
+        'monthly list and editor fit $size $brightness with enlarged text',
+        (tester) async {
+          await tester.binding.setSurfaceSize(size);
+          addTearDown(() => tester.binding.setSurfaceSize(null));
+          final api = _Api();
+          addTearDown(api.dispose);
+          await tester.pumpWidget(
+            MaterialApp(
+              theme: buildAppTheme(brightness: brightness),
+              builder: (context, child) => MediaQuery(
+                data: MediaQuery.of(
+                  context,
+                ).copyWith(textScaler: const TextScaler.linear(2)),
+                child: child!,
+              ),
+              home: ReintegrosPage(api: api, token: 'token'),
+            ),
+          );
+          await tester.pumpAndSettle();
+          expect(tester.takeException(), isNull);
+          await tester.tap(find.text('Cargar gastos'));
+          await tester.pumpAndSettle();
+          await tester.scrollUntilVisible(
+            find.text('Abrir 2026-09'),
+            160,
+            scrollable: find
+                .descendant(
+                  of: find.byType(BottomSheet),
+                  matching: find.byType(Scrollable),
+                )
+                .first,
+          );
+          await tester.pumpAndSettle();
+          await tester.tap(find.text('Abrir 2026-09'));
+          await tester.pumpAndSettle();
+          expect(api.periodQueries, contains('2026-09'));
+          await tester.ensureVisible(find.text('Agregar gasto (0/50)'));
+          await tester.pumpAndSettle();
+          await tester.tap(find.text('Agregar gasto (0/50)'));
+          await tester.pumpAndSettle();
+          await tester.scrollUntilVisible(
+            find.text('Guardar borrador'),
+            300,
+            scrollable: find
+                .descendant(
+                  of: find.byType(ReintegroEditor),
+                  matching: find.byType(Scrollable),
+                )
+                .first,
+          );
+          await tester.pumpAndSettle();
+          expect(tester.takeException(), isNull);
+          await tester.tap(find.text('Guardar borrador'));
+          await tester.pumpAndSettle();
+          expect(api.saved.single['gastos'], [containsPair('importe', null)]);
+          expect(find.text('Borrador'), findsOneWidget);
+        },
       );
-      await tester.pumpAndSettle();
-      expect(tester.takeException(), isNull);
-      await tester.tap(find.text('Cargar gastos'));
-      await tester.pumpAndSettle();
-      await tester.scrollUntilVisible(
-        find.text('Abrir 2026-09'),
-        160,
-        scrollable: find
-            .descendant(
-              of: find.byType(BottomSheet),
-              matching: find.byType(Scrollable),
-            )
-            .first,
-      );
-      await tester.pumpAndSettle();
-      await tester.tap(find.text('Abrir 2026-09'));
-      await tester.pumpAndSettle();
-      expect(api.periodQueries, contains('2026-09'));
-      await tester.ensureVisible(find.text('Agregar gasto (0/50)'));
-      await tester.pumpAndSettle();
-      await tester.tap(find.text('Agregar gasto (0/50)'));
-      await tester.pumpAndSettle();
-      await tester.scrollUntilVisible(
-        find.text('Guardar borrador'),
-        300,
-        scrollable: find
-            .descendant(
-              of: find.byType(ReintegroEditor),
-              matching: find.byType(Scrollable),
-            )
-            .first,
-      );
-      await tester.pumpAndSettle();
-      expect(tester.takeException(), isNull);
-      await tester.tap(find.text('Guardar borrador'));
-      await tester.pumpAndSettle();
-      expect(api.saved.single['gastos'], [containsPair('importe', null)]);
-      expect(find.text('Borrador'), findsOneWidget);
-    });
+    }
   }
   testWidgets('sector disabled keeps history but offers no creation', (
     tester,

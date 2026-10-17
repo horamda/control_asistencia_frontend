@@ -33,6 +33,23 @@ class SessionManager extends ChangeNotifier {
   final StreamController<void> _onUnauthorizedController =
       StreamController<void>.broadcast();
 
+  int _generation = 0;
+  bool _disposed = false;
+  Future<void> _storageTail = Future.value();
+  void _invalidatePending() {
+    _generation++;
+    _bootstrapping = false;
+    _refreshCompleter = null;
+    _refreshing = false;
+    _biometricLoading = false;
+  }
+
+  Future<void> _store(Future<void> Function() action) {
+    final task = _storageTail.then((_) => action());
+    _storageTail = task.catchError((Object _) {});
+    return task;
+  }
+
   LoginResponse? _session;
   bool _bootstrapping = true;
   bool _biometricLoading = false;
@@ -77,6 +94,7 @@ class SessionManager extends ChangeNotifier {
   }
 
   Future<void> bootstrap() async {
+    final generation = _generation;
     _bootstrapping = true;
     _statusMessage = null;
     notifyListeners();
@@ -86,6 +104,7 @@ class SessionManager extends ChangeNotifier {
     _biometricEnabled = biometricPref ?? true;
     _clockFeedbackProfile = await _sessionStorage.readClockFeedbackProfile();
     final envelope = await _sessionStorage.readEnvelope();
+    if (_disposed || generation != _generation) return;
     _hasStoredSession = envelope != null;
 
     if (envelope == null) {
@@ -116,6 +135,7 @@ class SessionManager extends ChangeNotifier {
       notifyListeners();
 
       final restored = await restoreWithBiometrics(auto: true);
+      if (_disposed || generation != _generation) return;
       if (!restored && _session != null) {
         _locked = true;
         _statusMessage = 'Desbloqueá la sesión con huella.';
@@ -135,7 +155,9 @@ class SessionManager extends ChangeNotifier {
     if (_biometricLoading) {
       return false;
     }
+    final generation = _generation;
     final envelope = await _sessionStorage.readEnvelope();
+    if (_disposed || generation != _generation) return false;
     if (envelope == null) {
       _hasStoredSession = false;
       _session = null;
@@ -164,6 +186,7 @@ class SessionManager extends ChangeNotifier {
     final ok = await _biometricAuthService.authenticate(
       reason: 'Usá tu huella para desbloquear la sesión.',
     );
+    if (_disposed || generation != _generation) return false;
     if (!ok) {
       _biometricLoading = false;
       if (!auto) {
@@ -184,6 +207,7 @@ class SessionManager extends ChangeNotifier {
       silent: auto,
       triggerUnauthorized: false,
     );
+    if (_disposed || generation != _generation) return false;
     if (!refreshed && _session == null) {
       _biometricLoading = false;
       notifyListeners();
@@ -198,6 +222,7 @@ class SessionManager extends ChangeNotifier {
   }
 
   Future<void> onLoginSuccess(LoginResponse session) async {
+    _invalidatePending();
     final now = DateTime.now();
     _session = session;
     _sessionStartedAt = now;
@@ -212,6 +237,8 @@ class SessionManager extends ChangeNotifier {
   }
 
   Future<void> logout({bool clearStored = true}) async {
+    _invalidatePending();
+    final generation = _generation;
     _stopTimers();
     _session = null;
     _locked = false;
@@ -221,13 +248,15 @@ class SessionManager extends ChangeNotifier {
     _lastActivityAt = null;
     _lastRefreshAt = null;
     if (clearStored) {
-      await _sessionStorage.clear();
+      await _store(_sessionStorage.clear);
+      if (_disposed || generation != _generation) return;
       _hasStoredSession = false;
     }
-    notifyListeners();
+    if (!_disposed && generation == _generation) notifyListeners();
   }
 
   Future<void> lockSession({String? reason}) async {
+    _invalidatePending();
     if (_session == null) {
       return;
     }
@@ -378,13 +407,15 @@ class SessionManager extends ChangeNotifier {
     bool triggerUnauthorized = true,
   }) async {
     final current = _session;
-    if (current == null) {
+    if (current == null || _locked || _disposed) {
       return false;
     }
     if (_refreshCompleter != null) {
       return _refreshCompleter!.future;
     }
 
+    final generation = _generation;
+    bool stale() => _disposed || generation != _generation;
     final completer = Completer<bool>();
     _refreshCompleter = completer;
     _refreshing = true;
@@ -397,6 +428,10 @@ class SessionManager extends ChangeNotifier {
       final refreshedToken = await _apiClient.refreshToken(
         token: current.token,
       );
+      if (stale()) {
+        completer.complete(false);
+        return false;
+      }
       _session = LoginResponse(
         token: refreshedToken,
         empleado: current.empleado,
@@ -408,10 +443,18 @@ class SessionManager extends ChangeNotifier {
         _statusMessage = 'Sesión recuperada automáticamente.';
       }
       await _persistCurrentEnvelope();
+      if (stale()) {
+        completer.complete(false);
+        return false;
+      }
       notifyListeners();
       completer.complete(true);
       return true;
     } on ApiException catch (e) {
+      if (stale()) {
+        completer.complete(false);
+        return false;
+      }
       if (_isUnauthorized(e)) {
         await _expireSession(
           reason: 'La sesión venció. Ingresá nuevamente.',
@@ -427,6 +470,10 @@ class SessionManager extends ChangeNotifier {
       completer.complete(false);
       return false;
     } catch (e, stack) {
+      if (stale()) {
+        completer.complete(false);
+        return false;
+      }
       _log.warning('Error inesperado al renovar sesión', e, stack);
       if (!silent) {
         _statusMessage = 'No se pudo renovar la sesión.';
@@ -435,9 +482,11 @@ class SessionManager extends ChangeNotifier {
       completer.complete(false);
       return false;
     } finally {
-      _refreshCompleter = null;
-      _refreshing = false;
-      notifyListeners();
+      if (!_disposed && identical(_refreshCompleter, completer)) {
+        _refreshCompleter = null;
+        _refreshing = false;
+        notifyListeners();
+      }
     }
   }
 
@@ -597,6 +646,8 @@ class SessionManager extends ChangeNotifier {
     required String reason,
     required bool clearStored,
   }) async {
+    _invalidatePending();
+    final generation = _generation;
     _stopTimers();
     _session = null;
     _locked = false;
@@ -609,7 +660,8 @@ class SessionManager extends ChangeNotifier {
     // en el mismo microtask, antes de que _onUnauthorizedController dispare navegación.
     notifyListeners();
     if (clearStored) {
-      await _sessionStorage.clear();
+      await _store(_sessionStorage.clear);
+      if (_disposed || generation != _generation) return;
       _hasStoredSession = false;
       notifyListeners();
     }
@@ -621,18 +673,24 @@ class SessionManager extends ChangeNotifier {
     if (current == null || startedAt == null) {
       return;
     }
-    await _sessionStorage.saveEnvelope(
-      StoredSessionEnvelope(
-        session: current,
-        sessionStartedAt: startedAt,
-        lastActivityAt: _lastActivityAt ?? DateTime.now(),
-        lastRefreshAt: _lastRefreshAt ?? DateTime.now(),
-      ),
-    );
+    final generation = _generation;
+    await _store(() async {
+      if (_disposed || generation != _generation) return;
+      await _sessionStorage.saveEnvelope(
+        StoredSessionEnvelope(
+          session: current,
+          sessionStartedAt: startedAt,
+          lastActivityAt: _lastActivityAt ?? DateTime.now(),
+          lastRefreshAt: _lastRefreshAt ?? DateTime.now(),
+        ),
+      );
+    });
   }
 
   @override
   void dispose() {
+    _disposed = true;
+    _invalidatePending();
     _stopTimers();
     _onUnauthorizedController.close();
     super.dispose();

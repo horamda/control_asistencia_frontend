@@ -641,23 +641,24 @@ class _CargasPageState extends State<CargasPage> {
                 textAlign: TextAlign.center,
               ),
               const SizedBox(height: 12),
+              Text(
+                'Registro #${row['id']}',
+                style: Theme.of(context).textTheme.bodySmall,
+                textAlign: TextAlign.center,
+              ),
+              const SizedBox(height: 8),
               Row(
                 mainAxisAlignment: MainAxisAlignment.center,
                 children: [
-                  Expanded(
+                  Flexible(
                     child: Text(
-                      'Registro #${row['id']}',
-                      style: Theme.of(context).textTheme.bodySmall,
+                      'Ver detalle',
+                      style: TextStyle(
+                        color: colors.primary,
+                        fontWeight: FontWeight.w600,
+                      ),
                       textAlign: TextAlign.center,
                     ),
-                  ),
-                  Text(
-                    'Ver detalle',
-                    style: TextStyle(
-                      color: colors.primary,
-                      fontWeight: FontWeight.w600,
-                    ),
-                    textAlign: TextAlign.center,
                   ),
                   Icon(
                     Icons.chevron_right_rounded,

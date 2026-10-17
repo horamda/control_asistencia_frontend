@@ -102,95 +102,104 @@ class _NotificationSettingsPageState extends State<NotificationSettingsPage>
         padding: const EdgeInsets.all(16),
         children: [
           AppCard(
-            child: Column(
-              children: [
-                Icon(
-                  Icons.notifications_active_outlined,
-                  size: 32,
-                  color: Theme.of(context).colorScheme.primary,
-                ),
-                const SizedBox(height: 12),
-                Text(_permission, textAlign: TextAlign.center),
-                const SizedBox(height: 8),
-                ValueListenableBuilder<String>(
-                  valueListenable: PushService.instance.status,
-                  builder: (_, status, _) =>
-                      Text(status, textAlign: TextAlign.center),
-                ),
-                if (_busy)
-                  const Padding(
-                    padding: EdgeInsets.all(12),
-                    child: LinearProgressIndicator(),
+            child: Padding(
+              padding: const EdgeInsets.all(16),
+              child: Column(
+                children: [
+                  Icon(
+                    Icons.notifications_active_outlined,
+                    size: 32,
+                    color: Theme.of(context).colorScheme.primary,
                   ),
-                if (_error != null)
-                  Padding(
-                    padding: const EdgeInsets.all(12),
-                    child: Text(_error!, textAlign: TextAlign.center),
+                  const SizedBox(height: 12),
+                  Text(_permission, textAlign: TextAlign.center),
+                  const SizedBox(height: 8),
+                  ValueListenableBuilder<String>(
+                    valueListenable: PushService.instance.status,
+                    builder: (_, status, _) =>
+                        Text(status, textAlign: TextAlign.center),
                   ),
-                const SizedBox(height: 12),
-                AppAdaptiveActions(
-                  children: [
-                    FilledButton(
-                      onPressed: _busy || !PushService.instance.supported
-                          ? null
-                          : () => _run(enable: true),
-                      child: const Text(
-                        'Activar notificaciones',
-                        textAlign: TextAlign.center,
+                  if (_busy)
+                    const Padding(
+                      padding: EdgeInsets.all(12),
+                      child: LinearProgressIndicator(),
+                    ),
+                  if (_error != null)
+                    Padding(
+                      padding: const EdgeInsets.all(12),
+                      child: Text(_error!, textAlign: TextAlign.center),
+                    ),
+                  const SizedBox(height: 12),
+                  AppAdaptiveActions(
+                    children: [
+                      FilledButton(
+                        onPressed: _busy || !PushService.instance.supported
+                            ? null
+                            : () => _run(enable: true),
+                        child: const Text(
+                          'Activar notificaciones',
+                          textAlign: TextAlign.center,
+                        ),
                       ),
-                    ),
-                    OutlinedButton(
-                      onPressed: _busy ? null : () => _run(),
-                      child: const Text('Verificar conexión'),
-                    ),
-                    if (_android)
                       OutlinedButton(
-                        onPressed: _busy ? null : _settings,
-                        child: const Text('Ajustes de Android'),
+                        onPressed: _busy ? null : () => _run(),
+                        child: const Text('Verificar conexión'),
                       ),
-                  ],
-                ),
-              ],
+                      if (_android)
+                        OutlinedButton(
+                          onPressed: _busy ? null : _settings,
+                          child: const Text('Ajustes de Android'),
+                        ),
+                    ],
+                  ),
+                ],
+              ),
             ),
           ),
           const SizedBox(height: 12),
           AppCard(
-            child: Column(
-              children: [
-                const Text(
-                  'Sonido y avisos en pantalla',
-                  style: TextStyle(fontWeight: FontWeight.w700),
-                  textAlign: TextAlign.center,
-                ),
-                const SizedBox(height: 8),
-                Text(
-                  _android
-                      ? 'En Ajustes de Android, entrá en Notificaciones. Allí podés activar o silenciar los avisos y ajustar sonido, vibración y avisos emergentes según las opciones de tu celular.'
-                      : 'En el navegador, abrí los permisos de este sitio y revisá Notificaciones. Si bloqueaste el permiso, habilitalo allí y volvé a verificar la conexión.',
-                  textAlign: TextAlign.center,
-                ),
-              ],
+            child: Padding(
+              padding: const EdgeInsets.all(16),
+              child: Column(
+                children: [
+                  const Text(
+                    'Sonido y avisos en pantalla',
+                    style: TextStyle(fontWeight: FontWeight.w700),
+                    textAlign: TextAlign.center,
+                  ),
+                  const SizedBox(height: 8),
+                  Text(
+                    _android
+                        ? 'En Ajustes de Android, entrá en Notificaciones. Allí podés activar o silenciar los avisos y ajustar sonido, vibración y avisos emergentes según las opciones de tu celular.'
+                        : 'En el navegador, abrí los permisos de este sitio y revisá Notificaciones. Si bloqueaste el permiso, habilitalo allí y volvé a verificar la conexión.',
+                    textAlign: TextAlign.center,
+                  ),
+                ],
+              ),
             ),
           ),
           const SizedBox(height: 12),
           const AppCard(
-            child: Column(
-              children: [
-                Text(
-                  'Con la app cerrada',
-                  style: TextStyle(fontWeight: FontWeight.w700),
-                ),
-                SizedBox(height: 8),
-                Text(
-                  'Mantené tu sesión iniciada, los permisos habilitados y conexión a Internet. Si forzás la detención desde Android, abrí FichaYa nuevamente.',
-                  textAlign: TextAlign.center,
-                ),
-                SizedBox(height: 12),
-                Text(
-                  'Los comunicados que la empresa conserve siguen disponibles en Comunicados, aunque borres la notificación del celular.',
-                  textAlign: TextAlign.center,
-                ),
-              ],
+            child: Padding(
+              padding: EdgeInsets.all(16),
+              child: Column(
+                children: [
+                  Text(
+                    'Con la app cerrada',
+                    style: TextStyle(fontWeight: FontWeight.w700),
+                  ),
+                  SizedBox(height: 8),
+                  Text(
+                    'Mantené tu sesión iniciada, los permisos habilitados y conexión a Internet. Si forzás la detención desde Android, abrí FichaYa nuevamente.',
+                    textAlign: TextAlign.center,
+                  ),
+                  SizedBox(height: 12),
+                  Text(
+                    'Los comunicados que la empresa conserve siguen disponibles en Comunicados, aunque borres la notificación del celular.',
+                    textAlign: TextAlign.center,
+                  ),
+                ],
+              ),
             ),
           ),
         ],

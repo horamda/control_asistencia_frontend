@@ -15,7 +15,8 @@ import '../network/mobile_api_client.dart';
 /// La contraseña nunca se guarda en texto plano: se aplica SHA-256 con un
 /// salt aleatorio de 32 bytes (HMAC-SHA256). Esto garantiza que incluso si
 /// el almacenamiento cifrado se ve comprometido, la contraseña original no
-/// puede recuperarse.
+/// se protege frente a lectura directa. Este hash heredado requiere migración
+/// a una derivación de contraseña lenta para resistir ataques de diccionario.
 ///
 /// Caducidad: [maxAgeHours] horas desde el ultimo login online exitoso.
 /// Pasado ese tiempo, el acceso offline queda bloqueado hasta el proximo
@@ -27,8 +28,8 @@ class OfflineCredentialsCache {
   );
 
   static const _keyDni = '_off_cred_dni';
-  static const _keyPwHash = '_off_cred_pw_hash';   // hash SHA-256
-  static const _keyPwSalt = '_off_cred_pw_salt';   // salt hex (32 bytes)
+  static const _keyPwHash = '_off_cred_pw_hash'; // hash SHA-256
+  static const _keyPwSalt = '_off_cred_pw_salt'; // salt hex (32 bytes)
   static const _keyEmpleado = '_off_cred_emp';
   static const _keySavedAt = '_off_cred_at';
   static const maxAgeHours = 72; // 3 dias de gracia
@@ -65,14 +66,8 @@ class OfflineCredentialsCache {
       _storage.write(key: _keyDni, value: dni.trim()),
       _storage.write(key: _keyPwHash, value: pwHash),
       _storage.write(key: _keyPwSalt, value: salt),
-      _storage.write(
-        key: _keyEmpleado,
-        value: jsonEncode(empleado.toJson()),
-      ),
-      _storage.write(
-        key: _keySavedAt,
-        value: DateTime.now().toIso8601String(),
-      ),
+      _storage.write(key: _keyEmpleado, value: jsonEncode(empleado.toJson())),
+      _storage.write(key: _keySavedAt, value: DateTime.now().toIso8601String()),
     ]);
   }
 
@@ -87,18 +82,20 @@ class OfflineCredentialsCache {
     final savedAt = await _storage.read(key: _keySavedAt);
     final empleadoJson = await _storage.read(key: _keyEmpleado);
 
-    if (storedDni == null || storedPwHash == null || storedSalt == null ||
+    if (storedDni == null ||
+        storedPwHash == null ||
+        storedSalt == null ||
         empleadoJson == null) {
       return const OfflineValidationResult.noCredentials();
     }
 
-    // Verificar caducidad
-    if (savedAt != null) {
-      final saved = DateTime.tryParse(savedAt);
-      if (saved != null &&
-          DateTime.now().difference(saved).inHours >= maxAgeHours) {
-        return const OfflineValidationResult.expired();
-      }
+    // Missing, malformed or future timestamps must never extend offline access.
+    final saved = savedAt == null ? null : DateTime.tryParse(savedAt);
+    final now = DateTime.now();
+    if (saved == null ||
+        saved.isAfter(now) ||
+        now.difference(saved) >= const Duration(hours: maxAgeHours)) {
+      return const OfflineValidationResult.expired();
     }
 
     // Verificar credenciales (comparacion de hashes)
@@ -143,22 +140,19 @@ class OfflineCredentialsCache {
 enum OfflineValidationStatus { ok, noCredentials, expired, wrongCredentials }
 
 class OfflineValidationResult {
-  const OfflineValidationResult._({
-    required this.status,
-    this.empleado,
-  });
+  const OfflineValidationResult._({required this.status, this.empleado});
 
   const OfflineValidationResult.ok(EmployeeSummary empleado)
-      : this._(status: OfflineValidationStatus.ok, empleado: empleado);
+    : this._(status: OfflineValidationStatus.ok, empleado: empleado);
 
   const OfflineValidationResult.noCredentials()
-      : this._(status: OfflineValidationStatus.noCredentials);
+    : this._(status: OfflineValidationStatus.noCredentials);
 
   const OfflineValidationResult.expired()
-      : this._(status: OfflineValidationStatus.expired);
+    : this._(status: OfflineValidationStatus.expired);
 
   const OfflineValidationResult.wrongCredentials()
-      : this._(status: OfflineValidationStatus.wrongCredentials);
+    : this._(status: OfflineValidationStatus.wrongCredentials);
 
   final OfflineValidationStatus status;
   final EmployeeSummary? empleado;

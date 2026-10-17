@@ -50,7 +50,7 @@ void main() {
           builder: (context, child) => MediaQuery(
             data: MediaQuery.of(
               context,
-            ).copyWith(textScaler: const TextScaler.linear(1.3)),
+            ).copyWith(textScaler: const TextScaler.linear(2)),
             child: child!,
           ),
           home: CargasPage(apiClient: client, token: 'token'),

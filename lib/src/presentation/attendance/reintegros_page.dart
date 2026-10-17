@@ -240,14 +240,21 @@ class _ReintegrosPageState extends State<ReintegrosPage> {
                             textAlign: TextAlign.center,
                           ),
                         ),
-                      const Text(
-                        'Podés cargar gastos del mes en curso y, hasta el día 15 inclusive, completar y enviar la rendición del mes anterior. Por eso pueden aparecer dos meses disponibles.',
-                        textAlign: TextAlign.center,
-                      ),
-                      const SizedBox(height: 8),
-                      const Text(
-                        'Desde el día 16, el mes anterior queda cerrado para cargar o editar, salvo reapertura de Administración. El historial se conserva. Si ya existe una rendición para el mes elegido, se abrirá la misma.',
-                        textAlign: TextAlign.center,
+                      ExpansionTile(
+                        tilePadding: EdgeInsets.zero,
+                        title: const Text('Plazos y condiciones'),
+                        leading: const Icon(Icons.info_outline_rounded),
+                        children: [
+                          const Text(
+                            'Podés cargar gastos del mes en curso y, hasta el día 15 inclusive, completar y enviar la rendición del mes anterior. Por eso pueden aparecer dos meses disponibles.',
+                            textAlign: TextAlign.center,
+                          ),
+                          const SizedBox(height: 8),
+                          const Text(
+                            'Desde el día 16, el mes anterior queda cerrado para cargar o editar, salvo reapertura de Administración. El historial se conserva. Si ya existe una rendición para el mes elegido, se abrirá la misma.',
+                            textAlign: TextAlign.center,
+                          ),
+                        ],
                       ),
                     ] else
                       Text(
@@ -402,20 +409,37 @@ class _ReintegrosPageState extends State<ReintegrosPage> {
                     ),
                   ),
                 for (final item in reintegroMaps(history!['items']))
-                  AppCard(
-                    child: ListTile(
-                      contentPadding: const EdgeInsets.all(16),
-                      title: Text(
-                        '${item['periodo'] ?? 'Registro histórico'} · ${_state(item['estado'])}',
+                  _Section(
+                    title: '${item['periodo'] ?? 'Registro anterior'}',
+                    children: [
+                      Text(
+                        _state(item['estado']),
+                        textAlign: TextAlign.center,
+                        style: Theme.of(context).textTheme.labelLarge?.copyWith(
+                          color: Theme.of(context).colorScheme.primary,
+                        ),
+                      ),
+                      const SizedBox(height: 12),
+                      _Amounts(
+                        requested: item['total_solicitado'],
+                        approved: item['total_aprobado'],
+                      ),
+                      const SizedBox(height: 12),
+                      Text(
+                        'Creada: ${item['creado_at'] ?? 'Sin fecha'}',
                         textAlign: TextAlign.center,
                       ),
-                      subtitle: Text(
-                        'Creada: ${item['creado_at'] ?? '—'}\nSolicitado: ${_money(item['total_solicitado'])}\nAprobado: ${_money(item['total_aprobado'])}\nKilómetros: ${item['kilometros'] ?? 'No informados'}',
+                      Text(
+                        'Kil\u00f3metros: ${item['kilometros'] ?? 'No informados'}',
                         textAlign: TextAlign.center,
                       ),
-                      trailing: const Icon(Icons.chevron_right_rounded),
-                      onTap: () => open(item['id'] as int),
-                    ),
+                      const SizedBox(height: 12),
+                      OutlinedButton.icon(
+                        onPressed: () => open(item['id'] as int),
+                        icon: const Icon(Icons.arrow_forward_rounded),
+                        label: const Text('Ver rendici\u00f3n'),
+                      ),
+                    ],
                   ),
                 Wrap(
                   alignment: WrapAlignment.center,
@@ -1318,10 +1342,8 @@ class _ReintegroEditorState extends State<ReintegroEditor>
             top: false,
             child: Padding(
               padding: const EdgeInsets.symmetric(horizontal: 16, vertical: 12),
-              child: Wrap(
-                spacing: 12,
-                runSpacing: 12,
-                alignment: WrapAlignment.center,
+              child: AppAdaptiveActions(
+                minWidth: 220,
                 children: [
                   OutlinedButton(
                     onPressed: busy || blocked || refreshing
@@ -1515,10 +1537,8 @@ class _ReintegroEditorState extends State<ReintegroEditor>
     );
   }
 
-  Widget photoButtons(_Expense? expense) => Wrap(
-    spacing: 8,
-    runSpacing: 8,
-    alignment: WrapAlignment.center,
+  Widget photoButtons(_Expense? expense) => AppAdaptiveActions(
+    minWidth: 180,
     children: [
       for (final source in [ImageSource.camera, ImageSource.gallery])
         OutlinedButton.icon(
@@ -1704,6 +1724,42 @@ Future<bool> _confirm(
     ) ??
     false;
 
+class _Amounts extends StatelessWidget {
+  const _Amounts({required this.requested, required this.approved});
+  final dynamic requested;
+  final dynamic approved;
+  @override
+  Widget build(BuildContext context) => AppAdaptiveActions(
+    minWidth: 220,
+    children: [
+      for (final entry in {
+        'Solicitado': requested,
+        'Aprobado': approved,
+      }.entries)
+        Container(
+          padding: const EdgeInsets.all(12),
+          decoration: BoxDecoration(
+            color: Theme.of(context).colorScheme.surfaceContainerHighest,
+            borderRadius: BorderRadius.circular(12),
+          ),
+          child: Column(
+            children: [
+              Text(entry.key, style: Theme.of(context).textTheme.bodySmall),
+              const SizedBox(height: 4),
+              Text(
+                _money(entry.value),
+                textAlign: TextAlign.center,
+                style: Theme.of(
+                  context,
+                ).textTheme.titleMedium?.copyWith(fontWeight: FontWeight.w700),
+              ),
+            ],
+          ),
+        ),
+    ],
+  );
+}
+
 class _Body extends StatelessWidget {
   const _Body({required this.child});
   final Widget child;
@@ -1726,6 +1782,10 @@ class _Section extends StatelessWidget {
   @override
   Widget build(BuildContext context) => AppCard(
     margin: const EdgeInsets.only(bottom: 16),
+    shape: RoundedRectangleBorder(
+      borderRadius: BorderRadius.circular(16),
+      side: BorderSide(color: Theme.of(context).colorScheme.outlineVariant),
+    ),
     child: Padding(
       padding: const EdgeInsets.all(16),
       child: Column(

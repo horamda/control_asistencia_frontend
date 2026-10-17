@@ -501,12 +501,12 @@ class _PedidoCard extends StatelessWidget {
         child: Column(
           crossAxisAlignment: CrossAxisAlignment.center,
           children: [
-            Row(
-              mainAxisAlignment: MainAxisAlignment.center,
+            Column(
               children: [
                 const Icon(Icons.inventory_2_outlined, size: 22),
                 const SizedBox(width: 8),
-                Expanded(
+                Padding(
+                  padding: const EdgeInsets.symmetric(vertical: 8),
                   child: Text(
                     item.periodo ?? '—',
                     style: const TextStyle(fontWeight: FontWeight.w600),
@@ -532,11 +532,10 @@ class _PedidoCard extends StatelessWidget {
               ...item.items.map(
                 (l) => Padding(
                   padding: const EdgeInsets.only(bottom: 4),
-                  child: Row(
-                    mainAxisAlignment: MainAxisAlignment.center,
+                  child: Column(
                     children: [
-                      const SizedBox(width: 30),
-                      Expanded(
+                      Padding(
+                        padding: const EdgeInsets.symmetric(vertical: 4),
                         child: Text(
                           l.descripcion ??
                               l.codigoArticulo ??
@@ -582,8 +581,7 @@ class _PedidoCard extends StatelessWidget {
             ],
             if (onEditar != null || onCancelar != null) ...[
               const SizedBox(height: 8),
-              Row(
-                mainAxisAlignment: MainAxisAlignment.end,
+              AppAdaptiveActions(
                 children: [
                   if (onEditar != null)
                     TextButton.icon(
@@ -917,13 +915,16 @@ class _PedidoFormPageState extends State<_PedidoFormPage> {
           return Center(
             child: ConstrainedBox(
               constraints: BoxConstraints(maxWidth: maxWidth),
-              child: Column(
-                crossAxisAlignment: CrossAxisAlignment.center,
-                children: [
-                  if (_mostrarAvisoPlantilla) _buildAvisoPlantilla(),
-                  if (_lineas.isNotEmpty) _buildCarrito(),
-                  _buildFilters(),
-                  Expanded(child: _buildCatalog()),
+              child: CustomScrollView(
+                keyboardDismissBehavior:
+                    ScrollViewKeyboardDismissBehavior.onDrag,
+                slivers: [
+                  if (_mostrarAvisoPlantilla)
+                    SliverToBoxAdapter(child: _buildAvisoPlantilla()),
+                  if (_lineas.isNotEmpty)
+                    SliverToBoxAdapter(child: _buildCarrito()),
+                  SliverToBoxAdapter(child: _buildFilters()),
+                  _buildCatalog(),
                 ],
               ),
             ),
@@ -984,11 +985,11 @@ class _PedidoFormPageState extends State<_PedidoFormPage> {
             child: Center(
               child: ConstrainedBox(
                 constraints: const BoxConstraints(maxWidth: 1040),
-                child: Row(
-                  mainAxisAlignment: MainAxisAlignment.center,
+                child: AppAdaptiveActions(
+                  minWidth: 280,
                   children: [
-                    Expanded(
-                      child: _lineas.isEmpty
+                    Builder(
+                      builder: (context) => _lineas.isEmpty
                           ? Text(
                               'Agregá artículos al pedido',
                               style: Theme.of(context).textTheme.bodySmall
@@ -1016,7 +1017,6 @@ class _PedidoFormPageState extends State<_PedidoFormPage> {
                               ],
                             ),
                     ),
-                    const SizedBox(width: 12),
                     FilledButton.icon(
                       onPressed: _lineas.isNotEmpty && !_submitting
                           ? _confirmAndSubmit
@@ -1103,7 +1103,7 @@ class _PedidoFormPageState extends State<_PedidoFormPage> {
           ),
           const SizedBox(height: 6),
           SizedBox(
-            height: 36,
+            height: 32 + MediaQuery.textScalerOf(context).scale(16),
             child: ListView.separated(
               scrollDirection: Axis.horizontal,
               padding: const EdgeInsets.only(right: 16),
@@ -1197,62 +1197,70 @@ class _PedidoFormPageState extends State<_PedidoFormPage> {
 
   Widget _buildCatalog() {
     if (_loadingCatalog) {
-      return const Center(
-        child: Column(
-          mainAxisSize: MainAxisSize.min,
-          crossAxisAlignment: CrossAxisAlignment.center,
-          children: [
-            CircularProgressIndicator(),
-            SizedBox(height: 12),
-            Text('Cargando catálogo...', textAlign: TextAlign.center),
-          ],
+      return const SliverToBoxAdapter(
+        child: Center(
+          child: Column(
+            mainAxisSize: MainAxisSize.min,
+            crossAxisAlignment: CrossAxisAlignment.center,
+            children: [
+              CircularProgressIndicator(),
+              SizedBox(height: 12),
+              Text('Cargando catálogo...', textAlign: TextAlign.center),
+            ],
+          ),
         ),
       );
     }
     if (_catalogError != null) {
-      return Center(
-        child: Column(
-          mainAxisSize: MainAxisSize.min,
-          crossAxisAlignment: CrossAxisAlignment.center,
-          children: [
-            Text(_catalogError!, textAlign: TextAlign.center),
-            const SizedBox(height: 12),
-            FilledButton.icon(
-              onPressed: _loadAllCatalog,
-              icon: const Icon(Icons.refresh),
-              label: const Text('Reintentar', textAlign: TextAlign.center),
-            ),
-          ],
+      return SliverToBoxAdapter(
+        child: Center(
+          child: Column(
+            mainAxisSize: MainAxisSize.min,
+            crossAxisAlignment: CrossAxisAlignment.center,
+            children: [
+              Text(_catalogError!, textAlign: TextAlign.center),
+              const SizedBox(height: 12),
+              FilledButton.icon(
+                onPressed: _loadAllCatalog,
+                icon: const Icon(Icons.refresh),
+                label: const Text('Reintentar', textAlign: TextAlign.center),
+              ),
+            ],
+          ),
         ),
       );
     }
     final rows = _catalogRows();
     if (rows.isEmpty) {
-      return const Center(
-        child: Text('Sin resultados.', textAlign: TextAlign.center),
+      return const SliverToBoxAdapter(
+        child: Center(
+          child: Text('Sin resultados.', textAlign: TextAlign.center),
+        ),
       );
     }
-    return ListView.builder(
-      padding: const EdgeInsets.symmetric(horizontal: 16),
-      itemCount: rows.length,
-      itemBuilder: (context, index) {
-        final row = rows[index];
-        if (row is String) {
-          return _DivisionHeader(label: row);
-        }
-        final art = row as CatalogoPedidoMercaderiaItem;
-        final existing = _lineas
-            .where((l) => l.articuloId == art.id)
-            .firstOrNull;
-        return _ArticuloTile(
-          articulo: art,
-          cantidadActual: _PedidoCantidad(
-            bultos: existing?.cantidadBultos ?? 0,
-            unidades: existing?.cantidadUnidades ?? 0,
-          ),
-          onChanged: (cantidad) => _addOrUpdate(art, cantidad),
-        );
-      },
+    return SliverPadding(
+      padding: const EdgeInsets.fromLTRB(16, 8, 16, 24),
+      sliver: SliverList.builder(
+        itemCount: rows.length,
+        itemBuilder: (context, index) {
+          final row = rows[index];
+          if (row is String) {
+            return _DivisionHeader(label: row);
+          }
+          final art = row as CatalogoPedidoMercaderiaItem;
+          final existing = _lineas
+              .where((l) => l.articuloId == art.id)
+              .firstOrNull;
+          return _ArticuloTile(
+            articulo: art,
+            cantidadActual: _PedidoCantidad(
+              bultos: existing?.cantidadBultos ?? 0,
+              unidades: existing?.cantidadUnidades ?? 0,
+            ),
+            onChanged: (cantidad) => _addOrUpdate(art, cantidad),
+          );
+        },
+      ),
     );
   }
 
@@ -1392,48 +1400,52 @@ class _ArticuloTile extends StatelessWidget {
       if (articulo.familia != null) articulo.familia!,
     ];
     if (parts.isEmpty) return null;
-    return Text(
-      parts.join(' · '),
-      maxLines: 1,
-      overflow: TextOverflow.ellipsis,
-      textAlign: TextAlign.center,
-    );
+    return Text(parts.join(' · '), textAlign: TextAlign.center);
   }
 
   @override
   Widget build(BuildContext context) {
     final cs = Theme.of(context).colorScheme;
     final inCart = !cantidadActual.isEmpty;
-    return Material(
+    return Card(
       color: inCart
           ? cs.primaryContainer.withValues(alpha: 0.35)
-          : Colors.transparent,
-      borderRadius: BorderRadius.circular(10),
-      child: ListTile(
-        contentPadding: const EdgeInsets.symmetric(horizontal: 8, vertical: 2),
-        shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(10)),
-        leading: SizedBox(
-          width: 22,
-          child: inCart
-              ? Icon(Icons.check_circle, color: cs.primary, size: 22)
-              : null,
-        ),
-        title: Text(
-          articulo.descripcion ??
-              articulo.codigoArticulo ??
-              'Artículo #${articulo.id}',
-          maxLines: 2,
-          overflow: TextOverflow.ellipsis,
-          textAlign: TextAlign.center,
-        ),
-        subtitle: _buildSubtitle(),
-        trailing: SizedBox(
-          width: 184,
-          child: Row(
-            mainAxisAlignment: MainAxisAlignment.center,
-            children: [
-              Expanded(
-                child: _CantidadStepper(
+          : cs.surfaceContainerLow,
+      margin: const EdgeInsets.symmetric(vertical: 6),
+      shape: RoundedRectangleBorder(
+        borderRadius: BorderRadius.circular(14),
+        side: BorderSide(color: inCart ? cs.primary : cs.outlineVariant),
+      ),
+      child: Column(
+        children: [
+          ListTile(
+            contentPadding: const EdgeInsets.symmetric(
+              horizontal: 8,
+              vertical: 2,
+            ),
+            shape: RoundedRectangleBorder(
+              borderRadius: BorderRadius.circular(10),
+            ),
+            leading: SizedBox(
+              width: 22,
+              child: inCart
+                  ? Icon(Icons.check_circle, color: cs.primary, size: 22)
+                  : null,
+            ),
+            title: Text(
+              articulo.descripcion ??
+                  articulo.codigoArticulo ??
+                  'Artículo #${articulo.id}',
+              textAlign: TextAlign.center,
+            ),
+            subtitle: _buildSubtitle(),
+          ),
+          Padding(
+            padding: const EdgeInsets.all(12),
+            child: AppAdaptiveActions(
+              minWidth: 160,
+              children: [
+                _CantidadStepper(
                   label: 'Bultos',
                   value: cantidadActual.bultos,
                   onChanged: (value) => onChanged(
@@ -1443,10 +1455,7 @@ class _ArticuloTile extends StatelessWidget {
                     ),
                   ),
                 ),
-              ),
-              const SizedBox(width: 4),
-              Expanded(
-                child: _CantidadStepper(
+                _CantidadStepper(
                   label: 'Unidades',
                   value: cantidadActual.unidades,
                   onChanged: (value) => onChanged(
@@ -1456,10 +1465,10 @@ class _ArticuloTile extends StatelessWidget {
                     ),
                   ),
                 ),
-              ),
-            ],
+              ],
+            ),
           ),
-        ),
+        ],
       ),
     );
   }
@@ -1484,45 +1493,46 @@ class _CantidadStepper extends StatelessWidget {
   @override
   Widget build(BuildContext context) {
     return SizedBox(
-      height: 48,
       child: Column(
         mainAxisAlignment: MainAxisAlignment.center,
         children: [
           Text(label, style: Theme.of(context).textTheme.labelSmall),
           SizedBox(
-            height: 30,
             child: Row(
               mainAxisAlignment: MainAxisAlignment.center,
               children: [
                 IconButton(
                   constraints: const BoxConstraints.tightFor(
-                    width: 28,
-                    height: 28,
+                    width: 48,
+                    height: 48,
                   ),
-                  visualDensity: VisualDensity.compact,
+                  visualDensity: VisualDensity.standard,
                   padding: EdgeInsets.zero,
+                  tooltip: 'Quitar $label',
                   icon: const Icon(Icons.remove_circle_outline, size: 19),
                   onPressed: value > 0 ? () => onChanged(value - 1) : null,
                 ),
-                InkWell(
-                  onTap: () => _editar(context),
-                  borderRadius: BorderRadius.circular(6),
-                  child: SizedBox(
-                    width: 28,
-                    child: Text(
-                      '$value',
-                      textAlign: TextAlign.center,
-                      style: const TextStyle(fontWeight: FontWeight.w600),
+                Expanded(
+                  child: InkWell(
+                    onTap: () => _editar(context),
+                    borderRadius: BorderRadius.circular(6),
+                    child: SizedBox(
+                      child: Text(
+                        '$value',
+                        textAlign: TextAlign.center,
+                        style: const TextStyle(fontWeight: FontWeight.w600),
+                      ),
                     ),
                   ),
                 ),
                 IconButton(
                   constraints: const BoxConstraints.tightFor(
-                    width: 28,
-                    height: 28,
+                    width: 48,
+                    height: 48,
                   ),
-                  visualDensity: VisualDensity.compact,
+                  visualDensity: VisualDensity.standard,
                   padding: EdgeInsets.zero,
+                  tooltip: 'Agregar $label',
                   icon: const Icon(Icons.add_circle_outline, size: 19),
                   onPressed: () => onChanged(value + 1),
                 ),
@@ -1547,6 +1557,7 @@ Future<int?> _promptQuantity(
     context: context,
     builder: (ctx) => AlertDialog(
       title: Text(label),
+      scrollable: true,
       content: TextField(
         controller: ctrl,
         autofocus: true,
@@ -1575,136 +1586,75 @@ Future<int?> _promptQuantity(
 
 class _PedidoConfirmSheet extends StatelessWidget {
   const _PedidoConfirmSheet({required this.lineas, required this.esEdicion});
-
   final List<_LineaEntry> lineas;
   final bool esEdicion;
-
   @override
-  Widget build(BuildContext context) {
-    final cs = Theme.of(context).colorScheme;
-    final totalBultos = lineas.fold(0, (s, l) => s + l.cantidadBultos);
-    final unidadesSueltas = lineas.fold(0, (s, l) => s + l.cantidadUnidades);
-    final totalUnidades = lineas.fold(0, (s, l) => s + l.totalUnidades);
-
-    return Padding(
+  Widget build(BuildContext context) => SafeArea(
+    child: SingleChildScrollView(
       padding: EdgeInsets.fromLTRB(
-        24,
         16,
-        24,
-        24 + MediaQuery.of(context).viewInsets.bottom,
+        20,
+        16,
+        20 + MediaQuery.viewInsetsOf(context).bottom,
       ),
-      child: Center(
-        child: ConstrainedBox(
-          constraints: const BoxConstraints(maxWidth: 480),
-          child: Column(
-            mainAxisSize: MainAxisSize.min,
-            crossAxisAlignment: CrossAxisAlignment.start,
-            children: [
-              Center(
-                child: Container(
-                  width: 36,
-                  height: 4,
-                  decoration: BoxDecoration(
-                    color: cs.outlineVariant,
-                    borderRadius: BorderRadius.circular(2),
+      child: Column(
+        mainAxisSize: MainAxisSize.min,
+        children: [
+          Text(
+            esEdicion ? 'Confirmar cambios' : 'Confirmar pedido',
+            textAlign: TextAlign.center,
+            style: Theme.of(context).textTheme.titleMedium,
+          ),
+          const SizedBox(height: 8),
+          const Text(
+            'Revis\u00e1 los art\u00edculos antes de enviar.',
+            textAlign: TextAlign.center,
+          ),
+          const SizedBox(height: 16),
+          for (final l in lineas)
+            Padding(
+              padding: const EdgeInsets.symmetric(vertical: 8),
+              child: Column(
+                children: [
+                  Text(l.descripcion, textAlign: TextAlign.center),
+                  Text(
+                    _formatPedidoCantidades(
+                      l.cantidadBultos,
+                      l.cantidadUnidades,
+                    ),
+                    textAlign: TextAlign.center,
+                    style: Theme.of(context).textTheme.bodySmall,
                   ),
+                ],
+              ),
+            ),
+          const Divider(),
+          Text(
+            '${lineas.fold<int>(0, (s, l) => s + l.totalUnidades)} unidades equivalentes',
+            textAlign: TextAlign.center,
+            style: Theme.of(context).textTheme.titleSmall,
+          ),
+          const SizedBox(height: 16),
+          AppAdaptiveActions(
+            children: [
+              FilledButton.icon(
+                onPressed: () => Navigator.of(context).pop(true),
+                icon: const Icon(Icons.send_outlined),
+                label: Text(
+                  esEdicion ? 'Guardar cambios' : 'Enviar pedido',
+                  textAlign: TextAlign.center,
                 ),
               ),
-              const SizedBox(height: 20),
-              Text(
-                esEdicion ? 'Confirmar cambios' : 'Confirmar pedido',
-                style: Theme.of(
-                  context,
-                ).textTheme.titleLarge?.copyWith(fontWeight: FontWeight.w700),
-              ),
-              const SizedBox(height: 4),
-              Text(
-                'Revisá los artículos antes de enviar.',
-                style: Theme.of(
-                  context,
-                ).textTheme.bodySmall?.copyWith(color: cs.onSurfaceVariant),
-              ),
-              const SizedBox(height: 16),
-              ConstrainedBox(
-                constraints: const BoxConstraints(maxHeight: 260),
-                child: ListView.separated(
-                  shrinkWrap: true,
-                  itemCount: lineas.length,
-                  separatorBuilder: (_, __) => const Divider(height: 1),
-                  itemBuilder: (_, i) {
-                    final l = lineas[i];
-                    return Padding(
-                      padding: const EdgeInsets.symmetric(vertical: 10),
-                      child: Row(
-                        children: [
-                          Expanded(
-                            child: Text(
-                              l.descripcion,
-                              style: const TextStyle(
-                                fontWeight: FontWeight.w500,
-                              ),
-                            ),
-                          ),
-                          const SizedBox(width: 12),
-                          Text(
-                            _formatPedidoCantidades(
-                              l.cantidadBultos,
-                              l.cantidadUnidades,
-                            ),
-                            style: TextStyle(color: cs.onSurfaceVariant),
-                          ),
-                        ],
-                      ),
-                    );
-                  },
-                ),
-              ),
-              const Divider(),
-              Padding(
-                padding: const EdgeInsets.symmetric(vertical: 6),
-                child: Row(
-                  mainAxisAlignment: MainAxisAlignment.spaceBetween,
-                  children: [
-                    Text(
-                      'Total',
-                      style: Theme.of(context).textTheme.titleSmall?.copyWith(
-                        fontWeight: FontWeight.w600,
-                      ),
-                    ),
-                    Text(
-                      '${_formatPedidoCantidades(totalBultos, unidadesSueltas)} · $totalUnidades unidades equivalentes',
-                      style: Theme.of(context).textTheme.titleSmall?.copyWith(
-                        fontWeight: FontWeight.w700,
-                      ),
-                    ),
-                  ],
-                ),
-              ),
-              const SizedBox(height: 16),
-              SizedBox(
-                height: 50,
-                width: double.infinity,
-                child: FilledButton.icon(
-                  onPressed: () => Navigator.of(context).pop(true),
-                  icon: const Icon(Icons.send_outlined),
-                  label: Text(esEdicion ? 'Guardar cambios' : 'Enviar pedido'),
-                ),
-              ),
-              const SizedBox(height: 8),
-              SizedBox(
-                height: 46,
-                width: double.infinity,
-                child: OutlinedButton(
-                  onPressed: () => Navigator.of(context).pop(false),
-                  child: const Text('Revisar pedido'),
-                ),
+              OutlinedButton(
+                onPressed: () => Navigator.of(context).pop(false),
+                child: const Text('Revisar pedido'),
               ),
             ],
           ),
-        ),
+        ],
       ),
-    );
-  }
+    ),
+  );
 }
 
 /// Diálogo para editar bultos y unidades de una línea ya agregada al carrito,
