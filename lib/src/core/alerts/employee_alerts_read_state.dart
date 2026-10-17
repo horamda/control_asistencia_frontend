@@ -12,7 +12,15 @@ class EmployeeAlertsReadState {
   final String _key;
   static const _storage = FlutterSecureStorage();
 
-  Map<String, String> fingerprints(EmployeeAlertsSnapshot snapshot) {
+  // API summaries may repeat a record in "current" and "latest", and tied
+  // timestamps may arrive in a different order. Neither is a new notification.
+  List<String> _canonical(Iterable<List<Object?>> records) =>
+      records.map(jsonEncode).toSet().toList()..sort();
+
+  Map<String, String> fingerprints(
+    EmployeeAlertsSnapshot snapshot, {
+    bool legacy = false,
+  }) {
     final result = <String, String>{};
     final a = snapshot.adelantos;
     final m = snapshot.mercaderia;
@@ -23,7 +31,9 @@ class EmployeeAlertsReadState {
       ].whereType<AdelantoItem>();
       if (items.isNotEmpty) {
         result['adelantos'] = jsonEncode(
-          items.map((e) => [e.id, e.estado, e.resueltoAt]).toList(),
+          legacy
+              ? items.map((e) => [e.id, e.estado, e.resueltoAt]).toList()
+              : _canonical(items.map((e) => [e.id, e.estado, e.resueltoAt])),
         );
       }
     }
@@ -35,7 +45,9 @@ class EmployeeAlertsReadState {
       ].whereType<PedidoMercaderiaItem>();
       if (items.isNotEmpty) {
         result['mercaderia'] = jsonEncode(
-          items.map((e) => [e.id, e.estado, e.resueltaAt]).toList(),
+          legacy
+              ? items.map((e) => [e.id, e.estado, e.resueltaAt]).toList()
+              : _canonical(items.map((e) => [e.id, e.estado, e.resueltaAt])),
         );
       }
     }
@@ -47,8 +59,22 @@ class EmployeeAlertsReadState {
         f.enProceso,
         f.resueltos,
         f.vencidos,
-        for (final e in snapshot.feedbackRecent)
-          [e.id, e.estado, e.updatedAt, e.resueltoAt],
+        if (legacy)
+          ...snapshot.feedbackRecent.map(
+            (e) => [e.id, e.estado, e.updatedAt, e.resueltoAt],
+          )
+        else
+          _canonical(
+            snapshot.feedbackRecent.map(
+              (e) => [
+                e.id,
+                e.estado,
+                e.estadoActual,
+                e.updatedAt,
+                e.resueltoAt,
+              ],
+            ),
+          ),
       ]);
     }
     return result.map(
@@ -66,9 +92,11 @@ class EmployeeAlertsReadState {
 
   Future<Set<String>> unreadModules(EmployeeAlertsSnapshot snapshot) async {
     final seen = await _read();
-    return fingerprints(
-      snapshot,
-    ).entries.where((e) => seen[e.key] != e.value).map((e) => e.key).toSet();
+    final previous = fingerprints(snapshot, legacy: true);
+    return fingerprints(snapshot).entries
+        .where((e) => seen[e.key] != e.value && seen[e.key] != previous[e.key])
+        .map((e) => e.key)
+        .toSet();
   }
 
   Future<int> unreadCount(EmployeeAlertsSnapshot snapshot) async =>

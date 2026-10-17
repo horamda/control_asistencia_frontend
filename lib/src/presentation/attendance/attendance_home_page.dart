@@ -514,8 +514,11 @@ class _AttendanceHomePageState extends State<AttendanceHomePage>
     await _homeCoordinator.openGpsLocation(context);
   }
 
-  Future<void> _loadAlertsOverview() async {
-    if (_alertsLoading) return;
+  int _alertsRequest = 0;
+
+  Future<void> _loadAlertsOverview({bool force = false}) async {
+    if (_alertsLoading && !force) return;
+    final request = ++_alertsRequest;
     _alertsLoading = true;
     try {
       final snapshot = await _alertsRepository.loadDetails(token: widget.token);
@@ -525,6 +528,7 @@ class _AttendanceHomePageState extends State<AttendanceHomePage>
         employeeId: widget.empleado.id,
       ).unreadCount(snapshot);
       if (!mounted) return;
+      if (request != _alertsRequest) return;
       setState(() => _alertsCount = count);
     } catch (error, stackTrace) {
       _log.warning(
@@ -533,7 +537,7 @@ class _AttendanceHomePageState extends State<AttendanceHomePage>
         stackTrace,
       );
     } finally {
-      _alertsLoading = false;
+      if (request == _alertsRequest) _alertsLoading = false;
     }
   }
 
@@ -548,7 +552,7 @@ class _AttendanceHomePageState extends State<AttendanceHomePage>
       employeeId: widget.empleado.id,
     );
     if (mounted) {
-      unawaited(_loadAlertsOverview());
+      unawaited(_loadAlertsOverview(force: true));
     }
   }
 
@@ -2472,6 +2476,25 @@ class _AttendanceHomePageState extends State<AttendanceHomePage>
                     // ── Stats grid (4 tiles) ───────────────────────────
                     AttendanceQuickActionsCard(
                       items: [
+                        AttendanceQuickActionItem(
+                          icon: Icons.notifications_outlined,
+                          label: 'Notificaciones',
+                          onTap: _submitting
+                              ? null
+                              : () => unawaited(_openEmployeeAlerts()),
+                        ),
+                        AttendanceQuickActionItem(
+                          icon: Icons.notifications_active_outlined,
+                          label: 'Ajustes de avisos',
+                          onTap: _submitting
+                              ? null
+                              : () => Navigator.of(context).push(
+                                  MaterialPageRoute<void>(
+                                    builder: (_) =>
+                                        const NotificationSettingsPage(),
+                                  ),
+                                ),
+                        ),
                         AttendanceQuickActionItem(
                           icon: Icons.campaign_outlined,
                           label: _comunicadosUnread > 0

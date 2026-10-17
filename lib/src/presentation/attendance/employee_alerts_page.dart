@@ -34,6 +34,7 @@ class _EmployeeAlertsPageState extends State<EmployeeAlertsPage> {
   late final EmployeeAlertsRepository _alertsRepository;
 
   bool _loading = true;
+  int _loadRequest = 0;
   bool _marking = false;
   bool _readFailed = false;
   int _unreadCount = 0;
@@ -63,7 +64,8 @@ class _EmployeeAlertsPageState extends State<EmployeeAlertsPage> {
   }
 
   Future<void> _loadAll() async {
-    if (!mounted) return;
+    if (!mounted || _marking) return;
+    final request = ++_loadRequest;
     setState(() {
       _loading = true;
       _adelantosError = null;
@@ -90,7 +92,7 @@ class _EmployeeAlertsPageState extends State<EmployeeAlertsPage> {
       }
     }
 
-    if (mounted) {
+    if (mounted && request == _loadRequest) {
       setState(() {
         _snapshot = snapshot;
         _unreadModules = unread;
@@ -163,7 +165,9 @@ class _EmployeeAlertsPageState extends State<EmployeeAlertsPage> {
         actions: [
           IconButton(
             tooltip: 'Actualizar',
-            onPressed: _loading ? null : () => unawaited(_loadAll()),
+            onPressed: _loading || _marking
+                ? null
+                : () => unawaited(_loadAll()),
             icon: const Icon(Icons.refresh_rounded),
           ),
         ],
@@ -295,7 +299,7 @@ class _EmployeeAlertsPageState extends State<EmployeeAlertsPage> {
   Future<void> _markViewed() async {
     final snapshot = _snapshot;
     final state = _readState;
-    if (snapshot == null || state == null) return;
+    if (snapshot == null || state == null || _loading || _marking) return;
     setState(() => _marking = true);
     try {
       await state.markViewed(snapshot);

@@ -1,0 +1,199 @@
+ .github/workflows/validate.yml                     |   20 [32m+[m
+ .gitignore                                         |    1 [32m+[m
+ .vscode/launch.json                                |   31 [32m+[m[31m-[m
+ CHANGELOG.md                                       |   33 [32m+[m
+ README.md                                          |  147 [32m++[m
+ android/app/build.gradle.kts                       |   10 [32m+[m
+ android/app/google-services.json                   |   29 [32m+[m
+ android/app/src/main/AndroidManifest.xml           |   12 [32m+[m
+ .../res/drawable-hdpi/ic_launcher_foreground.png   |  Bin [31m0[m -> [32m39922[m bytes
+ .../res/drawable-mdpi/ic_launcher_foreground.png   |  Bin [31m0[m -> [32m18926[m bytes
+ .../res/drawable-xhdpi/ic_launcher_foreground.png  |  Bin [31m0[m -> [32m60896[m bytes
+ .../res/drawable-xxhdpi/ic_launcher_foreground.png |  Bin [31m0[m -> [32m128238[m bytes
+ .../drawable-xxxhdpi/ic_launcher_foreground.png    |  Bin [31m0[m -> [32m223554[m bytes
+ .../app/src/main/res/drawable/ic_stat_reunion.xml  |    3 [32m+[m
+ .../src/main/res/mipmap-anydpi-v26/ic_launcher.xml |    9 [32m+[m
+ .../app/src/main/res/mipmap-hdpi/ic_launcher.png   |  Bin [31m6832[m -> [32m10264[m bytes
+ .../app/src/main/res/mipmap-mdpi/ic_launcher.png   |  Bin [31m3680[m -> [32m5361[m bytes
+ .../app/src/main/res/mipmap-xhdpi/ic_launcher.png  |  Bin [31m10793[m -> [32m15633[m bytes
+ .../app/src/main/res/mipmap-xxhdpi/ic_launcher.png |  Bin [31m21282[m -> [32m30873[m bytes
+ .../src/main/res/mipmap-xxxhdpi/ic_launcher.png    |  Bin [31m35238[m -> [32m49528[m bytes
+ android/app/src/main/res/raw/fichaya.wav           |  Bin [31m0[m -> [32m41938[m bytes
+ android/app/src/main/res/raw/keep.xml              |    4 [32m+[m
+ android/app/src/main/res/values/colors.xml         |    4 [32m+[m
+ android/gradle.properties                          |    2 [32m+[m
+ android/settings.gradle.kts                        |    2 [32m+[m
+ assets/branding/fichaya-favicon.png                |  Bin [31m0[m -> [32m1792254[m bytes
+ assets/branding/fichaya-header.png                 |  Bin [31m0[m -> [32m21274[m bytes
+ assets/branding/fichaya-icon.png                   |  Bin [31m0[m -> [32m1792254[m bytes
+ assets/branding/fichaya-icon.svg                   |    4 [32m+[m
+ assets/branding/fichaya-launcher.png               |  Bin [31m0[m -> [32m1611730[m bytes
+ assets/branding/fichaya-login.png                  |  Bin [31m0[m -> [32m311881[m bytes
+ assets/branding/fichaya_splash.json                |    1 [32m+[m
+ assets/branding/logo_dp.png                        |  Bin [31m1567906[m -> [32m1792254[m bytes
+ ios/Runner/AppDelegate.swift                       |    2 [32m+[m
+ .../AppIcon.appiconset/Icon-App-1024x1024@1x.png   |  Bin [31m1036989[m -> [32m1053810[m bytes
+ .../AppIcon.appiconset/Icon-App-20x20@1x.png       |  Bin [31m962[m -> [32m1203[m bytes
+ .../AppIcon.appiconset/Icon-App-20x20@2x.png       |  Bin [31m2824[m -> [32m3582[m bytes
+ .../AppIcon.appiconset/Icon-App-20x20@3x.png       |  Bin [31m5197[m -> [32m6735[m bytes
+ .../AppIcon.appiconset/Icon-App-29x29@1x.png       |  Bin [31m1718[m -> [32m2156[m bytes
+ .../AppIcon.appiconset/Icon-App-29x29@2x.png       |  Bin [31m4875[m -> [32m6428[m bytes
+ .../AppIcon.appiconset/Icon-App-29x29@3x.png       |  Bin [31m9240[m -> [32m12049[m bytes
+ .../AppIcon.appiconset/Icon-App-40x40@1x.png       |  Bin [31m2824[m -> [32m3582[m bytes
+ .../AppIcon.appiconset/Icon-App-40x40@2x.png       |  Bin [31m8074[m -> [32m10499[m bytes
+ .../AppIcon.appiconset/Icon-App-40x40@3x.png       |  Bin [31m15687[m -> [32m20395[m bytes
+ .../AppIcon.appiconset/Icon-App-50x50@1x.png       |  Bin [31m3913[m -> [32m5119[m bytes
+ .../AppIcon.appiconset/Icon-App-50x50@2x.png       |  Bin [31m11584[m -> [32m15077[m bytes
+ .../AppIcon.appiconset/Icon-App-57x57@1x.png       |  Bin [31m4839[m -> [32m6273[m bytes
+ .../AppIcon.appiconset/Icon-App-57x57@2x.png       |  Bin [31m14364[m -> [32m18629[m bytes
+ .../AppIcon.appiconset/Icon-App-60x60@2x.png       |  Bin [31m15687[m -> [32m20395[m bytes
+ .../AppIcon.appiconset/Icon-App-60x60@3x.png       |  Bin [31m31369[m -> [32m39948[m bytes
+ .../AppIcon.appiconset/Icon-App-72x72@1x.png       |  Bin [31m6832[m -> [32m8985[m bytes
+ .../AppIcon.appiconset/Icon-App-72x72@2x.png       |  Bin [31m21282[m -> [32m27638[m bytes
+ .../AppIcon.appiconset/Icon-App-76x76@1x.png       |  Bin [31m7405[m -> [32m9713[m bytes
+ .../AppIcon.appiconset/Icon-App-76x76@2x.png       |  Bin [31m23401[m -> [32m30134[m bytes
+ .../AppIcon.appiconset/Icon-App-83.5x83.5@2x.png   |  Bin [31m27333[m -> [32m35142[m bytes
+ lib/main.dart                                      |   15 [32m+[m[31m-[m
+ lib/src/app.dart                                   |   74 [32m+[m[31m-[m
+ .../core/alerts/employee_alerts_read_state.dart    |   82 [32m+[m
+ .../core/alerts/employee_alerts_repository.dart    |    2 [32m+[m[31m-[m
+ .../attendance/qr_clock_submission_service.dart    |   11 [32m+[m
+ lib/src/core/epp/epp_models.dart                   |   53 [32m+[m
+ lib/src/core/image/profile_photo_cache.dart        |    9 [32m+[m
+ lib/src/core/network/mobile_api_client.dart        |  420 [32m++++[m[31m-[m
+ lib/src/core/network/reuniones_models.dart         |   46 [32m+[m
+ .../permissions/device_permission_bootstrap.dart   |   13 [32m+[m[31m-[m
+ lib/src/core/reintegros/reintegros_helpers.dart    |   93 [32m+[m
+ lib/src/core/reuniones/comunicados_navigation.dart |   20 [32m+[m
+ lib/src/core/reuniones/push_service.dart           |  313 [32m++++[m
+ lib/src/core/reuniones/reunion_navigation.dart     |   35 [32m+[m
+ lib/src/core/reuniones/reunion_reminders.dart      |  232 [32m+++[m
+ lib/src/presentation/attendance/about_page.dart    |   59 [32m+[m[31m-[m
+ .../presentation/attendance/adelantos_page.dart    |  223 [32m++[m[31m-[m
+ .../attendance/attendance_history_page.dart        |  283 [32m++[m[31m-[m
+ .../attendance_home_action_presenter.dart          |   71 [32m+[m[31m-[m
+ .../attendance/attendance_home_coordinator.dart    |   45 [32m+[m[31m-[m
+ .../attendance/attendance_home_page.dart           |  715 [32m++++++[m[31m--[m
+ .../attendance/camera_permission_page.dart         |  180 [32m++[m
+ lib/src/presentation/attendance/cargas_page.dart   |  179 [32m+[m[31m-[m
+ .../presentation/attendance/comunicados_page.dart  |  450 [32m+++++[m
+ .../attendance/employee_alerts_page.dart           |  456 [32m+++[m[31m--[m
+ .../attendance/employee_stats_page.dart            |  359 [32m++[m[31m--[m
+ lib/src/presentation/attendance/epp_page.dart      | 1855 [32m+++++++++++++++++++[m
+ lib/src/presentation/attendance/feedback_page.dart |  444 [32m+++[m[31m--[m
+ lib/src/presentation/attendance/francos_page.dart  |   48 [32m+[m[31m-[m
+ .../presentation/attendance/gps_location_page.dart |  148 [32m+[m[31m-[m
+ .../attendance/historial_adelantos_page.dart       |   96 [32m+[m[31m-[m
+ lib/src/presentation/attendance/horarios_page.dart |   77 [32m+[m[31m-[m
+ .../attendance/justificaciones_page.dart           |  334 [32m++[m[31m--[m
+ .../presentation/attendance/kpis_sector_page.dart  |  340 [32m+++[m[31m-[m
+ .../attendance/legajo_evento_admin_page.dart       |   92 [32m+[m[31m-[m
+ lib/src/presentation/attendance/legajo_page.dart   |  122 [32m+[m[31m-[m
+ .../attendance/marks_history_page.dart             |  309 [32m++[m[31m--[m
+ .../attendance/notification_settings_page.dart     |  200 [32m+++[m
+ .../attendance/pedidos_mercaderia_page.dart        |  172 [32m+[m[31m-[m
+ lib/src/presentation/attendance/premios_page.dart  |  171 [32m+[m[31m-[m
+ .../presentation/attendance/qr_display_page.dart   |   60 [32m+[m[31m-[m
+ lib/src/presentation/attendance/qr_scan_page.dart  |   47 [32m+[m[31m-[m
+ .../presentation/attendance/reintegros_page.dart   | 1872 [32m++++++++++++++++++++[m
+ .../presentation/attendance/reuniones_page.dart    | 1079 [32m+++++++++++[m
+ .../attendance/security_events_page.dart           |   92 [32m+[m[31m-[m
+ .../attendance/seguridad_dashboard.dart            |  276 [32m+[m[31m--[m
+ .../attendance/seguridad_external_dialog.dart      |  140 [32m+[m[31m-[m
+ .../presentation/attendance/seguridad_page.dart    | 1302 [32m++++++++[m[31m------[m
+ .../presentation/attendance/skap_matrices_tab.dart |   23 [32m+[m[31m-[m
+ lib/src/presentation/attendance/skap_page.dart     |  209 [32m++[m[31m-[m
+ .../presentation/attendance/vacaciones_page.dart   |  137 [32m+[m[31m-[m
+ .../widgets/attendance_dashboard_widgets.dart      |  498 [32m++++[m[31m--[m
+ .../attendance/widgets/branch_safety_card.dart     |  253 [32m+++[m
+ .../widgets/feedback_summary_dashboard.dart        |  158 [32m+[m[31m-[m
+ .../attendance/widgets/home_reuniones_card.dart    |  170 [32m++[m
+ .../attendance/widgets/horario_semanal.dart        |   41 [32m+[m[31m-[m
+ .../attendance/widgets/pending_queue_sheet.dart    |  257 [32m+[m[31m--[m
+ .../attendance/widgets/reuniones_dashboard.dart    |  476 [32m+++++[m
+ .../attendance/widgets/skap_evaluations_list.dart  |  174 [32m+[m[31m-[m
+ .../attendance/widgets/skap_matrix_dashboard.dart  |  203 [32m++[m[31m-[m
+ .../presentation/auth/biometric_settings_page.dart |  385 [32m++[m[31m--[m
+ lib/src/presentation/auth/login_page.dart          |  185 [32m+[m[31m-[m
+ lib/src/presentation/auth_gate_page.dart           |   54 [32m+[m[31m-[m
+ lib/src/presentation/profile/profile_page.dart     |  254 [32m+[m[31m--[m
+ lib/src/presentation/splash/splash_page.dart       |   18 [32m+[m[31m-[m
+ lib/src/presentation/theme/app_palette.dart        |   66 [32m+[m
+ lib/src/presentation/theme/app_theme.dart          |  152 [32m+[m[31m-[m
+ lib/src/presentation/theme/card_typography.dart    |   26 [32m+[m
+ lib/src/presentation/theme/theme_preferences.dart  |  122 [32m++[m
+ .../presentation/trivia/ranking_entry_layout.dart  |   48 [32m+[m
+ .../trivia/trivia_annual_ranking_screen.dart       |  394 [32m++[m[31m--[m
+ .../presentation/trivia/trivia_history_screen.dart |  207 [32m++[m[31m-[m
+ .../presentation/trivia/trivia_home_screen.dart    |  399 [32m+++[m[31m--[m
+ .../trivia/trivia_my_history_screen.dart           |  242 [32m++[m[31m-[m
+ .../presentation/trivia/trivia_play_screen.dart    |  171 [32m+[m[31m-[m
+ .../presentation/trivia/trivia_ranking_screen.dart |  265 [32m++[m[31m-[m
+ .../presentation/trivia/trivia_result_screen.dart  |  330 [32m++[m[31m--[m
+ lib/src/presentation/version/app_version_gate.dart |   34 [32m+[m[31m-[m
+ lib/src/presentation/widgets/app_card.dart         |   39 [32m+[m
+ lib/src/presentation/widgets/app_page_layout.dart  |  133 [32m++[m
+ .../presentation/widgets/app_rating_dialog.dart    |   86 [32m+[m[31m-[m
+ .../presentation/widgets/app_startup_screen.dart   |  116 [32m++[m
+ .../widgets/browser_permission_dialog.dart         |   36 [32m+[m[31m-[m
+ .../presentation/widgets/centered_snackbar.dart    |    6 [32m+[m[31m-[m
+ lib/src/presentation/widgets/croppable_image.dart  |   14 [32m+[m[31m-[m
+ .../widgets/employee_photo_widget.dart             |   22 [32m+[m[31m-[m
+ .../widgets/scrollable_error_state.dart            |   42 [32m+[m
+ macos/Flutter/GeneratedPluginRegistrant.swift      |    6 [32m+[m
+ .../AppIcon.appiconset/app_icon_1024.png           |  Bin [31m1036989[m -> [32m1190975[m bytes
+ .../AppIcon.appiconset/app_icon_128.png            |  Bin [31m17415[m -> [32m24930[m bytes
+ .../AppIcon.appiconset/app_icon_16.png             |  Bin [31m693[m -> [32m905[m bytes
+ .../AppIcon.appiconset/app_icon_256.png            |  Bin [31m60289[m -> [32m82513[m bytes
+ .../AppIcon.appiconset/app_icon_32.png             |  Bin [31m1994[m -> [32m2774[m bytes
+ .../AppIcon.appiconset/app_icon_512.png            |  Bin [31m242743[m -> [32m311881[m bytes
+ .../AppIcon.appiconset/app_icon_64.png             |  Bin [31m5683[m -> [32m8251[m bytes
+ pubspec.lock                                       |  108 [32m+[m[31m-[m
+ pubspec.yaml                                       |   19 [32m+[m[31m-[m
+ scripts/build_android.ps1                          |   79 [32m+[m
+ test/app_page_layout_test.dart                     |   75 [32m+[m
+ test/app_rating_dialog_test.dart                   |   56 [32m+[m
+ test/app_startup_screen_test.dart                  |   99 [32m++[m
+ test/appearance_cards_test.dart                    |  108 [32m++[m
+ test/attendance_dashboard_widgets_test.dart        |  106 [32m+[m[31m-[m
+ test/attendance_home_golden_test.dart              |   25 [32m+[m[31m-[m
+ test/branch_safety_card_test.dart                  |  242 [32m+++[m
+ test/camera_permission_page_test.dart              |   59 [32m+[m
+ test/comunicados_test.dart                         |  216 [32m+++[m
+ test/employee_alerts_page_test.dart                |   74 [32m+[m[31m-[m
+ test/epp_test.dart                                 |  530 [32m++++++[m
+ test/feedback_create_sheet_test.dart               |   73 [32m+[m[31m-[m
+ .../attendance_home_mobile_pending_error.png       |  Bin [31m71094[m -> [32m77765[m bytes
+ test/goldens/attendance_home_mobile_ready.png      |  Bin [31m71628[m -> [32m75923[m bytes
+ .../attendance_home_tablet_pending_error.png       |  Bin [31m142818[m -> [32m153447[m bytes
+ test/goldens/attendance_home_tablet_ready.png      |  Bin [31m122888[m -> [32m139810[m bytes
+ test/goldens/startup_lottie_completed.png          |  Bin [31m0[m -> [32m139786[m bytes
+ test/home_reuniones_card_test.dart                 |   64 [32m+[m
+ test/mobile_settings_responsive_test.dart          |  106 [32m++[m
+ test/notification_settings_page_test.dart          |   35 [32m+[m
+ test/profile_photo_web_url_test.dart               |   21 [32m+[m
+ test/project_responsive_test.dart                  |  205 [32m+++[m
+ test/push_acuse_test.dart                          |   68 [32m+[m
+ test/push_contract_test.dart                       |  102 [32m++[m
+ test/push_lifecycle_test.dart                      |  102 [32m++[m
+ test/qr_clock_submission_service_test.dart         |   41 [32m+[m[31m-[m
+ test/ranking_responsive_test.dart                  |  100 [32m++[m
+ test/reintegros_test.dart                          |  705 [32m++++++++[m
+ test/reunion_reminders_test.dart                   |  107 [32m++[m
+ test/reuniones_responsive_test.dart                |  227 [32m+++[m
+ test/reuniones_test.dart                           |  411 [32m+++++[m
+ test/seguridad_dashboard_test.dart                 |   92 [32m+[m[31m-[m
+ test/seguridad_external_dialog_test.dart           |   85 [32m+[m[31m-[m
+ test/seguridad_test.dart                           |   23 [32m+[m[31m-[m
+ test/theme_preferences_test.dart                   |  158 [32m++[m
+ test/widget_test.dart                              |   58 [32m+[m[31m-[m
+ web/favicon.png                                    |  Bin [31m693[m -> [32m905[m bytes
+ web/firebase-messaging-sw.js                       |   32 [32m+[m
+ web/icons/Icon-192.png                             |  Bin [31m35238[m -> [32m49528[m bytes
+ web/icons/Icon-512.png                             |  Bin [31m242743[m -> [32m311881[m bytes
+ web/icons/Icon-maskable-192.png                    |  Bin [31m35238[m -> [32m49528[m bytes
+ web/icons/Icon-maskable-512.png                    |  Bin [31m242743[m -> [32m311881[m bytes
+ windows/flutter/generated_plugin_registrant.cc     |    3 [32m+[m
+ windows/flutter/generated_plugins.cmake            |    2 [32m+[m
+ windows/runner/resources/app_icon.ico              |  Bin [31m3702[m -> [32m5383[m bytes
+ 198 files changed, 20937 insertions(+), 4158 deletions(-)

@@ -137,39 +137,21 @@ class AttendanceHomeActionPresenter {
       ],
       quickActions: [
         AttendanceHomeActionSpec(
-          intent: AttendanceHomeActionIntent.openEpp,
-          label: 'EPP y vestimenta',
-          icon: Icons.checkroom_rounded,
-          enabled: historyEnabled,
-        ),
-        AttendanceHomeActionSpec(
-          intent: AttendanceHomeActionIntent.openReintegros,
-          label: 'Viáticos y reintegros',
-          icon: Icons.receipt_long_rounded,
-          enabled: historyEnabled,
-        ),
-        AttendanceHomeActionSpec(
           intent: AttendanceHomeActionIntent.openAttendanceHistory,
           label: 'Asistencias',
           icon: Icons.calendar_month_rounded,
           enabled: historyEnabled,
         ),
         AttendanceHomeActionSpec(
-          intent: AttendanceHomeActionIntent.openGpsLocation,
-          label: 'GPS real',
-          icon: Icons.my_location_rounded,
+          intent: AttendanceHomeActionIntent.openHorarios,
+          label: 'Horarios',
+          icon: Icons.calendar_today_rounded,
           enabled: historyEnabled,
         ),
         AttendanceHomeActionSpec(
           intent: AttendanceHomeActionIntent.openJustificaciones,
           label: 'Justificaciones',
           icon: Icons.fact_check_rounded,
-          enabled: historyEnabled,
-        ),
-        AttendanceHomeActionSpec(
-          intent: AttendanceHomeActionIntent.openAdelantos,
-          label: 'Adelantos',
-          icon: Icons.payments_rounded,
           enabled: historyEnabled,
         ),
         AttendanceHomeActionSpec(
@@ -185,18 +167,29 @@ class AttendanceHomeActionPresenter {
           enabled: historyEnabled,
         ),
         AttendanceHomeActionSpec(
-          intent: AttendanceHomeActionIntent.openLegajo,
-          label: 'Legajo',
-          icon: Icons.folder_open_rounded,
+          intent: AttendanceHomeActionIntent.openEpp,
+          label: 'EPP y vestimenta',
+          icon: Icons.checkroom_rounded,
           enabled: historyEnabled,
         ),
-        if (canCreateLegajoEventos)
-          AttendanceHomeActionSpec(
-            intent: AttendanceHomeActionIntent.openLegajoEventoAdmin,
-            label: 'Cargar legajo',
-            icon: Icons.assignment_add,
-            enabled: historyEnabled,
-          ),
+        AttendanceHomeActionSpec(
+          intent: AttendanceHomeActionIntent.openSeguridad,
+          label: 'Seguridad e Higiene',
+          icon: Icons.health_and_safety_rounded,
+          enabled: historyEnabled,
+        ),
+        AttendanceHomeActionSpec(
+          intent: AttendanceHomeActionIntent.openReintegros,
+          label: 'Viáticos y reintegros',
+          icon: Icons.receipt_long_rounded,
+          enabled: historyEnabled,
+        ),
+        AttendanceHomeActionSpec(
+          intent: AttendanceHomeActionIntent.openAdelantos,
+          label: 'Adelantos',
+          icon: Icons.payments_rounded,
+          enabled: historyEnabled,
+        ),
         AttendanceHomeActionSpec(
           intent: AttendanceHomeActionIntent.openPedidosMercaderia,
           label: 'Mercadería',
@@ -211,21 +204,28 @@ class AttendanceHomeActionPresenter {
             enabled: historyEnabled,
           ),
         AttendanceHomeActionSpec(
-          intent: AttendanceHomeActionIntent.openSeguridad,
-          label: 'Seguridad e Higiene',
-          icon: Icons.health_and_safety_rounded,
+          intent: AttendanceHomeActionIntent.openLegajo,
+          label: 'Legajo',
+          icon: Icons.folder_open_rounded,
+          enabled: historyEnabled,
+        ),
+        if (canCreateLegajoEventos)
+          AttendanceHomeActionSpec(
+            intent: AttendanceHomeActionIntent.openLegajoEventoAdmin,
+            label: 'Cargar legajo',
+            icon: Icons.assignment_add,
+            enabled: historyEnabled,
+          ),
+        AttendanceHomeActionSpec(
+          intent: AttendanceHomeActionIntent.openFeedback,
+          label: 'Feedback',
+          icon: Icons.campaign_rounded,
           enabled: historyEnabled,
         ),
         AttendanceHomeActionSpec(
           intent: AttendanceHomeActionIntent.openKpisSector,
           label: 'KPIs',
           icon: Icons.bar_chart_rounded,
-          enabled: historyEnabled,
-        ),
-        AttendanceHomeActionSpec(
-          intent: AttendanceHomeActionIntent.openFeedback,
-          label: 'Feedback',
-          icon: Icons.campaign_rounded,
           enabled: historyEnabled,
         ),
         AttendanceHomeActionSpec(
@@ -241,9 +241,9 @@ class AttendanceHomeActionPresenter {
           enabled: historyEnabled,
         ),
         AttendanceHomeActionSpec(
-          intent: AttendanceHomeActionIntent.openHorarios,
-          label: 'Horarios',
-          icon: Icons.calendar_today_rounded,
+          intent: AttendanceHomeActionIntent.openGpsLocation,
+          label: 'GPS real',
+          icon: Icons.my_location_rounded,
           enabled: historyEnabled,
         ),
         AttendanceHomeActionSpec(

@@ -9,6 +9,46 @@ import 'package:ficharqr/src/core/alerts/employee_alerts_repository.dart';
 
 void main() {
   setUp(() => FlutterSecureStorage.setMockInitialValues({}));
+  test(
+    'reading survives duplicate summary records and reordered feedback',
+    () async {
+      final api = _FakeAlertsApiClient();
+      final initial = await EmployeeAlertsRepository(
+        api,
+      ).loadDetails(token: 'token');
+      final state = EmployeeAlertsReadState(server: api.baseUrl, employeeId: 1);
+      final other = FeedbackItem(
+        id: 45,
+        estado: 'pendiente',
+        updatedAt: '2026-06-15T10:00:00',
+      );
+      EmployeeAlertsSnapshot snapshot({required bool reversed}) =>
+          EmployeeAlertsSnapshot(
+            adelantos: AdelantoResumenResponse(
+              periodo: '2026-06',
+              periodoYear: 2026,
+              periodoMonth: 6,
+              yaSolicitado: true,
+              totalHistorial: 1,
+              pendientesTotal: 0,
+              adelantoMesActual: initial.adelantos!.adelantoMesActual,
+              ultimoAdelanto: reversed
+                  ? initial.adelantos!.adelantoMesActual
+                  : null,
+            ),
+            adelantosError: null,
+            mercaderia: initial.mercaderia,
+            mercaderiaError: null,
+            feedbackDashboard: initial.feedbackDashboard,
+            feedbackError: null,
+            feedbackRecent: reversed
+                ? [other, ...initial.feedbackRecent]
+                : [...initial.feedbackRecent, other],
+          );
+      await state.markViewed(snapshot(reversed: false));
+      expect(await state.unreadCount(snapshot(reversed: true)), 0);
+    },
+  );
   test('viewed modules persist and new status changes become unread', () async {
     final api = _FakeAlertsApiClient();
     final repo = EmployeeAlertsRepository(api);
