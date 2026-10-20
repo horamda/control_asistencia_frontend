@@ -1143,18 +1143,27 @@ class _HorasRachaCard extends StatelessWidget {
         child: Column(
           crossAxisAlignment: CrossAxisAlignment.center,
           children: [
-            Row(
+            // Titulo y dato en un renglon; con letra grande el dato baja en lugar de apretar el titulo.
+            Wrap(
+              alignment: WrapAlignment.spaceBetween,
+              crossAxisAlignment: WrapCrossAlignment.center,
+              spacing: 8,
+              runSpacing: 4,
               children: [
-                const Icon(Icons.insights_rounded, size: 18),
-                const SizedBox(width: 8),
-                Expanded(
-                  child: Text(
-                    'Horas y racha',
-                    style: Theme.of(context).textTheme.titleMedium,
-                    textAlign: TextAlign.start,
-                  ),
+                Row(
+                  mainAxisSize: MainAxisSize.min,
+                  children: [
+                    const Icon(Icons.insights_rounded, size: 18),
+                    const SizedBox(width: 8),
+                    Flexible(
+                      child: Text(
+                        'Horas y racha',
+                        style: Theme.of(context).textTheme.titleMedium,
+                        textAlign: TextAlign.start,
+                      ),
+                    ),
+                  ],
                 ),
-                const SizedBox(width: 8),
                 Text(
                   '${kpis.diasConRegistro} / ${kpis.diasLaborables} días',
                   style: Theme.of(
@@ -1298,18 +1307,26 @@ class _StatusCard extends StatelessWidget {
         child: Column(
           crossAxisAlignment: CrossAxisAlignment.center,
           children: [
-            Row(
+            Wrap(
+              alignment: WrapAlignment.spaceBetween,
+              crossAxisAlignment: WrapCrossAlignment.center,
+              spacing: 8,
+              runSpacing: 4,
               children: [
-                const Icon(Icons.donut_small_rounded, size: 18),
-                const SizedBox(width: 8),
-                Expanded(
-                  child: Text(
-                    'Distribución de estados',
-                    style: Theme.of(context).textTheme.titleMedium,
-                    textAlign: TextAlign.start,
-                  ),
+                Row(
+                  mainAxisSize: MainAxisSize.min,
+                  children: [
+                    const Icon(Icons.donut_small_rounded, size: 18),
+                    const SizedBox(width: 8),
+                    Flexible(
+                      child: Text(
+                        'Distribución de estados',
+                        style: Theme.of(context).textTheme.titleMedium,
+                        textAlign: TextAlign.start,
+                      ),
+                    ),
+                  ],
                 ),
-                const SizedBox(width: 8),
                 Text(
                   '${t.registros} registros',
                   style: Theme.of(

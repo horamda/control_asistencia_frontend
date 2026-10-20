@@ -5,6 +5,19 @@ Formato: `[version+build] — fecha`
 
 ---
 
+## Tarjetas compactas — 2026-10-20 (sin publicar)
+
+- Corregido en todas las pantallas el error que apretaba títulos: un `Flexible` (o `Spacer`) junto a un `Expanded`
+  repartía el renglón por mitades. Premios, Legajo, Estadísticas y Justificaciones recuperan el ancho del título.
+  Con letra grande, el dato de la derecha (fecha, estado, cantidad) pasa al renglón de abajo en vez de desbordar.
+- Premios: tarjeta de premio de 4 renglones (antes el texto quedaba en una columna angosta y muy alta).
+- Estadísticas: períodos en una sola fila desplazable e indicadores en grilla de 2 columnas (antes un carrusel alto).
+- Adelantos: aviso "Sin solicitud este mes" con el ícono al costado.
+- Legajo: eventos y categorías alineados a la izquierda, con menos relleno.
+- Alertas: novedades por módulo alineadas a la izquierda, con menos relleno e íconos más chicos.
+- Reuniones: los tres indicadores entran en una fila en el celular.
+- Validación: 789 pruebas Flutter aprobadas y análisis estático sin problemas.
+
 ## Mejoras de interfaz — 2026-10-18 (sin publicar)
 
 - Base visual compartida: títulos de sección compactos, texto de lectura uniforme,

@@ -347,6 +347,7 @@ class _TipoCard extends StatelessWidget {
             ),
             const SizedBox(width: 12),
             Expanded(
+              flex: 3,
               child: Column(
                 crossAxisAlignment: CrossAxisAlignment.start,
                 children: [
@@ -368,36 +369,41 @@ class _TipoCard extends StatelessWidget {
                 ],
               ),
             ),
+            // El contador ocupa como mucho un cuarto del renglon: el nombre conserva el resto.
             if (tieneEventos)
-              Column(
-                crossAxisAlignment: CrossAxisAlignment.end,
-                children: [
-                  Text(
-                    '${item.total}',
-                    maxLines: 1,
-                    overflow: TextOverflow.ellipsis,
-                    style: Theme.of(context).textTheme.titleSmall?.copyWith(
-                      fontWeight: FontWeight.w700,
-                      color: cs.primary,
+              Flexible(
+                child: Column(
+                  crossAxisAlignment: CrossAxisAlignment.end,
+                  children: [
+                    Text(
+                      '${item.total}',
+                      maxLines: 1,
+                      overflow: TextOverflow.ellipsis,
+                      style: Theme.of(context).textTheme.titleSmall?.copyWith(
+                        fontWeight: FontWeight.w700,
+                        color: cs.primary,
+                      ),
+                      textAlign: TextAlign.center,
                     ),
-                    textAlign: TextAlign.center,
-                  ),
-                  Text(
-                    '${item.vigentes} vigente${item.vigentes != 1 ? 's' : ''}',
-                    style: Theme.of(
-                      context,
-                    ).textTheme.bodySmall?.copyWith(color: cs.onSurfaceVariant),
-                    textAlign: TextAlign.center,
-                  ),
-                ],
+                    Text(
+                      '${item.vigentes} vigente${item.vigentes != 1 ? 's' : ''}',
+                      style: Theme.of(context).textTheme.bodySmall?.copyWith(
+                        color: cs.onSurfaceVariant,
+                      ),
+                      textAlign: TextAlign.center,
+                    ),
+                  ],
+                ),
               )
             else
-              Text(
-                'Sin eventos',
-                style: Theme.of(
-                  context,
-                ).textTheme.bodySmall?.copyWith(color: cs.onSurfaceVariant),
-                textAlign: TextAlign.end,
+              Flexible(
+                child: Text(
+                  'Sin eventos',
+                  style: Theme.of(
+                    context,
+                  ).textTheme.bodySmall?.copyWith(color: cs.onSurfaceVariant),
+                  textAlign: TextAlign.end,
+                ),
               ),
           ],
         ),
@@ -682,29 +688,39 @@ class _LegajoEventoCard extends StatelessWidget {
         child: Column(
           crossAxisAlignment: CrossAxisAlignment.start,
           children: [
-            Row(
-              crossAxisAlignment: CrossAxisAlignment.start,
+            // Titulo y fecha en un renglon; con letra grande la fecha baja en lugar de apretar el titulo.
+            Wrap(
+              alignment: WrapAlignment.spaceBetween,
+              crossAxisAlignment: WrapCrossAlignment.center,
+              spacing: 8,
+              runSpacing: 2,
               children: [
-                Icon(
-                  Icons.description_rounded,
-                  size: 20,
-                  color: AppColors.of(context).foreground(severidadColor),
-                ),
-                const SizedBox(width: 8),
-                Expanded(
-                  child: Text(
-                    item.tipoNombre ?? item.tipoCodigo ?? 'Evento',
-                    style: TextStyle(
-                      fontWeight: FontWeight.w600,
-                      decoration: anulado ? TextDecoration.lineThrough : null,
-                      color: anulado ? cs.onSurfaceVariant : null,
+                Row(
+                  mainAxisSize: MainAxisSize.min,
+                  crossAxisAlignment: CrossAxisAlignment.start,
+                  children: [
+                    Icon(
+                      Icons.description_rounded,
+                      size: 20,
+                      color: AppColors.of(context).foreground(severidadColor),
                     ),
-                    textAlign: TextAlign.start,
-                  ),
+                    const SizedBox(width: 8),
+                    Flexible(
+                      child: Text(
+                        item.tipoNombre ?? item.tipoCodigo ?? 'Evento',
+                        style: TextStyle(
+                          fontWeight: FontWeight.w600,
+                          decoration: anulado
+                              ? TextDecoration.lineThrough
+                              : null,
+                          color: anulado ? cs.onSurfaceVariant : null,
+                        ),
+                        textAlign: TextAlign.start,
+                      ),
+                    ),
+                  ],
                 ),
-                if (item.fechaEvento != null) ...[
-                  const SizedBox(width: 8),
-                  // Solo el ancho de la fecha (con Flexible le quitaba la mitad del renglon al titulo).
+                if (item.fechaEvento != null)
                   Text(
                     item.fechaEvento!,
                     style: Theme.of(
@@ -712,7 +728,6 @@ class _LegajoEventoCard extends StatelessWidget {
                     ).textTheme.bodySmall?.copyWith(color: cs.onSurfaceVariant),
                     textAlign: TextAlign.end,
                   ),
-                ],
               ],
             ),
             if (item.titulo != null) ...[

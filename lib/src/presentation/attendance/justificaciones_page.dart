@@ -688,24 +688,32 @@ class _JustificacionCard extends StatelessWidget {
                 child: Column(
                   crossAxisAlignment: CrossAxisAlignment.start,
                   children: [
-                    Row(
-                      mainAxisAlignment: MainAxisAlignment.center,
+                    // Titulo y estado en un renglon; con letra grande el estado baja en lugar de apretar el titulo.
+                    Wrap(
+                      alignment: WrapAlignment.spaceBetween,
+                      crossAxisAlignment: WrapCrossAlignment.center,
+                      spacing: 8,
+                      runSpacing: 4,
                       children: [
-                        Icon(
-                          _estadoIcon(item.estado),
-                          color: AppColors.of(context).foreground(color),
-                          size: 18,
+                        Row(
+                          mainAxisSize: MainAxisSize.min,
+                          children: [
+                            Icon(
+                              _estadoIcon(item.estado),
+                              color: AppColors.of(context).foreground(color),
+                              size: 18,
+                            ),
+                            const SizedBox(width: 6),
+                            Flexible(
+                              child: Text(
+                                'Justificación #${item.id}',
+                                style: Theme.of(context).textTheme.titleSmall
+                                    ?.copyWith(fontWeight: FontWeight.w700),
+                                textAlign: TextAlign.start,
+                              ),
+                            ),
+                          ],
                         ),
-                        const SizedBox(width: 6),
-                        Expanded(
-                          child: Text(
-                            'Justificación #${item.id}',
-                            style: Theme.of(context).textTheme.titleSmall
-                                ?.copyWith(fontWeight: FontWeight.w700),
-                            textAlign: TextAlign.start,
-                          ),
-                        ),
-                        const SizedBox(width: 8),
                         Container(
                           padding: const EdgeInsets.symmetric(
                             horizontal: 8,
