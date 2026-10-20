@@ -1,3 +1,5 @@
+import '../../theme/app_visual.dart';
+import '../../theme/app_layout.dart';
 import 'package:flutter/material.dart';
 import '../../../core/network/reuniones_models.dart';
 import '../../theme/app_palette.dart';
@@ -81,8 +83,13 @@ class ReunionesResponsiveGrid extends StatelessWidget {
   @override
   Widget build(BuildContext context) => LayoutBuilder(
     builder: (context, constraints) {
-      final scale = MediaQuery.textScalerOf(context).scale(14) / 14;
-      final columns = constraints.maxWidth >= 720 * scale.clamp(1, 1.5) ? 2 : 1;
+      final columns = AppLayout.columns(
+        context,
+        constraints.maxWidth,
+        minWidth: 350,
+        maxColumns: 2,
+        spacing: 14,
+      );
       final width = (constraints.maxWidth - (columns - 1) * 14) / columns;
       return Wrap(
         spacing: 14,
@@ -130,9 +137,9 @@ class ReunionesAgendaOverview extends StatelessWidget {
       children: [
         Container(
           width: double.infinity,
-          padding: const EdgeInsets.all(22),
+          padding: const EdgeInsets.all(AppVisual.cardPadding),
           decoration: BoxDecoration(
-            borderRadius: BorderRadius.circular(24),
+            borderRadius: BorderRadius.circular(AppVisual.cardRadius),
             gradient: LinearGradient(
               begin: Alignment.topLeft,
               end: Alignment.bottomRight,
@@ -167,10 +174,10 @@ class ReunionesAgendaOverview extends StatelessWidget {
                   ),
                 ],
               ),
-              const SizedBox(height: 14),
+              const SizedBox(height: 10),
               Text(
                 next?.nombre ?? 'Todo al día',
-                style: Theme.of(context).textTheme.headlineSmall?.copyWith(
+                style: Theme.of(context).textTheme.titleMedium?.copyWith(
                   color: Colors.white,
                   fontWeight: FontWeight.w800,
                   height: 1.15,
@@ -204,7 +211,7 @@ class ReunionesAgendaOverview extends StatelessWidget {
                   runSpacing: 10,
                   alignment: WrapAlignment.center,
                   children: [
-                    if (next.estado == 'abierta')
+                    if (next.data['puede_registrar'] == true)
                       FilledButton.icon(
                         style: FilledButton.styleFrom(
                           backgroundColor: AppColors.of(
@@ -241,17 +248,23 @@ class ReunionesAgendaOverview extends StatelessWidget {
                 ),
               ] else
                 const Text(
-                  'No tenés reuniones pendientes esta semana.',
+                  'No tenés reuniones pendientes en las próximas 4 semanas.',
                   style: TextStyle(color: Colors.white70),
                   textAlign: TextAlign.center,
                 ),
             ],
           ),
         ),
-        const SizedBox(height: 14),
+        const SizedBox(height: 10),
         LayoutBuilder(
           builder: (context, constraints) {
-            final columns = constraints.maxWidth >= 500 ? 3 : 2;
+            final columns = AppLayout.columns(
+              context,
+              constraints.maxWidth,
+              minWidth: 140,
+              maxColumns: 3,
+              spacing: 10,
+            );
             final width = (constraints.maxWidth - (columns - 1) * 10) / columns;
             return Wrap(
               spacing: 10,
@@ -260,7 +273,7 @@ class ReunionesAgendaOverview extends StatelessWidget {
                 _AgendaMetric(
                   width: width,
                   value: '${active.length}',
-                  label: 'Esta semana',
+                  label: 'Próximas 4 semanas',
                   icon: Icons.calendar_month_outlined,
                   color: AppPalette.blue,
                 ),
@@ -282,9 +295,9 @@ class ReunionesAgendaOverview extends StatelessWidget {
             );
           },
         ),
-        const SizedBox(height: 22),
+        const SizedBox(height: 16),
         Text(
-          'Agenda de la semana',
+          'Agenda de las próximas semanas',
           style: Theme.of(
             context,
           ).textTheme.titleLarge?.copyWith(fontWeight: FontWeight.w800),
@@ -342,7 +355,7 @@ class _AgendaMetric extends StatelessWidget {
   @override
   Widget build(BuildContext context) => Container(
     width: width,
-    padding: const EdgeInsets.all(14),
+    padding: const EdgeInsets.all(10),
     decoration: BoxDecoration(
       color: AppColors.of(context).surface(color.withValues(alpha: .06)),
       borderRadius: BorderRadius.circular(18),
@@ -354,10 +367,10 @@ class _AgendaMetric extends StatelessWidget {
       crossAxisAlignment: CrossAxisAlignment.center,
       children: [
         Icon(icon, size: 22, color: AppColors.of(context).foreground(color)),
-        const SizedBox(height: 8),
+        const SizedBox(height: 4),
         Text(
           value,
-          style: Theme.of(context).textTheme.headlineMedium?.copyWith(
+          style: Theme.of(context).textTheme.titleLarge?.copyWith(
             fontWeight: FontWeight.w800,
             color: AppColors.of(context).foreground(color),
           ),

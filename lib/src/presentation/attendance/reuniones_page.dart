@@ -1,3 +1,5 @@
+import '../theme/app_visual.dart';
+import 'reuniones_monthly_page.dart';
 import 'package:ficharqr/src/presentation/widgets/app_card.dart';
 import 'dart:async';
 import 'package:flutter/material.dart';
@@ -137,7 +139,7 @@ class _ReunionesPageState extends State<ReunionesPage>
     });
     try {
       final query = <String, String>{
-        if (_tab == 0) 'semana': 'actual',
+        if (_tab == 0) 'semanas': '4',
         if (_tab == 2) ...{
           'page': '$_page',
           'per': '20',
@@ -270,8 +272,10 @@ class _ReunionesPageState extends State<ReunionesPage>
       ],
     ),
     floatingActionButton:
-        MediaQuery.sizeOf(context).height < 500 ||
-            MediaQuery.textScalerOf(context).scale(14) > 20
+        !reunionMaps(_data?['items']).any((e) => e['puede_registrar'] == true)
+        ? null
+        : MediaQuery.sizeOf(context).height < 500 ||
+              MediaQuery.textScalerOf(context).scale(14) > 20
         ? FloatingActionButton(
             onPressed: _scanning ? null : _scan,
             tooltip: 'Escanear QR',
@@ -308,11 +312,11 @@ class _ReunionesPageState extends State<ReunionesPage>
           ),
           physics: const AlwaysScrollableScrollPhysics(),
           children: [
-            SingleChildScrollView(
-              scrollDirection: Axis.horizontal,
+            Padding(
               padding: const EdgeInsets.all(12),
-              child: Row(
-                mainAxisAlignment: MainAxisAlignment.center,
+              child: Wrap(
+                spacing: 4,
+                runSpacing: 4,
                 children: [
                   for (final (i, label) in [
                     'Próximas',
@@ -342,6 +346,19 @@ class _ReunionesPageState extends State<ReunionesPage>
                       ),
                     ),
                 ],
+              ),
+            ),
+            OutlinedButton.icon(
+              icon: const Icon(Icons.calendar_month),
+              label: const Text('Calendario y resumen mensual'),
+              onPressed: () => Navigator.of(context).push(
+                MaterialPageRoute<void>(
+                  builder: (_) => ReunionesMonthlyPage(
+                    api: widget.api,
+                    token: widget.token,
+                    onOpen: _detail,
+                  ),
+                ),
               ),
             ),
             if (_tab >= 2)
@@ -448,7 +465,13 @@ class _ReunionesPageState extends State<ReunionesPage>
       if (_tab == 0)
         ReunionesAgendaOverview(
           items: items.map(ReunionOccurrence.new).toList(),
-          onScan: _scanning ? null : _scan,
+          onScan:
+              _scanning ||
+                  !reunionMaps(
+                    _data?['items'],
+                  ).any((e) => e['puede_registrar'] == true)
+              ? null
+              : _scan,
           onDetail: _detail,
         ),
       if (_tab == 0)
@@ -494,7 +517,13 @@ class _ReunionesPageState extends State<ReunionesPage>
             if (_tab == 0)
               ReunionOccurrenceCard(
                 item: ReunionOccurrence(item),
-                onScan: _scanning ? null : _scan,
+                onScan:
+                    _scanning ||
+                        !reunionMaps(
+                          _data?['items'],
+                        ).any((e) => e['puede_registrar'] == true)
+                    ? null
+                    : _scan,
                 onDetail: () => _detail(item['reunion_id'] as int),
               )
             else if (_tab == 1)
@@ -577,10 +606,10 @@ class ReunionOccurrenceCard extends StatelessWidget {
   final VoidCallback? onScan, onDetail;
   @override
   Widget build(BuildContext context) => AppCard(
-    margin: const EdgeInsets.only(bottom: 12),
+    margin: const EdgeInsets.only(bottom: 8),
     clipBehavior: Clip.antiAlias,
     shape: RoundedRectangleBorder(
-      borderRadius: BorderRadius.circular(20),
+      borderRadius: BorderRadius.circular(AppVisual.cardRadius),
       side: BorderSide(
         color: AppColors.of(context).border(
           item.estado == 'abierta'
@@ -589,191 +618,201 @@ class ReunionOccurrenceCard extends StatelessWidget {
         ),
       ),
     ),
-    child: Padding(
-      padding: const EdgeInsets.all(16),
-      child: Column(
-        crossAxisAlignment: CrossAxisAlignment.center,
-        children: [
-          Column(
-            crossAxisAlignment: CrossAxisAlignment.center,
-            children: [
-              Container(
-                width:
-                    54 *
-                    (MediaQuery.textScalerOf(context).scale(14) / 14).clamp(
-                      1,
-                      1.5,
-                    ),
-                padding: const EdgeInsets.symmetric(vertical: 10),
-                decoration: BoxDecoration(
-                  color: AppColors.of(
-                    context,
-                  ).surface(AppPalette.blue.withValues(alpha: .07)),
-                  borderRadius: BorderRadius.circular(14),
+    child: DefaultTextStyle.merge(
+      style: AppVisual.body,
+      child: Padding(
+        padding: const EdgeInsets.all(12),
+        child: Column(
+          crossAxisAlignment: CrossAxisAlignment.start,
+          children: [
+            Row(
+              crossAxisAlignment: CrossAxisAlignment.start,
+              children: [
+                Container(
+                  width:
+                      54 *
+                      (MediaQuery.textScalerOf(context).scale(14) / 14).clamp(
+                        1,
+                        1.5,
+                      ),
+                  padding: const EdgeInsets.symmetric(vertical: 6),
+                  decoration: BoxDecoration(
+                    color: AppColors.of(
+                      context,
+                    ).surface(AppPalette.blue.withValues(alpha: .07)),
+                    borderRadius: BorderRadius.circular(AppVisual.cardRadius),
+                  ),
+                  child: Column(
+                    crossAxisAlignment: CrossAxisAlignment.center,
+                    children: [
+                      Text(
+                        item.fecha.substring(8),
+                        style: Theme.of(context).textTheme.titleMedium
+                            ?.copyWith(
+                              color: AppColors.of(
+                                context,
+                              ).foreground(AppPalette.navy),
+                              fontWeight: FontWeight.w800,
+                            ),
+                        textAlign: TextAlign.center,
+                      ),
+                      Text(
+                        const [
+                          'ENE',
+                          'FEB',
+                          'MAR',
+                          'ABR',
+                          'MAY',
+                          'JUN',
+                          'JUL',
+                          'AGO',
+                          'SEP',
+                          'OCT',
+                          'NOV',
+                          'DIC',
+                        ][int.parse(item.fecha.substring(5, 7)) - 1],
+                        style: TextStyle(
+                          color: AppColors.of(
+                            context,
+                          ).foreground(AppPalette.muted),
+                          fontSize: 11,
+                          fontWeight: FontWeight.w700,
+                        ),
+                        textAlign: TextAlign.center,
+                      ),
+                    ],
+                  ),
                 ),
-                child: Column(
-                  crossAxisAlignment: CrossAxisAlignment.center,
+                const SizedBox(width: 10),
+                Expanded(
+                  child: Column(
+                    crossAxisAlignment: CrossAxisAlignment.start,
+                    children: [
+                      InkWell(
+                        onTap: onDetail,
+                        borderRadius: BorderRadius.circular(6),
+                        child: Padding(
+                          padding: const EdgeInsets.symmetric(vertical: 8),
+                          child: Text(
+                            item.nombre,
+                            style: Theme.of(context).textTheme.titleMedium
+                                ?.copyWith(
+                                  fontSize: 14,
+                                  fontWeight: FontWeight.w700,
+                                  color: AppColors.of(
+                                    context,
+                                  ).foreground(AppPalette.navy),
+                                  decoration: item.cancelada
+                                      ? TextDecoration.lineThrough
+                                      : null,
+                                ),
+                            textAlign: TextAlign.start,
+                          ),
+                        ),
+                      ),
+                      const SizedBox(height: 2),
+                      ReunionStatusBadge(state: item.estado),
+                    ],
+                  ),
+                ),
+              ],
+            ),
+            const SizedBox(height: 8),
+            Text(
+              '${reunionDateTime(item.data['inicio'])} · ${item.data['fin']?.toString().substring(11, 16) ?? ''} (hora Argentina)',
+              textAlign: TextAlign.start,
+            ),
+            if (item.location.isNotEmpty)
+              Padding(
+                padding: const EdgeInsets.only(top: 4, bottom: 4),
+                child: Row(
+                  crossAxisAlignment: CrossAxisAlignment.start,
+                  mainAxisAlignment: MainAxisAlignment.center,
                   children: [
-                    Text(
-                      item.fecha.substring(8),
-                      style: Theme.of(context).textTheme.titleLarge?.copyWith(
-                        color: AppColors.of(
-                          context,
-                        ).foreground(AppPalette.navy),
-                        fontWeight: FontWeight.w800,
-                      ),
-                      textAlign: TextAlign.center,
+                    Icon(
+                      Icons.location_on_outlined,
+                      size: 17,
+                      color: AppColors.of(context).foreground(AppPalette.muted),
                     ),
-                    Text(
-                      const [
-                        'ENE',
-                        'FEB',
-                        'MAR',
-                        'ABR',
-                        'MAY',
-                        'JUN',
-                        'JUL',
-                        'AGO',
-                        'SEP',
-                        'OCT',
-                        'NOV',
-                        'DIC',
-                      ][int.parse(item.fecha.substring(5, 7)) - 1],
-                      style: TextStyle(
-                        color: AppColors.of(
-                          context,
-                        ).foreground(AppPalette.muted),
-                        fontSize: 11,
-                        fontWeight: FontWeight.w700,
+                    const SizedBox(width: 6),
+                    Expanded(
+                      child: Text(
+                        item.location,
+                        style: TextStyle(
+                          color: AppColors.of(
+                            context,
+                          ).foreground(AppPalette.muted),
+                        ),
+                        textAlign: TextAlign.start,
                       ),
-                      textAlign: TextAlign.center,
                     ),
                   ],
                 ),
               ),
-              const SizedBox(height: 12),
-              Column(
-                crossAxisAlignment: CrossAxisAlignment.center,
-                children: [
-                  InkWell(
-                    onTap: onDetail,
-                    borderRadius: BorderRadius.circular(6),
-                    child: Padding(
-                      padding: const EdgeInsets.symmetric(vertical: 4),
-                      child: Text(
-                        item.nombre,
-                        style: Theme.of(context).textTheme.titleMedium
-                            ?.copyWith(
-                              fontWeight: FontWeight.w800,
-                              color: AppColors.of(
-                                context,
-                              ).foreground(AppPalette.navy),
-                              decoration: item.cancelada
-                                  ? TextDecoration.lineThrough
-                                  : null,
-                            ),
-                        textAlign: TextAlign.center,
-                      ),
-                    ),
-                  ),
-                  const SizedBox(height: 6),
-                  ReunionStatusBadge(state: item.estado),
-                ],
+            if (item.estado == 'pendiente')
+              Text(
+                'Se habilita: ${reunionDateTime(item.data['ventana_desde'])}',
+                textAlign: TextAlign.start,
               ),
-            ],
-          ),
-          const SizedBox(height: 14),
-          Text(
-            '${reunionDateTime(item.data['inicio'])} · ${item.data['fin']?.toString().substring(11, 16) ?? ''} (hora Argentina)',
-            textAlign: TextAlign.center,
-          ),
-          if (item.location.isNotEmpty)
-            Padding(
-              padding: const EdgeInsets.only(top: 6, bottom: 8),
-              child: Row(
-                crossAxisAlignment: CrossAxisAlignment.start,
-                mainAxisAlignment: MainAxisAlignment.center,
-                children: [
-                  Icon(
-                    Icons.location_on_outlined,
-                    size: 17,
-                    color: AppColors.of(context).foreground(AppPalette.muted),
-                  ),
-                  const SizedBox(width: 6),
-                  Expanded(
-                    child: Text(
-                      item.location,
-                      style: TextStyle(
-                        color: AppColors.of(
-                          context,
-                        ).foreground(AppPalette.muted),
-                      ),
-                      textAlign: TextAlign.center,
-                    ),
-                  ),
-                ],
+            if (item.estado == 'ausente' && item.data['definitivo'] != true)
+              const Text(
+                'Estado provisorio hasta el cierre del servidor.',
+                style: TextStyle(fontSize: 12),
+                textAlign: TextAlign.start,
               ),
-            ),
-          if (item.estado == 'pendiente')
-            Text(
-              'Se habilita: ${reunionDateTime(item.data['ventana_desde'])}',
-              textAlign: TextAlign.center,
-            ),
-          if (item.estado == 'ausente')
-            const Text(
-              'Estado provisorio hasta el cierre del servidor.',
-              textAlign: TextAlign.center,
-            ),
-          for (final key in [
-            'motivo_cambio',
-            'motivo_cancelacion',
-            'observaciones',
-          ])
-            if (item.data[key] != null)
-              Container(
-                width: double.infinity,
-                margin: const EdgeInsets.symmetric(vertical: 8),
-                padding: const EdgeInsets.all(10),
-                decoration: BoxDecoration(
-                  color: AppColors.of(
-                    context,
-                  ).surface(AppPalette.warning.withValues(alpha: .07)),
-                  borderRadius: BorderRadius.circular(10),
+            for (final key in [
+              'motivo_cambio',
+              'motivo_cancelacion',
+              'observaciones',
+            ])
+              if (item.data[key] != null)
+                Container(
+                  width: double.infinity,
+                  margin: const EdgeInsets.symmetric(vertical: 8),
+                  padding: const EdgeInsets.all(10),
+                  decoration: BoxDecoration(
+                    color: AppColors.of(
+                      context,
+                    ).surface(AppPalette.warning.withValues(alpha: .07)),
+                    borderRadius: BorderRadius.circular(10),
+                  ),
+                  child: Text(
+                    item.data[key].toString(),
+                    style: TextStyle(
+                      color: AppColors.of(
+                        context,
+                      ).foreground(AppPalette.warning),
+                    ),
+                    textAlign: TextAlign.start,
+                  ),
                 ),
+            if (item.data['fecha_original'] != null)
+              Text(
+                'Fecha original: ${reunionDateTime(item.data['fecha_original'])}',
+                textAlign: TextAlign.start,
+              ),
+            for (final overlap in reunionMaps(item.data['superpuesta_con']))
+              Padding(
+                padding: const EdgeInsets.only(top: 8),
                 child: Text(
-                  item.data[key].toString(),
-                  style: TextStyle(
-                    color: AppColors.of(context).foreground(AppPalette.warning),
-                  ),
-                  textAlign: TextAlign.center,
+                  'Se superpone con ${overlap['nombre']} · ${reunionDateTime(overlap['inicio'])}',
+                  textAlign: TextAlign.start,
+                  style: TextStyle(color: Theme.of(context).colorScheme.error),
                 ),
               ),
-          if (item.data['fecha_original'] != null)
-            Text(
-              'Fecha original: ${reunionDateTime(item.data['fecha_original'])}',
-              textAlign: TextAlign.center,
-            ),
-          for (final overlap in reunionMaps(item.data['superpuesta_con']))
-            Padding(
-              padding: const EdgeInsets.only(top: 8),
-              child: Text(
-                'Se superpone con ${overlap['nombre']} · ${reunionDateTime(overlap['inicio'])}',
-                textAlign: TextAlign.center,
-                style: TextStyle(color: Theme.of(context).colorScheme.error),
+            if (item.data['registrado_at'] != null)
+              Text(
+                'Registro: ${reunionDateTime(item.data['registrado_at'])}',
+                textAlign: TextAlign.start,
               ),
-            ),
-          if (item.data['registrado_at'] != null)
-            Text(
-              'Registro: ${reunionDateTime(item.data['registrado_at'])}',
-              textAlign: TextAlign.center,
-            ),
-          if (item.estado == 'abierta' && !item.cancelada)
-            FilledButton.icon(
-              onPressed: onScan,
-              icon: const Icon(Icons.qr_code_scanner),
-              label: const Text('Escanear QR', textAlign: TextAlign.center),
-            ),
-        ],
+            if (item.data['puede_registrar'] == true && !item.cancelada)
+              FilledButton.icon(
+                onPressed: onScan,
+                icon: const Icon(Icons.qr_code_scanner),
+                label: const Text('Escanear QR', textAlign: TextAlign.start),
+              ),
+          ],
+        ),
       ),
     ),
   );
@@ -1045,7 +1084,11 @@ class _ReunionDetailPageState extends State<ReunionDetailPage> {
                     const SizedBox(height: 16),
                     const Text('Próximas fechas', textAlign: TextAlign.center),
                     Text(
-                      (d['proximas_fechas'] as List? ?? [])
+                      (d.containsKey('proximas_ocurrencias')
+                              ? reunionMaps(
+                                  d['proximas_ocurrencias'],
+                                ).map((e) => e['inicio'] ?? e['fecha']).toList()
+                              : (d['proximas_fechas'] as List? ?? []))
                           .map(reunionDateTime)
                           .join(' · '),
                       textAlign: TextAlign.center,

@@ -12,11 +12,14 @@ class HomeReunionesCard extends StatelessWidget {
     required this.onRetry,
     this.onScan,
     this.summary,
+    this.next,
+    this.hasNext,
     this.loading = false,
     this.error,
   });
   final List<ReunionOccurrence> items;
-  final Map<String, dynamic>? summary;
+  final Map<String, dynamic>? summary, next;
+  final bool? hasNext;
   final bool loading;
   final String? error;
   final VoidCallback onOpen, onRetry;
@@ -94,12 +97,16 @@ class HomeReunionesCard extends StatelessWidget {
               TextButton(onPressed: onRetry, child: const Text('Reintentar')),
             ],
             if (!loading && error == null && items.isEmpty)
-              const Padding(
-                padding: EdgeInsets.all(8),
+              Padding(
+                padding: const EdgeInsets.all(8),
                 child: Text(
-                  'No tenés reuniones esta semana.',
+                  next != null
+                      ? 'Pr?xima: ${next!['nombre'] ?? 'Reuni?n'} ? ${reunionDateTime(next!['inicio'] ?? next!['fecha'])}'
+                      : hasNext == false
+                      ? 'No hay pr?ximas reuniones.'
+                      : 'No ten?s reuniones esta semana.',
                   textAlign: TextAlign.center,
-                  style: TextStyle(fontSize: 12),
+                  style: const TextStyle(fontSize: 12),
                 ),
               ),
             for (final item in sorted.take(2)) ...[
@@ -142,7 +149,7 @@ class HomeReunionesCard extends StatelessWidget {
                       ),
                     ),
                   ),
-                  if (item.estado == 'abierta' && !item.cancelada)
+                  if (item.data['puede_registrar'] == true && !item.cancelada)
                     IconButton(
                       onPressed: onScan,
                       tooltip: 'Escanear QR de reunión',

@@ -1,3 +1,7 @@
+import '../widgets/app_menu_page.dart';
+import 'vacaciones_page.dart';
+import 'notifications_page.dart';
+import '../../core/reuniones/notifications_navigation.dart';
 import 'package:ficharqr/src/presentation/widgets/app_card.dart';
 import '../theme/theme_preferences.dart';
 import '../../core/network/reuniones_models.dart';
@@ -23,8 +27,7 @@ import 'package:image_picker/image_picker.dart';
 import 'package:url_launcher/url_launcher.dart';
 
 import '../../config/app_config.dart';
-import '../../core/alerts/employee_alerts_repository.dart';
-import '../../core/alerts/employee_alerts_read_state.dart';
+
 import '../../core/attendance/attendance_config_cache.dart';
 import '../../core/attendance/clock_readiness_cache.dart';
 import '../../core/attendance/clock_feedback_presenter.dart';
@@ -103,27 +106,13 @@ class _AttendanceHomePageState extends State<AttendanceHomePage>
   late final QrClockPreflightService _qrClockPreflightService;
   late final QrClockSubmissionService _qrClockSubmissionService;
   late final PendingQueueController _pendingQueueController;
-  late final EmployeeAlertsRepository _alertsRepository;
 
   List<ReunionOccurrence> _reuniones = [];
   Map<String, dynamic>? _reunionesSummary;
+  Map<String, dynamic>? _nextReunion;
+  bool? _hasNextReunion;
   StreamSubscription? _pushMessages;
-  int _comunicadosUnread = 0, _comunicadosRequest = 0;
-  Future<void> _loadComunicadosBadge() async {
-    final request = ++_comunicadosRequest;
-    final token = widget.token;
-    if (_isOfflineToken) return;
-    try {
-      final data = await widget.apiClient.getComunicados(token: token);
-      if (mounted && request == _comunicadosRequest && widget.token == token) {
-        setState(
-          () => _comunicadosUnread = (data['no_leidos'] as num?)?.toInt() ?? 0,
-        );
-      }
-    } catch (_) {
-      /* Keep attendance usable when the optional inbox is offline. */
-    }
-  }
+  Future<void> _loadComunicadosBadge() => _loadAlertsOverview(force: true);
 
   void _comunicadosRefresh() => unawaited(_loadComunicadosBadge());
   void _comunicadoRoute() {
@@ -146,7 +135,10 @@ class _AttendanceHomePageState extends State<AttendanceHomePage>
               ),
       ),
     );
-    if (mounted) await _loadComunicadosBadge();
+    if (mounted) {
+      await _loadComunicadosBadge();
+      await _loadAlertsOverview(force: true);
+    }
   }
 
   void _notificationRoute() {
@@ -196,6 +188,10 @@ class _AttendanceHomePageState extends State<AttendanceHomePage>
       ).map(ReunionOccurrence.new).toList();
       setState(() {
         _reuniones = items;
+        _nextReunion = data['proxima'] is Map
+            ? Map<String, dynamic>.from(data['proxima'])
+            : null;
+        _hasNextReunion = data['hay_proximas'] as bool?;
         _reunionesSummary = data['resumen'] is Map
             ? Map<String, dynamic>.from(data['resumen'])
             : null;
@@ -298,6 +294,11 @@ class _AttendanceHomePageState extends State<AttendanceHomePage>
   void initState() {
     super.initState();
     ReunionNavigation.pending.addListener(_notificationRoute);
+    NotificationsNavigation.route.addListener(_vacationRoute);
+    WidgetsBinding.instance.addPostFrameCallback((_) => _vacationRoute());
+    NotificationsNavigation.pending.addListener(_inboxRoute);
+    NotificationsNavigation.refresh.addListener(_inboxRefresh);
+    WidgetsBinding.instance.addPostFrameCallback((_) => _inboxRoute());
     ComunicadosNavigation.pending.addListener(_comunicadoRoute);
     ComunicadosNavigation.refresh.addListener(_comunicadosRefresh);
     unawaited(_loadComunicadosBadge());
@@ -311,8 +312,7 @@ class _AttendanceHomePageState extends State<AttendanceHomePage>
             '${message.notification?.title ?? 'FichaYa'}: ${message.notification?.body ?? ''}',
         action: SnackBarAction(
           label: 'Ver',
-          onPressed: () =>
-              ReunionNavigation.open(message.data['ruta'] as String?),
+          onPressed: () => PushService.instance.openMessage(message),
         ),
       );
     });
@@ -344,7 +344,7 @@ class _AttendanceHomePageState extends State<AttendanceHomePage>
     _pendingQueueController = PendingQueueController(
       syncService: _pendingClockSyncService,
     );
-    _alertsRepository = EmployeeAlertsRepository(widget.apiClient);
+
     // Inicializar URL de foto usando el endpoint canonico /empleados/imagen/{dni}.
     // No usar el campo `foto` de EmployeeSummary como primario porque el backend
     // puede devolverlo como URL relativa (sin esquema), que CachedNetworkImage
@@ -419,6 +419,9 @@ class _AttendanceHomePageState extends State<AttendanceHomePage>
     ReunionNavigation.pending.removeListener(_notificationRoute);
     ReunionNavigation.refresh.removeListener(_notificationRefresh);
     _pushMessages?.cancel();
+    NotificationsNavigation.route.removeListener(_vacationRoute);
+    NotificationsNavigation.pending.removeListener(_inboxRoute);
+    NotificationsNavigation.refresh.removeListener(_inboxRefresh);
     ComunicadosNavigation.pending.removeListener(_comunicadoRoute);
     ComunicadosNavigation.refresh.removeListener(_comunicadosRefresh);
     WidgetsBinding.instance.removeObserver(this);
@@ -521,12 +524,11 @@ class _AttendanceHomePageState extends State<AttendanceHomePage>
     final request = ++_alertsRequest;
     _alertsLoading = true;
     try {
-      final snapshot = await _alertsRepository.loadDetails(token: widget.token);
-      if (!mounted) return;
-      final count = await EmployeeAlertsReadState(
-        server: widget.apiClient.baseUrl,
-        employeeId: widget.empleado.id,
-      ).unreadCount(snapshot);
+      final summary = await widget.apiClient.getNotifications(
+        token: widget.token,
+        suffix: '/resumen',
+      );
+      final count = (summary['no_leidas'] as num?)?.toInt() ?? 0;
       if (!mounted) return;
       if (request != _alertsRequest) return;
       setState(() => _alertsCount = count);
@@ -541,15 +543,128 @@ class _AttendanceHomePageState extends State<AttendanceHomePage>
     }
   }
 
-  Future<void> _openEmployeeAlerts() async {
+  void _inboxRefresh() {
+    unawaited(_loadAlertsOverview(force: true));
+  }
+
+  void _vacationRoute() {
+    final route = NotificationsNavigation.route.value;
+    if (route == null || !mounted || widget.sessionManager.isLocked) return;
+    NotificationsNavigation.route.value = null;
+    unawaited(_notificationDestination({'ruta': route}));
+  }
+
+  void _inboxRoute() {
+    final id = NotificationsNavigation.pending.value;
+    if (id == null || !mounted || widget.sessionManager.isLocked) return;
+    NotificationsNavigation.pending.value = null;
+    unawaited(
+      Navigator.of(context).push(
+        MaterialPageRoute<void>(
+          builder: (_) => NotificationsPage(
+            api: widget.apiClient,
+            token: widget.token,
+            initialId: id,
+            onDestination: _notificationDestination,
+          ),
+        ),
+      ),
+    );
+  }
+
+  Future<void> _notificationDestination(
+    Map<String, dynamic> destination,
+  ) async {
+    final route = destination['ruta']?.toString() ?? '';
+    switch (route.split('/').where((s) => s.isNotEmpty).firstOrNull) {
+      case 'adelantos':
+        await _openAdelantos();
+      case 'pedidos-mercaderia':
+      case 'pedidos_mercaderia':
+        await _openPedidosMercaderia();
+      case 'feedback':
+        await _openFeedback();
+      case 'justificaciones':
+        await _openJustificaciones();
+      case 'equipo':
+        if (!RegExp(r'^/equipo/vacaciones/[1-9][0-9]*/?$').hasMatch(route)) {
+          return;
+        }
+        await Navigator.of(context).push(
+          MaterialPageRoute<void>(
+            builder: (_) => VacacionesPage(
+              apiClient: widget.apiClient,
+              token: widget.token,
+              initialId: int.tryParse(
+                route.split('/').where((s) => s.isNotEmpty).last,
+              ),
+              team: true,
+            ),
+          ),
+        );
+      case 'vacaciones':
+        await Navigator.of(context).push(
+          MaterialPageRoute<void>(
+            builder: (_) => VacacionesPage(
+              apiClient: widget.apiClient,
+              token: widget.token,
+              initialId: int.tryParse(
+                route.split('/').where((s) => s.isNotEmpty).last,
+              ),
+            ),
+          ),
+        );
+      case 'trivia':
+      case 'trivias':
+        await _openTrivia();
+      case 'reintegros':
+        await _homeCoordinator.openReintegros(
+          context,
+          apiClient: widget.apiClient,
+          token: widget.token,
+        );
+      case 'epp':
+        await _homeCoordinator.openEpp(
+          context,
+          apiClient: widget.apiClient,
+          token: widget.token,
+        );
+      case 'seguridad':
+      case 'seguridad-higiene':
+        await _homeCoordinator.openSeguridad(
+          context,
+          apiClient: widget.apiClient,
+          token: widget.token,
+        );
+      case 'comunicados':
+        await _openComunicados(id: int.tryParse(route.split('/').last) ?? 0);
+      case 'reuniones':
+        ReunionNavigation.open(route);
+      default:
+        if (mounted) {
+          ScaffoldMessenger.of(context).showSnackBar(
+            const SnackBar(
+              content: Text(
+                'El mensaje est\u00e1 disponible. Consult\u00e1 el tr\u00e1mite desde su m\u00f3dulo.',
+              ),
+            ),
+          );
+        }
+    }
+  }
+
+  Future<void> _openNotifications() async {
     if (_submitting) {
       return;
     }
-    await _homeCoordinator.openEmployeeAlerts(
-      context,
-      apiClient: widget.apiClient,
-      token: widget.token,
-      employeeId: widget.empleado.id,
+    await Navigator.of(context).push(
+      MaterialPageRoute<void>(
+        builder: (_) => NotificationsPage(
+          api: widget.apiClient,
+          token: widget.token,
+          onDestination: _notificationDestination,
+        ),
+      ),
     );
     if (mounted) {
       unawaited(_loadAlertsOverview(force: true));
@@ -2045,11 +2160,11 @@ class _AttendanceHomePageState extends State<AttendanceHomePage>
           child: IconButton(
             onPressed: _submitting
                 ? null
-                : () => unawaited(_openEmployeeAlerts()),
+                : () => unawaited(_openNotifications()),
             icon: const Icon(Icons.notifications_active_rounded),
             tooltip: hasAlerts
-                ? 'Alertas (${alertsCount > 99 ? '99+' : alertsCount})'
-                : 'Alertas',
+                ? 'Notificaciones (${alertsCount > 99 ? '99+' : alertsCount})'
+                : 'Notificaciones',
           ),
         ),
         title: Row(
@@ -2078,226 +2193,147 @@ class _AttendanceHomePageState extends State<AttendanceHomePage>
           ],
         ),
         actions: [
-          PopupMenuButton<_HomeMenuAction>(
-            enabled: !_submitting,
+          IconButton(
             icon: const Icon(Icons.more_vert_rounded),
-            tooltip: 'Mas opciones',
-            onSelected: (action) async {
-              switch (action) {
-                case _HomeMenuAction.notifications:
-                  await Navigator.of(context).push(
-                    MaterialPageRoute<void>(
-                      builder: (_) => const NotificationSettingsPage(),
-                    ),
-                  );
-                case _HomeMenuAction.appearance:
-                  await Navigator.of(context).push(
-                    MaterialPageRoute<void>(
-                      builder: (_) => const AppearancePage(),
-                    ),
-                  );
-                case _HomeMenuAction.reuniones:
-                  await _openReuniones();
-                case _HomeMenuAction.comunicados:
-                  await _openComunicados();
-                case _HomeMenuAction.biometrics:
-                  await _openBiometricSettings();
-                case _HomeMenuAction.security:
-                  await _openSecurityEvents();
-                case _HomeMenuAction.locationGps:
-                  await _openGpsLocation();
-                case _HomeMenuAction.camera:
-                  await Navigator.of(context).push(
-                    MaterialPageRoute<void>(
-                      builder: (_) => CameraPermissionPage(
-                        permissions: _devicePermissionBootstrap,
-                      ),
-                    ),
-                  );
-                case _HomeMenuAction.rateApp:
-                  await _openRateApp();
-                case _HomeMenuAction.links:
-                  await _openLinks();
-                case _HomeMenuAction.diagnostics:
-                  if (mounted) {
-                    _showDiagnosticsSheet(
-                      context,
-                      viewData: viewData,
-                      clockMetrics: clockMetrics,
-                    );
-                  }
-                case _HomeMenuAction.lockSession:
-                  await widget.onLockSession();
-                case _HomeMenuAction.about:
-                  await _homeCoordinator.openAbout(context);
-                case _HomeMenuAction.logout:
-                  await widget.onLogout();
-              }
-            },
-            itemBuilder: (_) => [
-              PopupMenuItem(
-                value: _HomeMenuAction.comunicados,
-                child: ListTile(
-                  minLeadingWidth: 24,
-                  horizontalTitleGap: 12,
-                  leading: Badge(
-                    isLabelVisible: _comunicadosUnread > 0,
-                    label: Text('$_comunicadosUnread'),
-                    child: const Icon(Icons.campaign_outlined),
-                  ),
-                  title: const Text('Comunicados', textAlign: TextAlign.start),
-                  contentPadding: EdgeInsets.zero,
-                  dense: true,
-                ),
-              ),
-              const PopupMenuItem(
-                value: _HomeMenuAction.reuniones,
-                child: ListTile(
-                  minLeadingWidth: 24,
-                  horizontalTitleGap: 12,
-                  leading: Icon(Icons.groups_outlined),
-                  title: Text('Mis reuniones', textAlign: TextAlign.start),
-                  contentPadding: EdgeInsets.zero,
-                  dense: true,
-                ),
-              ),
-              const PopupMenuItem(
-                value: _HomeMenuAction.security,
-                child: ListTile(
-                  minLeadingWidth: 24,
-                  horizontalTitleGap: 12,
-                  leading: Icon(Icons.shield_rounded),
-                  title: Text('Seguridad laboral', textAlign: TextAlign.start),
-                  contentPadding: EdgeInsets.zero,
-                  dense: true,
-                ),
-              ),
-              const PopupMenuItem(
-                value: _HomeMenuAction.links,
-                child: ListTile(
-                  minLeadingWidth: 24,
-                  horizontalTitleGap: 12,
-                  leading: Icon(Icons.link_rounded),
-                  title: Text('Mis enlaces', textAlign: TextAlign.start),
-                  contentPadding: EdgeInsets.zero,
-                  dense: true,
-                ),
-              ),
-              const PopupMenuDivider(),
-              const PopupMenuItem(
-                value: _HomeMenuAction.notifications,
-                child: ListTile(
-                  contentPadding: EdgeInsets.zero,
-                  minLeadingWidth: 24,
-                  horizontalTitleGap: 12,
-                  dense: true,
-                  leading: Icon(Icons.notifications_outlined),
-                  title: Text('Notificaciones', textAlign: TextAlign.start),
-                ),
-              ),
-              const PopupMenuItem(
-                value: _HomeMenuAction.locationGps,
-                child: ListTile(
-                  minLeadingWidth: 24,
-                  horizontalTitleGap: 12,
-                  leading: Icon(Icons.my_location_rounded),
-                  title: Text('Ubicación GPS', textAlign: TextAlign.start),
-                  contentPadding: EdgeInsets.zero,
-                  dense: true,
-                ),
-              ),
-              const PopupMenuItem(
-                value: _HomeMenuAction.camera,
-                child: ListTile(
-                  minLeadingWidth: 24,
-                  horizontalTitleGap: 12,
-                  leading: Icon(Icons.camera_alt_outlined),
-                  title: Text('Cámara y permisos', textAlign: TextAlign.start),
-                  contentPadding: EdgeInsets.zero,
-                  dense: true,
-                ),
-              ),
-              const PopupMenuItem(
-                value: _HomeMenuAction.biometrics,
-                child: ListTile(
-                  minLeadingWidth: 24,
-                  horizontalTitleGap: 12,
-                  leading: Icon(Icons.fingerprint_rounded),
-                  title: Text('Huella y sonido', textAlign: TextAlign.start),
-                  contentPadding: EdgeInsets.zero,
-                  dense: true,
-                ),
-              ),
-              const PopupMenuItem(
-                value: _HomeMenuAction.appearance,
-                child: ListTile(
-                  minLeadingWidth: 24,
-                  horizontalTitleGap: 12,
-                  leading: Icon(Icons.palette_outlined),
-                  title: Text('Apariencia', textAlign: TextAlign.start),
-                  contentPadding: EdgeInsets.zero,
-                  dense: true,
-                ),
-              ),
-              const PopupMenuDivider(),
-              const PopupMenuItem(
-                value: _HomeMenuAction.rateApp,
-                child: ListTile(
-                  minLeadingWidth: 24,
-                  horizontalTitleGap: 12,
-                  leading: Icon(Icons.star_outline_rounded),
-                  title: Text('Calificá la app', textAlign: TextAlign.start),
-                  contentPadding: EdgeInsets.zero,
-                  dense: true,
-                ),
-              ),
-              const PopupMenuItem(
-                value: _HomeMenuAction.about,
-                child: ListTile(
-                  minLeadingWidth: 24,
-                  horizontalTitleGap: 12,
-                  leading: Icon(Icons.info_rounded),
-                  title: Text('Acerca de FichaYa', textAlign: TextAlign.start),
-                  contentPadding: EdgeInsets.zero,
-                  dense: true,
-                ),
-              ),
-              if (!AppConfig.current.isProd)
-                const PopupMenuItem(
-                  value: _HomeMenuAction.diagnostics,
-                  child: ListTile(
-                    minLeadingWidth: 24,
-                    horizontalTitleGap: 12,
-                    leading: Icon(Icons.developer_mode_rounded),
-                    title: Text('Diagnóstico', textAlign: TextAlign.start),
-                    contentPadding: EdgeInsets.zero,
-                    dense: true,
-                  ),
-                ),
-              const PopupMenuDivider(),
-              const PopupMenuItem(
-                value: _HomeMenuAction.lockSession,
-                child: ListTile(
-                  minLeadingWidth: 24,
-                  horizontalTitleGap: 12,
-                  leading: Icon(Icons.lock_rounded),
-                  title: Text('Bloquear sesión', textAlign: TextAlign.start),
-                  contentPadding: EdgeInsets.zero,
-                  dense: true,
-                ),
-              ),
-              const PopupMenuItem(
-                value: _HomeMenuAction.logout,
-                child: ListTile(
-                  minLeadingWidth: 24,
-                  horizontalTitleGap: 12,
-                  leading: Icon(Icons.logout_rounded),
-                  title: Text('Cerrar sesión', textAlign: TextAlign.start),
-                  contentPadding: EdgeInsets.zero,
-                  dense: true,
-                ),
-              ),
-            ],
+            tooltip: 'Más opciones',
+            onPressed: _submitting
+                ? null
+                : () async {
+                    final action = await Navigator.of(context)
+                        .push<_HomeMenuAction>(
+                          MaterialPageRoute(
+                            builder: (_) => AppMenuPage<_HomeMenuAction>(
+                              sections: {
+                                'Mi actividad': [
+                                  AppMenuEntry(
+                                    _HomeMenuAction.reuniones,
+                                    Icons.groups_outlined,
+                                    'Mis reuniones',
+                                  ),
+                                  AppMenuEntry(
+                                    _HomeMenuAction.security,
+                                    Icons.shield_rounded,
+                                    'Seguridad laboral',
+                                  ),
+                                  AppMenuEntry(
+                                    _HomeMenuAction.links,
+                                    Icons.link_rounded,
+                                    'Mis enlaces',
+                                  ),
+                                ],
+                                'Configuración': [
+                                  AppMenuEntry(
+                                    _HomeMenuAction.appearance,
+                                    Icons.palette_outlined,
+                                    'Apariencia',
+                                  ),
+                                  AppMenuEntry(
+                                    _HomeMenuAction.notifications,
+                                    Icons.notifications_outlined,
+                                    'Permisos de avisos',
+                                  ),
+                                  AppMenuEntry(
+                                    _HomeMenuAction.locationGps,
+                                    Icons.my_location_rounded,
+                                    'Ubicación GPS',
+                                  ),
+                                  AppMenuEntry(
+                                    _HomeMenuAction.camera,
+                                    Icons.camera_alt_outlined,
+                                    'Cámara y permisos',
+                                  ),
+                                  AppMenuEntry(
+                                    _HomeMenuAction.biometrics,
+                                    Icons.fingerprint_rounded,
+                                    'Huella y sonido',
+                                  ),
+                                ],
+                                'Ayuda': [
+                                  AppMenuEntry(
+                                    _HomeMenuAction.rateApp,
+                                    Icons.star_outline_rounded,
+                                    'Calificá la app',
+                                  ),
+                                  AppMenuEntry(
+                                    _HomeMenuAction.about,
+                                    Icons.info_rounded,
+                                    'Acerca de FichaYa',
+                                  ),
+                                  if (!AppConfig.current.isProd)
+                                    AppMenuEntry(
+                                      _HomeMenuAction.diagnostics,
+                                      Icons.developer_mode_rounded,
+                                      'Diagnóstico',
+                                    ),
+                                ],
+                                'Sesión': [
+                                  AppMenuEntry(
+                                    _HomeMenuAction.lockSession,
+                                    Icons.lock_rounded,
+                                    'Bloquear sesión',
+                                  ),
+                                  AppMenuEntry(
+                                    _HomeMenuAction.logout,
+                                    Icons.logout_rounded,
+                                    'Cerrar sesión',
+                                  ),
+                                ],
+                              },
+                            ),
+                          ),
+                        );
+                    if (!mounted || !context.mounted || action == null) return;
+                    switch (action) {
+                      case _HomeMenuAction.notifications:
+                        await Navigator.of(context).push(
+                          MaterialPageRoute<void>(
+                            builder: (_) => const NotificationSettingsPage(),
+                          ),
+                        );
+                      case _HomeMenuAction.appearance:
+                        await Navigator.of(context).push(
+                          MaterialPageRoute<void>(
+                            builder: (_) => const AppearancePage(),
+                          ),
+                        );
+                      case _HomeMenuAction.reuniones:
+                        await _openReuniones();
+                      case _HomeMenuAction.comunicados:
+                        await _openComunicados();
+                      case _HomeMenuAction.biometrics:
+                        await _openBiometricSettings();
+                      case _HomeMenuAction.security:
+                        await _openSecurityEvents();
+                      case _HomeMenuAction.locationGps:
+                        await _openGpsLocation();
+                      case _HomeMenuAction.camera:
+                        await Navigator.of(context).push(
+                          MaterialPageRoute<void>(
+                            builder: (_) => CameraPermissionPage(
+                              permissions: _devicePermissionBootstrap,
+                            ),
+                          ),
+                        );
+                      case _HomeMenuAction.rateApp:
+                        await _openRateApp();
+                      case _HomeMenuAction.links:
+                        await _openLinks();
+                      case _HomeMenuAction.diagnostics:
+                        if (mounted) {
+                          _showDiagnosticsSheet(
+                            context,
+                            viewData: viewData,
+                            clockMetrics: clockMetrics,
+                          );
+                        }
+                      case _HomeMenuAction.lockSession:
+                        await widget.onLockSession();
+                      case _HomeMenuAction.about:
+                        await _homeCoordinator.openAbout(context);
+                      case _HomeMenuAction.logout:
+                        await widget.onLogout();
+                    }
+                  },
           ),
         ],
       ),
@@ -2413,11 +2449,6 @@ class _AttendanceHomePageState extends State<AttendanceHomePage>
                       employeeName: empleado.nombreCompleto,
                       employeeDni: empleado.dni,
                       employeeCompany: null,
-                      syncText: viewData.syncText,
-                      sessionText: viewData.sessionText,
-                      sessionColor: sessionColor,
-                      sessionForeground: viewData.sessionForeground,
-                      gpsStatusText: viewData.gpsStatusText,
                     ),
                     if (_profileLoadError != null) ...[
                       const SizedBox(height: 8),
@@ -2476,32 +2507,6 @@ class _AttendanceHomePageState extends State<AttendanceHomePage>
                     // ── Stats grid (4 tiles) ───────────────────────────
                     AttendanceQuickActionsCard(
                       items: [
-                        AttendanceQuickActionItem(
-                          icon: Icons.notifications_outlined,
-                          label: 'Notificaciones',
-                          onTap: _submitting
-                              ? null
-                              : () => unawaited(_openEmployeeAlerts()),
-                        ),
-                        AttendanceQuickActionItem(
-                          icon: Icons.notifications_active_outlined,
-                          label: 'Ajustes de avisos',
-                          onTap: _submitting
-                              ? null
-                              : () => Navigator.of(context).push(
-                                  MaterialPageRoute<void>(
-                                    builder: (_) =>
-                                        const NotificationSettingsPage(),
-                                  ),
-                                ),
-                        ),
-                        AttendanceQuickActionItem(
-                          icon: Icons.campaign_outlined,
-                          label: _comunicadosUnread > 0
-                              ? 'Comunicados ($_comunicadosUnread)'
-                              : 'Comunicados',
-                          onTap: () => unawaited(_openComunicados()),
-                        ),
                         ...actionViewData.quickActions.map(_quickActionItem),
                       ],
                     ),
@@ -2509,6 +2514,8 @@ class _AttendanceHomePageState extends State<AttendanceHomePage>
                     HomeReunionesCard(
                       items: _reuniones,
                       summary: _reunionesSummary,
+                      next: _nextReunion,
+                      hasNext: _hasNextReunion,
                       loading: _loadingReuniones,
                       error: _reunionesError,
                       onOpen: _openReuniones,
@@ -2643,6 +2650,14 @@ class _AttendanceHomePageState extends State<AttendanceHomePage>
                           icon: const Icon(Icons.refresh_rounded),
                         ),
                       ),
+                    const SizedBox(height: 16),
+                    AttendanceConnectionCard(
+                      syncText: viewData.syncText,
+                      sessionText: viewData.sessionText,
+                      sessionColor: sessionColor,
+                      sessionForeground: viewData.sessionForeground,
+                      gpsStatusText: viewData.gpsStatusText,
+                    ),
                   ],
                 ),
               ),

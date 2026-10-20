@@ -38,10 +38,11 @@ void main() {
     );
     expect(tiles, findsNWidgets(3));
     final rects = [for (var i = 0; i < 3; i++) tester.getRect(tiles.at(i))];
-    for (final rect in rects.skip(1)) {
+    for (final rect in rects.skip(1).take(1)) {
       expect(rect.top, rects.first.top);
       expect(rect.height, rects.first.height);
     }
+    expect(rects[2].top, greaterThan(rects.first.bottom));
     expect(tester.takeException(), isNull);
   });
   for (final width in [320.0, 440.0, 1024.0]) {
@@ -67,11 +68,13 @@ void main() {
                       greeting: 'Buenos días',
                       employeeName: 'María Alejandra',
                       employeeDni: '12345678',
-                      syncText: 'Datos actualizados',
-                      sessionText: 'Sesión activa',
-                      sessionColor: Colors.green,
+                    ),
+                    const AttendanceConnectionCard(
+                      syncText: 'Datos sincronizados hace 5 min',
+                      sessionText: 'Sesion activa',
+                      sessionColor: Colors.blue,
                       sessionForeground: Colors.white,
-                      gpsStatusText: 'Ubicación pendiente de validar',
+                      gpsStatusText: 'GPS sin validar',
                     ),
                     AttendanceQuickActionsCard(
                       items: [

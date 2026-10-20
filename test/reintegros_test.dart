@@ -40,6 +40,68 @@ Map<String, dynamic> detail({int revision = 1}) => {
 };
 
 void main() {
+  testWidgets('editing survives rotation and a landscape keyboard', (
+    tester,
+  ) async {
+    await tester.binding.setSurfaceSize(const Size(390, 844));
+    addTearDown(() => tester.binding.setSurfaceSize(null));
+    final keyboard = ValueNotifier<double>(0);
+    addTearDown(keyboard.dispose);
+    final api = _Api();
+    addTearDown(api.dispose);
+    final original = detail()
+      ..['gastos'] = [
+        {
+          'categoria_id': 1,
+          'categoria_nombre': 'Peajes',
+          'concepto': 'Viaje original',
+          'importe': '25.00',
+          'fotos': [],
+        },
+      ];
+    await tester.pumpWidget(
+      MaterialApp(
+        theme: buildAppTheme(),
+        builder: (context, child) => ValueListenableBuilder<double>(
+          valueListenable: keyboard,
+          builder: (context, inset, _) => MediaQuery(
+            data: MediaQuery.of(context).copyWith(
+              viewInsets: EdgeInsets.only(bottom: inset),
+              textScaler: const TextScaler.linear(2),
+            ),
+            child: child!,
+          ),
+        ),
+        home: ReintegroEditor(
+          api: api,
+          token: 'token',
+          config: config,
+          period: '2026-09',
+          initial: original,
+        ),
+      ),
+    );
+    await tester.pumpAndSettle();
+    final description = find.widgetWithText(TextFormField, 'Viaje original');
+    await tester.ensureVisible(description);
+    await tester.pumpAndSettle();
+    await tester.enterText(description, 'Viaje conservado');
+    await tester.binding.setSurfaceSize(const Size(740, 360));
+    keyboard.value = 180;
+    await tester.pumpAndSettle();
+    expect(tester.takeException(), isNull);
+    expect(find.text('Viaje conservado'), findsOneWidget);
+    keyboard.value = 0;
+    await tester.binding.setSurfaceSize(const Size(390, 844));
+    await tester.pumpAndSettle();
+    await tester.ensureVisible(find.text('Guardar borrador'));
+    await tester.pumpAndSettle();
+    await tester.tap(find.text('Guardar borrador'));
+    await tester.pumpAndSettle();
+    expect(api.saved.single['gastos'][0]['concepto'], 'Viaje conservado');
+    expect(tester.takeException(), isNull);
+  });
+
   testWidgets(
     'refresh rejects deactivated concept even in draft and preserves local data',
     (tester) async {
@@ -379,6 +441,12 @@ void main() {
           );
           await tester.pumpAndSettle();
           expect(tester.takeException(), isNull);
+          await tester.scrollUntilVisible(
+            find.text('Cargar gastos'),
+            -250,
+            scrollable: find.byType(Scrollable).first,
+          );
+          await tester.pumpAndSettle();
           await tester.tap(find.text('Cargar gastos'));
           await tester.pumpAndSettle();
           await tester.scrollUntilVisible(
@@ -555,6 +623,12 @@ void main() {
       ),
     );
     await tester.pumpAndSettle();
+    await tester.scrollUntilVisible(
+      find.text('Cargar gastos'),
+      -250,
+      scrollable: find.byType(Scrollable).first,
+    );
+    await tester.pumpAndSettle();
     await tester.tap(find.text('Cargar gastos'));
     await tester.pumpAndSettle();
     await tester.tap(find.text('Abrir 2026-09'));
@@ -621,6 +695,12 @@ void main() {
       await tester.tap(find.text('Marcar como leído'));
       await tester.pumpAndSettle();
       expect(api.actions.first['path'], '/recordatorios/8/leido');
+      await tester.scrollUntilVisible(
+        find.text('Cargar gastos'),
+        -250,
+        scrollable: find.byType(Scrollable).first,
+      );
+      await tester.pumpAndSettle();
       await tester.tap(find.text('Cargar gastos'));
       await tester.pumpAndSettle();
       await tester.tap(find.text('Abrir 2026-09'));

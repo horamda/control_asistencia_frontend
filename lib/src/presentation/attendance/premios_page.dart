@@ -188,32 +188,36 @@ class _SectorChip extends StatelessWidget {
     return Row(
       mainAxisSize: MainAxisSize.min,
       children: [
-        Container(
-          padding: const EdgeInsets.symmetric(horizontal: 12, vertical: 5),
-          decoration: BoxDecoration(
-            color: cs.secondaryContainer,
-            borderRadius: BorderRadius.circular(20),
-          ),
-          child: Row(
-            mainAxisSize: MainAxisSize.min,
-            mainAxisAlignment: MainAxisAlignment.center,
-            children: [
-              Icon(
-                Icons.group_rounded,
-                size: 14,
-                color: cs.onSecondaryContainer,
-              ),
-              const SizedBox(width: 6),
-              Text(
-                nombre,
-                style: TextStyle(
-                  fontSize: 13,
-                  fontWeight: FontWeight.w600,
+        Flexible(
+          child: Container(
+            padding: const EdgeInsets.symmetric(horizontal: 12, vertical: 5),
+            decoration: BoxDecoration(
+              color: cs.secondaryContainer,
+              borderRadius: BorderRadius.circular(20),
+            ),
+            child: Row(
+              mainAxisSize: MainAxisSize.min,
+              mainAxisAlignment: MainAxisAlignment.center,
+              children: [
+                Icon(
+                  Icons.group_rounded,
+                  size: 14,
                   color: cs.onSecondaryContainer,
                 ),
-                textAlign: TextAlign.center,
-              ),
-            ],
+                const SizedBox(width: 6),
+                Flexible(
+                  child: Text(
+                    nombre,
+                    style: TextStyle(
+                      fontSize: 13,
+                      fontWeight: FontWeight.w600,
+                      color: cs.onSecondaryContainer,
+                    ),
+                    textAlign: TextAlign.center,
+                  ),
+                ),
+              ],
+            ),
           ),
         ),
       ],
@@ -307,29 +311,31 @@ class _ResumenTile extends StatelessWidget {
         children: [
           Icon(icon, size: 18, color: AppColors.of(context).foreground(color)),
           const SizedBox(width: 8),
-          Column(
-            crossAxisAlignment: CrossAxisAlignment.center,
-            mainAxisSize: MainAxisSize.min,
-            children: [
-              Text(
-                value,
-                style: TextStyle(
-                  fontSize: 16,
-                  fontWeight: FontWeight.w800,
-                  color: AppColors.of(context).foreground(color),
+          Flexible(
+            child: Column(
+              crossAxisAlignment: CrossAxisAlignment.center,
+              mainAxisSize: MainAxisSize.min,
+              children: [
+                Text(
+                  value,
+                  style: TextStyle(
+                    fontSize: 16,
+                    fontWeight: FontWeight.w800,
+                    color: AppColors.of(context).foreground(color),
+                  ),
+                  textAlign: TextAlign.center,
                 ),
-                textAlign: TextAlign.center,
-              ),
-              Text(
-                label,
-                style: Theme.of(context).textTheme.labelSmall?.copyWith(
-                  color: AppColors.of(
-                    context,
-                  ).foreground(color.withValues(alpha: 0.85)),
+                Text(
+                  label,
+                  style: Theme.of(context).textTheme.labelSmall?.copyWith(
+                    color: AppColors.of(
+                      context,
+                    ).foreground(color.withValues(alpha: 0.85)),
+                  ),
+                  textAlign: TextAlign.center,
                 ),
-                textAlign: TextAlign.center,
-              ),
-            ],
+              ],
+            ),
           ),
         ],
       ),
@@ -512,25 +518,27 @@ class _PremioCard extends StatelessWidget {
                       ),
                     ),
                     const SizedBox(width: 8),
-                    Container(
-                      padding: const EdgeInsets.symmetric(
-                        horizontal: 10,
-                        vertical: 5,
-                      ),
-                      decoration: BoxDecoration(
-                        color: AppColors.of(
-                          context,
-                        ).surface(color.withValues(alpha: 0.12)),
-                        borderRadius: BorderRadius.circular(20),
-                      ),
-                      child: Text(
-                        _rankLabel(premio.ranking),
-                        style: TextStyle(
-                          fontSize: 13,
-                          fontWeight: FontWeight.w800,
-                          color: AppColors.of(context).foreground(color),
+                    Flexible(
+                      child: Container(
+                        padding: const EdgeInsets.symmetric(
+                          horizontal: 10,
+                          vertical: 5,
                         ),
-                        textAlign: TextAlign.center,
+                        decoration: BoxDecoration(
+                          color: AppColors.of(
+                            context,
+                          ).surface(color.withValues(alpha: 0.12)),
+                          borderRadius: BorderRadius.circular(20),
+                        ),
+                        child: Text(
+                          _rankLabel(premio.ranking),
+                          style: TextStyle(
+                            fontSize: 13,
+                            fontWeight: FontWeight.w800,
+                            color: AppColors.of(context).foreground(color),
+                          ),
+                          textAlign: TextAlign.center,
+                        ),
                       ),
                     ),
                   ],

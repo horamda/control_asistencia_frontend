@@ -1,3 +1,4 @@
+import '../theme/app_visual.dart';
 import 'package:ficharqr/src/presentation/widgets/app_card.dart';
 import 'package:ficharqr/src/presentation/theme/app_palette.dart';
 import '../widgets/scrollable_error_state.dart';
@@ -499,7 +500,7 @@ class _PedidoCard extends StatelessWidget {
       child: Padding(
         padding: const EdgeInsets.all(16),
         child: Column(
-          crossAxisAlignment: CrossAxisAlignment.center,
+          crossAxisAlignment: CrossAxisAlignment.start,
           children: [
             Column(
               children: [
@@ -510,7 +511,7 @@ class _PedidoCard extends StatelessWidget {
                   child: Text(
                     item.periodo ?? '—',
                     style: const TextStyle(fontWeight: FontWeight.w600),
-                    textAlign: TextAlign.center,
+                    textAlign: TextAlign.start,
                   ),
                 ),
                 if (item.totalBultos != null || item.totalUnidades != null)
@@ -521,7 +522,7 @@ class _PedidoCard extends StatelessWidget {
                       style: Theme.of(context).textTheme.bodySmall?.copyWith(
                         color: cs.onSurfaceVariant,
                       ),
-                      textAlign: TextAlign.center,
+                      textAlign: TextAlign.start,
                     ),
                   ),
                 _EstadoChip(estado: item.estado),
@@ -541,7 +542,7 @@ class _PedidoCard extends StatelessWidget {
                               l.codigoArticulo ??
                               'Artículo #${l.articuloId}',
                           style: Theme.of(context).textTheme.bodySmall,
-                          textAlign: TextAlign.center,
+                          textAlign: TextAlign.start,
                         ),
                       ),
                       Text(
@@ -552,7 +553,7 @@ class _PedidoCard extends StatelessWidget {
                         style: Theme.of(context).textTheme.bodySmall?.copyWith(
                           color: cs.onSurfaceVariant,
                         ),
-                        textAlign: TextAlign.center,
+                        textAlign: TextAlign.start,
                       ),
                     ],
                   ),
@@ -573,7 +574,7 @@ class _PedidoCard extends StatelessWidget {
                       style: Theme.of(
                         context,
                       ).textTheme.bodySmall?.copyWith(color: cs.error),
-                      textAlign: TextAlign.center,
+                      textAlign: TextAlign.start,
                     ),
                   ),
                 ],
@@ -587,16 +588,13 @@ class _PedidoCard extends StatelessWidget {
                     TextButton.icon(
                       onPressed: onEditar,
                       icon: const Icon(Icons.edit_outlined, size: 18),
-                      label: const Text('Editar', textAlign: TextAlign.center),
+                      label: const Text('Editar', textAlign: TextAlign.start),
                     ),
                   if (onCancelar != null)
                     TextButton.icon(
                       onPressed: onCancelar,
                       icon: const Icon(Icons.close, size: 18),
-                      label: const Text(
-                        'Cancelar',
-                        textAlign: TextAlign.center,
-                      ),
+                      label: const Text('Cancelar', textAlign: TextAlign.start),
                       style: TextButton.styleFrom(foregroundColor: cs.error),
                     ),
                 ],
@@ -1400,7 +1398,7 @@ class _ArticuloTile extends StatelessWidget {
       if (articulo.familia != null) articulo.familia!,
     ];
     if (parts.isEmpty) return null;
-    return Text(parts.join(' · '), textAlign: TextAlign.center);
+    return Text(parts.join(' · '), textAlign: TextAlign.start);
   }
 
   @override
@@ -1411,18 +1409,17 @@ class _ArticuloTile extends StatelessWidget {
       color: inCart
           ? cs.primaryContainer.withValues(alpha: 0.35)
           : cs.surfaceContainerLow,
-      margin: const EdgeInsets.symmetric(vertical: 6),
+      margin: const EdgeInsets.symmetric(vertical: 4),
       shape: RoundedRectangleBorder(
-        borderRadius: BorderRadius.circular(14),
+        borderRadius: BorderRadius.circular(AppVisual.cardRadius),
         side: BorderSide(color: inCart ? cs.primary : cs.outlineVariant),
       ),
       child: Column(
         children: [
           ListTile(
-            contentPadding: const EdgeInsets.symmetric(
-              horizontal: 8,
-              vertical: 2,
-            ),
+            dense: true,
+            minVerticalPadding: 6,
+            contentPadding: const EdgeInsets.fromLTRB(10, 4, 10, 0),
             shape: RoundedRectangleBorder(
               borderRadius: BorderRadius.circular(10),
             ),
@@ -1430,48 +1427,77 @@ class _ArticuloTile extends StatelessWidget {
               width: 22,
               child: inCart
                   ? Icon(Icons.check_circle, color: cs.primary, size: 22)
-                  : null,
+                  : Icon(
+                      Icons.inventory_2_outlined,
+                      color: cs.onSurfaceVariant,
+                      size: 22,
+                    ),
             ),
             title: Text(
               articulo.descripcion ??
                   articulo.codigoArticulo ??
                   'Artículo #${articulo.id}',
-              textAlign: TextAlign.center,
+              textAlign: TextAlign.start,
             ),
             subtitle: _buildSubtitle(),
           ),
           Padding(
-            padding: const EdgeInsets.all(12),
-            child: AppAdaptiveActions(
-              minWidth: 160,
-              children: [
-                _CantidadStepper(
-                  label: 'Bultos',
-                  value: cantidadActual.bultos,
-                  onChanged: (value) => onChanged(
-                    _PedidoCantidad(
-                      bultos: value,
-                      unidades: cantidadActual.unidades,
-                    ),
+            padding: const EdgeInsets.fromLTRB(10, 2, 10, 10),
+            child: _ParDeContadores(
+              primero: _CantidadStepper(
+                label: 'Bultos',
+                value: cantidadActual.bultos,
+                onChanged: (value) => onChanged(
+                  _PedidoCantidad(
+                    bultos: value,
+                    unidades: cantidadActual.unidades,
                   ),
                 ),
-                _CantidadStepper(
-                  label: 'Unidades',
-                  value: cantidadActual.unidades,
-                  onChanged: (value) => onChanged(
-                    _PedidoCantidad(
-                      bultos: cantidadActual.bultos,
-                      unidades: value,
-                    ),
+              ),
+              segundo: _CantidadStepper(
+                label: 'Unidades',
+                value: cantidadActual.unidades,
+                onChanged: (value) => onChanged(
+                  _PedidoCantidad(
+                    bultos: cantidadActual.bultos,
+                    unidades: value,
                   ),
                 ),
-              ],
+              ),
             ),
           ),
         ],
       ),
     );
   }
+}
+
+/// Bultos y Unidades lado a lado; apilados solo si no entran (pantalla muy angosta o letra muy grande).
+class _ParDeContadores extends StatelessWidget {
+  const _ParDeContadores({required this.primero, required this.segundo});
+  final Widget primero, segundo;
+
+  @override
+  Widget build(BuildContext context) => LayoutBuilder(
+    builder: (context, box) {
+      final escala = MediaQuery.textScalerOf(context).scale(16) / 16;
+      if (box.maxWidth < 250 * escala) {
+        return Column(
+          mainAxisSize: MainAxisSize.min,
+          crossAxisAlignment: CrossAxisAlignment.stretch,
+          children: [primero, const SizedBox(height: 8), segundo],
+        );
+      }
+      return Row(
+        crossAxisAlignment: CrossAxisAlignment.start,
+        children: [
+          Expanded(child: primero),
+          const SizedBox(width: 10),
+          Expanded(child: segundo),
+        ],
+      );
+    },
+  );
 }
 
 class _CantidadStepper extends StatelessWidget {
@@ -1492,55 +1518,69 @@ class _CantidadStepper extends StatelessWidget {
 
   @override
   Widget build(BuildContext context) {
-    return SizedBox(
-      child: Column(
-        mainAxisAlignment: MainAxisAlignment.center,
-        children: [
-          Text(label, style: Theme.of(context).textTheme.labelSmall),
-          SizedBox(
-            child: Row(
-              mainAxisAlignment: MainAxisAlignment.center,
-              children: [
-                IconButton(
-                  constraints: const BoxConstraints.tightFor(
-                    width: 48,
-                    height: 48,
-                  ),
-                  visualDensity: VisualDensity.standard,
-                  padding: EdgeInsets.zero,
-                  tooltip: 'Quitar $label',
-                  icon: const Icon(Icons.remove_circle_outline, size: 19),
-                  onPressed: value > 0 ? () => onChanged(value - 1) : null,
+    final cs = Theme.of(context).colorScheme;
+    // Etiqueta arriba y un control de 44 de alto con borde: los dos contadores entran lado a lado en un celular.
+    return Column(
+      mainAxisSize: MainAxisSize.min,
+      crossAxisAlignment: CrossAxisAlignment.stretch,
+      children: [
+        Text(
+          label,
+          style: Theme.of(context).textTheme.labelSmall,
+          textAlign: TextAlign.center,
+        ),
+        const SizedBox(height: 4),
+        Container(
+          height: 44,
+          decoration: BoxDecoration(
+            color: cs.surface,
+            border: Border.all(
+              color: value > 0 ? cs.primary : cs.outlineVariant,
+            ),
+            borderRadius: BorderRadius.circular(12),
+          ),
+          child: Row(
+            children: [
+              IconButton(
+                constraints: const BoxConstraints.tightFor(
+                  width: 44,
+                  height: 44,
                 ),
-                Expanded(
-                  child: InkWell(
-                    onTap: () => _editar(context),
-                    borderRadius: BorderRadius.circular(6),
-                    child: SizedBox(
-                      child: Text(
-                        '$value',
-                        textAlign: TextAlign.center,
-                        style: const TextStyle(fontWeight: FontWeight.w600),
+                padding: EdgeInsets.zero,
+                tooltip: 'Quitar $label',
+                icon: const Icon(Icons.remove, size: 20),
+                onPressed: value > 0 ? () => onChanged(value - 1) : null,
+              ),
+              Expanded(
+                child: InkWell(
+                  onTap: () => _editar(context),
+                  borderRadius: BorderRadius.circular(8),
+                  child: Center(
+                    child: Text(
+                      '$value',
+                      textAlign: TextAlign.center,
+                      style: const TextStyle(
+                        fontSize: 16,
+                        fontWeight: FontWeight.w700,
                       ),
                     ),
                   ),
                 ),
-                IconButton(
-                  constraints: const BoxConstraints.tightFor(
-                    width: 48,
-                    height: 48,
-                  ),
-                  visualDensity: VisualDensity.standard,
-                  padding: EdgeInsets.zero,
-                  tooltip: 'Agregar $label',
-                  icon: const Icon(Icons.add_circle_outline, size: 19),
-                  onPressed: () => onChanged(value + 1),
+              ),
+              IconButton(
+                constraints: const BoxConstraints.tightFor(
+                  width: 44,
+                  height: 44,
                 ),
-              ],
-            ),
+                padding: EdgeInsets.zero,
+                tooltip: 'Agregar $label',
+                icon: const Icon(Icons.add, size: 20),
+                onPressed: () => onChanged(value + 1),
+              ),
+            ],
           ),
-        ],
-      ),
+        ),
+      ],
     );
   }
 }

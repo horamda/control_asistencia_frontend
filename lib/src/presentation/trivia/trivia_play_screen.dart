@@ -219,13 +219,15 @@ class _TriviaPlayScreenState extends State<TriviaPlayScreen> {
                       Row(
                         mainAxisAlignment: MainAxisAlignment.spaceBetween,
                         children: [
-                          Text(
-                            'Pregunta ${_currentIndex + 1} de $total',
-                            style: const TextStyle(
-                              color: Colors.white70,
-                              fontSize: 13,
+                          Flexible(
+                            child: Text(
+                              'Pregunta ${_currentIndex + 1} de $total',
+                              style: const TextStyle(
+                                color: Colors.white70,
+                                fontSize: 13,
+                              ),
+                              textAlign: TextAlign.center,
                             ),
-                            textAlign: TextAlign.center,
                           ),
                           Text(
                             '${(progreso * 100).toStringAsFixed(0)}%',
@@ -475,10 +477,7 @@ class _EnviandoOverlay extends StatelessWidget {
                 const SizedBox(height: 20),
                 const Text(
                   'Enviando respuestas...',
-                  style: TextStyle(
-                    fontSize: 16,
-                    fontWeight: FontWeight.w600,
-                  ),
+                  style: TextStyle(fontSize: 16, fontWeight: FontWeight.w600),
                   textAlign: TextAlign.center,
                 ),
                 const SizedBox(height: 6),

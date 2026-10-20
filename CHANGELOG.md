@@ -5,6 +5,26 @@ Formato: `[version+build] — fecha`
 
 ---
 
+## Mejoras de interfaz — 2026-10-18 (sin publicar)
+
+- Base visual compartida: títulos de sección compactos, texto de lectura uniforme,
+  esquinas consistentes y escalado de texto del sistema conservado.
+- Inicio con identidad compacta, estados suaves y accesos alfabéticos.
+- Notificaciones en filas con fecha, resumen, indicador sin leer y acceso a permisos.
+- Menú desplazable por grupos; perfil con acciones de foto visibles.
+- Reuniones con indicadores compactos, pestañas adaptables y un único acceso mensual.
+- Mercadería: descripción y código alineados junto al icono del artículo.
+- Mercadería: Bultos y Unidades lado a lado en contadores compactos con borde (se apilan solo si no entran).
+- EPP: foto lateral en catálogo, envío y borrador al pie, validaciones visibles arriba.
+- EPP, Mis talles: miniatura de 56 px (antes un bloque de 160 de alto), datos a la izquierda, talle como
+  etiqueta junto a la orientación anual y "Configurar talle" compacto a la derecha.
+- Viáticos: total orientativo y acciones al pie; barra desplazable en pantallas cortas.
+- Listas de vacaciones, francos, legajo, justificaciones e historial con lectura alineada.
+- Validación local: 789 pruebas Flutter aprobadas y análisis estático sin problemas;
+  incluye ambos temas, texto ampliado, orientación horizontal, tablets y teclado.
+- No modifica reglas de fichada ni autorizaciones del servidor. La revisión física
+  en el Motorola y las operaciones contra producción quedan pendientes.
+
 ## [1.24.0+32] — 2026-10-16
 
 - Bandeja de comunicados con historial del servidor, contador de no leídos,

@@ -10,7 +10,7 @@ void main() {
   group('AttendanceHomeActionPresenter', () {
     const presenter = AttendanceHomeActionPresenter();
 
-    test('carga aparece junto a mercaderia solo con acceso habilitado', () {
+    test('accesos alfabeticos y carga solo con acceso habilitado', () {
       for (final allowed in [false, true]) {
         final data = presenter.build(
           viewData: _viewData(),
@@ -25,14 +25,14 @@ void main() {
         final index = data.quickActions.indexWhere(
           (item) => item.intent == AttendanceHomeActionIntent.openCargas,
         );
+        final labels = data.quickActions
+            .map((item) => item.label.toLowerCase())
+            .toList();
+        expect(labels, orderedEquals([...labels]..sort()));
         if (!allowed) {
           expect(index, -1);
         } else {
           expect(index, greaterThan(0));
-          expect(
-            data.quickActions[index - 1].intent,
-            AttendanceHomeActionIntent.openPedidosMercaderia,
-          );
           expect(data.quickActions[index].label, 'Validación de carga');
           expect(data.quickActions[index].enabled, isTrue);
         }

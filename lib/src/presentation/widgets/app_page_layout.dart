@@ -1,3 +1,4 @@
+import '../theme/app_layout.dart';
 import 'package:ficharqr/src/presentation/theme/app_palette.dart';
 import 'dart:math' as math;
 import 'package:flutter/material.dart';
@@ -15,10 +16,12 @@ class AppAdaptiveActions extends StatelessWidget {
   Widget build(BuildContext context) => LayoutBuilder(
     builder: (context, box) {
       if (children.isEmpty) return const SizedBox.shrink();
-      final scale = MediaQuery.textScalerOf(context).scale(16) / 16;
-      final columns = ((box.maxWidth + 12) / (minWidth * scale + 12))
-          .floor()
-          .clamp(1, children.length);
+      final columns = AppLayout.columns(
+        context,
+        box.maxWidth,
+        minWidth: minWidth,
+        maxColumns: children.length,
+      );
       final width = (box.maxWidth - (columns - 1) * 12) / columns;
       return Wrap(
         alignment: WrapAlignment.center,
@@ -41,7 +44,11 @@ class AppAdaptiveActions extends StatelessWidget {
 
 /// Keeps forms and lists readable while the background fills the screen.
 class AppPageBody extends StatelessWidget {
-  const AppPageBody({super.key, required this.child, this.maxWidth = 1040});
+  const AppPageBody({
+    super.key,
+    required this.child,
+    this.maxWidth = AppLayout.pageMaxWidth,
+  });
   final Widget child;
   final double maxWidth;
 

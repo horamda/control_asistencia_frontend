@@ -510,9 +510,9 @@ class _StatePill extends StatelessWidget {
           color: AppColors.of(context).border(color.withValues(alpha: 0.3)),
         ),
       ),
-      child: Row(
-        mainAxisSize: MainAxisSize.min,
-        mainAxisAlignment: MainAxisAlignment.center,
+      child: Wrap(
+        alignment: WrapAlignment.center,
+        crossAxisAlignment: WrapCrossAlignment.center,
         children: [
           Text(
             '$count',
@@ -686,7 +686,7 @@ class _JustificacionCard extends StatelessWidget {
               child: Padding(
                 padding: const EdgeInsets.fromLTRB(12, 12, 12, 12),
                 child: Column(
-                  crossAxisAlignment: CrossAxisAlignment.center,
+                  crossAxisAlignment: CrossAxisAlignment.start,
                   children: [
                     Row(
                       mainAxisAlignment: MainAxisAlignment.center,
@@ -702,28 +702,30 @@ class _JustificacionCard extends StatelessWidget {
                             'Justificación #${item.id}',
                             style: Theme.of(context).textTheme.titleSmall
                                 ?.copyWith(fontWeight: FontWeight.w700),
-                            textAlign: TextAlign.center,
+                            textAlign: TextAlign.start,
                           ),
                         ),
-                        Container(
-                          padding: const EdgeInsets.symmetric(
-                            horizontal: 8,
-                            vertical: 3,
-                          ),
-                          decoration: BoxDecoration(
-                            color: AppColors.of(
-                              context,
-                            ).surface(color.withValues(alpha: 0.12)),
-                            borderRadius: BorderRadius.circular(20),
-                          ),
-                          child: Text(
-                            _capitalize(item.estado ?? 'pendiente'),
-                            style: TextStyle(
-                              fontSize: 13,
-                              fontWeight: FontWeight.w700,
-                              color: AppColors.of(context).foreground(color),
+                        Flexible(
+                          child: Container(
+                            padding: const EdgeInsets.symmetric(
+                              horizontal: 8,
+                              vertical: 3,
                             ),
-                            textAlign: TextAlign.center,
+                            decoration: BoxDecoration(
+                              color: AppColors.of(
+                                context,
+                              ).surface(color.withValues(alpha: 0.12)),
+                              borderRadius: BorderRadius.circular(20),
+                            ),
+                            child: Text(
+                              _capitalize(item.estado ?? 'pendiente'),
+                              style: TextStyle(
+                                fontSize: 13,
+                                fontWeight: FontWeight.w700,
+                                color: AppColors.of(context).foreground(color),
+                              ),
+                              textAlign: TextAlign.start,
+                            ),
                           ),
                         ),
                       ],
@@ -738,10 +740,12 @@ class _JustificacionCard extends StatelessWidget {
                           color: cs.onSurfaceVariant,
                         ),
                         const SizedBox(width: 4),
-                        Text(
-                          fechaDisplay,
-                          style: Theme.of(context).textTheme.bodySmall,
-                          textAlign: TextAlign.center,
+                        Flexible(
+                          child: Text(
+                            fechaDisplay,
+                            style: Theme.of(context).textTheme.bodySmall,
+                            textAlign: TextAlign.start,
+                          ),
                         ),
                         if (item.estado == 'pendiente') ...[
                           const Spacer(),
@@ -751,11 +755,13 @@ class _JustificacionCard extends StatelessWidget {
                             color: cs.outlineVariant,
                           ),
                           const SizedBox(width: 3),
-                          Text(
-                            'deslizar para eliminar',
-                            style: Theme.of(context).textTheme.labelSmall
-                                ?.copyWith(color: cs.outlineVariant),
-                            textAlign: TextAlign.center,
+                          Flexible(
+                            child: Text(
+                              'deslizar para eliminar',
+                              style: Theme.of(context).textTheme.labelSmall
+                                  ?.copyWith(color: cs.outlineVariant),
+                              textAlign: TextAlign.start,
+                            ),
                           ),
                         ],
                       ],
@@ -769,7 +775,7 @@ class _JustificacionCard extends StatelessWidget {
                         ),
                         maxLines: 2,
                         overflow: TextOverflow.ellipsis,
-                        textAlign: TextAlign.center,
+                        textAlign: TextAlign.start,
                       ),
                     ],
                     if (item.hasAdjuntos) ...[
@@ -783,12 +789,14 @@ class _JustificacionCard extends StatelessWidget {
                             color: cs.primary,
                           ),
                           const SizedBox(width: 3),
-                          Text(
-                            item.hasAdjuntos
-                                ? '${item.effectiveAdjuntosCount} adjunto${item.effectiveAdjuntosCount == 1 ? '' : 's'}'
-                                : 'Adjunto',
-                            style: TextStyle(fontSize: 13, color: cs.primary),
-                            textAlign: TextAlign.center,
+                          Flexible(
+                            child: Text(
+                              item.hasAdjuntos
+                                  ? '${item.effectiveAdjuntosCount} adjunto${item.effectiveAdjuntosCount == 1 ? '' : 's'}'
+                                  : 'Adjunto',
+                              style: TextStyle(fontSize: 13, color: cs.primary),
+                              textAlign: TextAlign.start,
+                            ),
                           ),
                         ],
                       ),
@@ -1208,22 +1216,24 @@ class _DetailRow extends StatelessWidget {
       children: [
         Icon(icon, size: 18, color: cs.onSurfaceVariant),
         const SizedBox(width: 10),
-        Column(
-          crossAxisAlignment: CrossAxisAlignment.start,
-          children: [
-            Text(
-              label,
-              style: Theme.of(
-                context,
-              ).textTheme.labelSmall?.copyWith(color: cs.onSurfaceVariant),
-            ),
-            Text(
-              value,
-              style: Theme.of(
-                context,
-              ).textTheme.bodyMedium?.copyWith(fontWeight: FontWeight.w600),
-            ),
-          ],
+        Expanded(
+          child: Column(
+            crossAxisAlignment: CrossAxisAlignment.start,
+            children: [
+              Text(
+                label,
+                style: Theme.of(
+                  context,
+                ).textTheme.labelSmall?.copyWith(color: cs.onSurfaceVariant),
+              ),
+              Text(
+                value,
+                style: Theme.of(
+                  context,
+                ).textTheme.bodyMedium?.copyWith(fontWeight: FontWeight.w600),
+              ),
+            ],
+          ),
         ),
       ],
     );

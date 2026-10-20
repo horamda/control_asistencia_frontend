@@ -1,3 +1,4 @@
+import 'notifications_navigation.dart';
 import 'dart:async';
 import 'package:firebase_core/firebase_core.dart';
 import 'package:firebase_messaging/firebase_messaging.dart';
@@ -31,6 +32,8 @@ const pushTypes = {
   // Contrato 1.48.0: todos los avisos al empleado pasan por push.
   'justificacion',
   'vacaciones',
+  'vacaciones_inicio',
+  'vacaciones_equipo',
   'feedback_asignado',
   'feedback_resuelto',
   'trivia_nueva',
@@ -245,10 +248,25 @@ class PushService {
     unawaited(acknowledgePush(message, event, api: _api));
   }
 
+  void openMessage(RemoteMessage message) => _open(message);
+
   void _open(RemoteMessage message) {
     _acknowledge(message, 'abierto');
     if (_owner == null || !pushTypes.contains(message.data['tipo'])) return;
-    ReunionNavigation.open(message.data['ruta'] as String?);
+    if (message.data['notificacion_id'] != null) {
+      NotificationsNavigation.open(message.data['notificacion_id']);
+    } else {
+      if (NotificationsNavigation.openRoute(message.data['ruta'] as String?)) {
+        return;
+      }
+      ReunionNavigation.open(message.data['ruta'] as String?);
+      if (!(message.data['ruta']?.toString().startsWith('/reuniones') ??
+              false) &&
+          !(message.data['ruta']?.toString().startsWith('/comunicados') ??
+              false)) {
+        NotificationsNavigation.open(0);
+      }
+    }
   }
 
   void _receive(RemoteMessage message) {
@@ -258,6 +276,7 @@ class PushService {
         !pushTypes.contains(message.data['tipo'])) {
       return;
     }
+    NotificationsNavigation.refresh.value++;
     ReunionNavigation.refresh.value++;
     if (message.data['tipo'] == 'comunicado') {
       ComunicadosNavigation.refresh.value++;
@@ -273,6 +292,10 @@ class PushService {
               message.notification?.body ?? '',
               meetingIdFromRoute(message.data['ruta'] as String?),
               route: message.data['ruta'] as String?,
+              notificationId: int.tryParse(
+                '${message.data['notificacion_id']}',
+              ),
+              receipt: message.data,
               urgent: urgentPushTypes.contains(message.data['tipo']),
             )
             .catchError((Object _) {}),
@@ -300,6 +323,8 @@ class PushService {
     final jwt = _jwt;
     _generation++;
     _owner = null;
+    NotificationsNavigation.pending.value = null;
+    NotificationsNavigation.route.value = null;
     _jwt = null;
     _api = null;
     active = false;

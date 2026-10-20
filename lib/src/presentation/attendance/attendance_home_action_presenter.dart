@@ -252,7 +252,7 @@ class AttendanceHomeActionPresenter {
           icon: Icons.link_rounded,
           enabled: historyEnabled,
         ),
-      ],
+      ]..sort((a, b) => a.label.toLowerCase().compareTo(b.label.toLowerCase())),
     );
   }
 }

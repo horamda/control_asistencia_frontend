@@ -120,11 +120,6 @@ Future<void> _pumpScenario(
                     employeeName: 'Horacio Perez',
                     employeeDni: '30111222',
                     employeeCompany: 'Empresa: 17',
-                    syncText: scenario.viewData.syncText,
-                    sessionText: scenario.viewData.sessionText,
-                    sessionColor: scenario.sessionColor,
-                    sessionForeground: scenario.viewData.sessionForeground,
-                    gpsStatusText: scenario.viewData.gpsStatusText,
                   ),
                   const SizedBox(height: 12),
                   AttendanceNextStepCard(

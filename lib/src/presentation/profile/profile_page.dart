@@ -1,3 +1,4 @@
+import '../theme/app_visual.dart';
 import 'package:ficharqr/src/presentation/widgets/app_card.dart';
 import '../widgets/app_page_layout.dart';
 import 'package:ficharqr/src/presentation/theme/app_palette.dart';
@@ -482,14 +483,14 @@ class _ProfilePageState extends State<ProfilePage> {
 
                           // ── Edit data ──────────────────────────────
                           _SectionCard(
-                            title: 'Editar datos',
+                            title: 'Datos de contacto',
                             icon: Icons.edit_rounded,
                             children: [
                               TextField(
                                 controller: _telefonoController,
                                 keyboardType: TextInputType.phone,
                                 decoration: const InputDecoration(
-                                  labelText: 'Telefono',
+                                  labelText: 'Teléfono',
                                   border: OutlineInputBorder(),
                                   prefixIcon: Icon(Icons.phone_rounded),
                                   isDense: true,
@@ -499,7 +500,7 @@ class _ProfilePageState extends State<ProfilePage> {
                               TextField(
                                 controller: _direccionController,
                                 decoration: const InputDecoration(
-                                  labelText: 'Direccion',
+                                  labelText: 'Dirección',
                                   border: OutlineInputBorder(),
                                   prefixIcon: Icon(Icons.home_rounded),
                                   isDense: true,
@@ -646,165 +647,63 @@ class _ProfileHero extends StatelessWidget {
     final estadoColor = estado == 'activo' ? Colors.green.shade700 : cs.error;
 
     return AppCard(
-      clipBehavior: Clip.antiAlias,
-      child: Column(
-        crossAxisAlignment: CrossAxisAlignment.center,
-        children: [
-          // Colored banner top
-          Container(
-            height: 56,
-            decoration: BoxDecoration(
-              gradient: LinearGradient(
-                colors: AppColors.of(context).brandGradient,
-              ),
-            ),
-          ),
-          Padding(
-            padding: const EdgeInsets.fromLTRB(16, 0, 16, 16),
-            child: Column(
-              crossAxisAlignment: CrossAxisAlignment.center,
+      child: Padding(
+        padding: const EdgeInsets.all(AppVisual.cardPadding),
+        child: Column(
+          children: [
+            Row(
+              crossAxisAlignment: CrossAxisAlignment.start,
               children: [
-                // Avatar overlapping the banner
-                Transform.translate(
-                  offset: const Offset(0, -36),
-                  child: Stack(
-                    clipBehavior: Clip.none,
-                    children: [
-                      Container(
-                        decoration: BoxDecoration(
-                          shape: BoxShape.circle,
-                          border: Border.all(color: cs.surface, width: 3),
-                        ),
-                        child: EmployeePhotoWidget(
-                          photoUrl: remoteFotoUrl,
-                          localPhotoPath: localPhotoPath,
-                          token: token,
-                          radius: 44,
-                          placeholderSize: 28,
-                          iconSize: 40,
-                        ),
-                      ),
-                      Positioned(
-                        bottom: 0,
-                        right: 0,
-                        child: PopupMenuButton<ImageSource>(
-                          onSelected: (src) => src == ImageSource.camera
-                              ? onPickCamera()
-                              : onPickGallery(),
-                          enabled: !busyPhoto,
-                          tooltip: 'Cambiar foto',
-                          offset: const Offset(0, 36),
-                          itemBuilder: (_) => const [
-                            PopupMenuItem(
-                              value: ImageSource.camera,
-                              child: ListTile(
-                                dense: true,
-                                leading: Icon(Icons.camera_alt_rounded),
-                                title: Text(
-                                  'Cámara',
-                                  textAlign: TextAlign.center,
-                                ),
-                                contentPadding: EdgeInsets.zero,
-                              ),
-                            ),
-                            PopupMenuItem(
-                              value: ImageSource.gallery,
-                              child: ListTile(
-                                dense: true,
-                                leading: Icon(Icons.photo_library_rounded),
-                                title: Text(
-                                  'Galeria',
-                                  textAlign: TextAlign.center,
-                                ),
-                                contentPadding: EdgeInsets.zero,
-                              ),
-                            ),
-                          ],
-                          child: Container(
-                            padding: const EdgeInsets.all(5),
-                            decoration: BoxDecoration(
-                              color: cs.primaryContainer,
-                              shape: BoxShape.circle,
-                              border: Border.all(color: cs.surface, width: 2),
-                            ),
-                            child: Icon(
-                              Icons.edit_rounded,
-                              size: 14,
-                              color: cs.onPrimaryContainer,
-                            ),
-                          ),
-                        ),
-                      ),
-                    ],
-                  ),
+                EmployeePhotoWidget(
+                  photoUrl: remoteFotoUrl,
+                  localPhotoPath: localPhotoPath,
+                  token: token,
+                  radius: 30,
                 ),
-                // Name + estado badge (pull up to reduce gap from transform)
-                Transform.translate(
-                  offset: const Offset(0, -24),
+                const SizedBox(width: 16),
+                Expanded(
                   child: Column(
-                    crossAxisAlignment: CrossAxisAlignment.center,
+                    crossAxisAlignment: CrossAxisAlignment.start,
                     children: [
                       Text(
                         nombre,
-                        style: Theme.of(context).textTheme.titleLarge?.copyWith(
-                          fontWeight: FontWeight.w700,
-                        ),
-                        textAlign: TextAlign.center,
+                        style: AppVisual.identity,
+                        textAlign: TextAlign.start,
                       ),
-                      const SizedBox(height: 6),
-                      if (p?.estado != null)
-                        Container(
-                          padding: const EdgeInsets.symmetric(
-                            horizontal: 10,
-                            vertical: 4,
-                          ),
-                          decoration: BoxDecoration(
+                      if (estado.isNotEmpty) ...[
+                        const SizedBox(height: 6),
+                        Text(
+                          _capitalize(estado),
+                          textAlign: TextAlign.start,
+                          style: AppVisual.body.copyWith(
                             color: AppColors.of(
                               context,
-                            ).surface(estadoColor.withValues(alpha: 0.12)),
-                            borderRadius: BorderRadius.circular(20),
-                            border: Border.all(
-                              color: AppColors.of(
-                                context,
-                              ).border(estadoColor.withValues(alpha: 0.3)),
-                            ),
-                          ),
-                          child: Row(
-                            mainAxisSize: MainAxisSize.min,
-                            mainAxisAlignment: MainAxisAlignment.center,
-                            children: [
-                              Container(
-                                width: 7,
-                                height: 7,
-                                decoration: BoxDecoration(
-                                  color: AppColors.of(
-                                    context,
-                                  ).surface(estadoColor),
-                                  shape: BoxShape.circle,
-                                ),
-                              ),
-                              const SizedBox(width: 5),
-                              Text(
-                                _capitalize(p!.estado!),
-                                style: TextStyle(
-                                  fontSize: 13,
-                                  fontWeight: FontWeight.w700,
-                                  color: AppColors.of(
-                                    context,
-                                  ).foreground(estadoColor),
-                                ),
-                                textAlign: TextAlign.center,
-                              ),
-                            ],
+                            ).foreground(estadoColor),
                           ),
                         ),
+                      ],
                     ],
                   ),
                 ),
               ],
             ),
-          ),
-        ],
+            const SizedBox(height: 16),
+            AppAdaptiveActions(
+              children: [
+                OutlinedButton.icon(
+                  onPressed: busyPhoto ? null : onPickCamera,
+                  icon: const Icon(Icons.camera_alt_outlined),
+                  label: const Text('Tomar foto'),
+                ),
+                OutlinedButton.icon(
+                  onPressed: busyPhoto ? null : onPickGallery,
+                  icon: const Icon(Icons.photo_library_outlined),
+                  label: const Text('Elegir foto'),
+                ),
+              ],
+            ),
+          ],
+        ),
       ),
     );
   }
@@ -812,8 +711,6 @@ class _ProfileHero extends StatelessWidget {
   String _capitalize(String s) =>
       s.isEmpty ? s : s[0].toUpperCase() + s.substring(1);
 }
-
-// ─── Section card ──────────────────────────────────────────────────────────────
 
 class _SectionCard extends StatelessWidget {
   const _SectionCard({
@@ -833,10 +730,10 @@ class _SectionCard extends StatelessWidget {
       child: Padding(
         padding: const EdgeInsets.all(16),
         child: Column(
-          crossAxisAlignment: CrossAxisAlignment.center,
+          crossAxisAlignment: CrossAxisAlignment.start,
           children: [
             Row(
-              mainAxisAlignment: MainAxisAlignment.center,
+              mainAxisAlignment: MainAxisAlignment.start,
               children: [
                 Icon(icon, size: 16, color: cs.primary),
                 const SizedBox(width: 6),
@@ -847,7 +744,7 @@ class _SectionCard extends StatelessWidget {
                       color: cs.primary,
                       fontWeight: FontWeight.w700,
                     ),
-                    textAlign: TextAlign.center,
+                    textAlign: TextAlign.start,
                   ),
                 ),
               ],
@@ -882,27 +779,27 @@ class _InfoTile extends StatelessWidget {
     return Padding(
       padding: const EdgeInsets.only(bottom: 10),
       child: Row(
-        mainAxisAlignment: MainAxisAlignment.center,
+        mainAxisAlignment: MainAxisAlignment.start,
         children: [
           Icon(icon, size: 18, color: cs.onSurfaceVariant),
           const SizedBox(width: 10),
           Expanded(
             child: Column(
-              crossAxisAlignment: CrossAxisAlignment.center,
+              crossAxisAlignment: CrossAxisAlignment.start,
               children: [
                 Text(
                   label,
                   style: Theme.of(
                     context,
                   ).textTheme.labelSmall?.copyWith(color: cs.onSurfaceVariant),
-                  textAlign: TextAlign.center,
+                  textAlign: TextAlign.start,
                 ),
                 Text(
                   value,
                   style: Theme.of(
                     context,
                   ).textTheme.bodyMedium?.copyWith(fontWeight: FontWeight.w500),
-                  textAlign: TextAlign.center,
+                  textAlign: TextAlign.start,
                 ),
               ],
             ),

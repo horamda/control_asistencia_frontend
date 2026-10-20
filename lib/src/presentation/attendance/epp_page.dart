@@ -1,3 +1,5 @@
+import '../widgets/app_submission_bar.dart';
+import '../theme/app_visual.dart';
 import 'package:ficharqr/src/presentation/widgets/app_card.dart';
 import 'dart:typed_data';
 import 'package:flutter/material.dart';
@@ -207,7 +209,7 @@ class _EppPageState extends State<EppPage> with WidgetsBindingObserver {
                         if (_tab == 0) ...[
                           Text(
                             'Elegí tus talles',
-                            style: Theme.of(context).textTheme.headlineSmall,
+                            style: Theme.of(context).textTheme.titleMedium,
                             textAlign: TextAlign.center,
                           ),
                           const Text(
@@ -226,53 +228,78 @@ class _EppPageState extends State<EppPage> with WidgetsBindingObserver {
                           for (final a in _config!.articles)
                             AppCard(
                               child: Padding(
-                                padding: const EdgeInsets.all(16),
+                                padding: const EdgeInsets.fromLTRB(
+                                  12,
+                                  12,
+                                  12,
+                                  6,
+                                ),
                                 child: Column(
                                   crossAxisAlignment:
                                       CrossAxisAlignment.stretch,
                                   children: [
-                                    if (a.hasImage)
-                                      _PrivateImage(
-                                        api: widget.api,
-                                        token: widget.token,
-                                        path: '/imagenes/articulos/${a.id}',
-                                      ),
-                                    Text(
-                                      a.name,
-                                      style: Theme.of(
-                                        context,
-                                      ).textTheme.titleMedium,
-                                      textAlign: TextAlign.center,
-                                    ),
-                                    Text(
-                                      a.category,
-                                      textAlign: TextAlign.center,
-                                    ),
-                                    if (a.description.isNotEmpty)
-                                      Padding(
-                                        padding: const EdgeInsets.symmetric(
-                                          vertical: 8,
+                                    Row(
+                                      crossAxisAlignment:
+                                          CrossAxisAlignment.start,
+                                      children: [
+                                        if (a.hasImage) ...[
+                                          _PrivateImage(
+                                            api: widget.api,
+                                            token: widget.token,
+                                            path: '/imagenes/articulos/${a.id}',
+                                            size: 56,
+                                          ),
+                                          const SizedBox(width: 12),
+                                        ],
+                                        Expanded(
+                                          child: Column(
+                                            crossAxisAlignment:
+                                                CrossAxisAlignment.start,
+                                            children: [
+                                              Text(
+                                                a.name,
+                                                style: AppVisual.sectionTitle,
+                                                textAlign: TextAlign.start,
+                                              ),
+                                              Text(
+                                                a.category,
+                                                style: AppVisual.caption,
+                                                textAlign: TextAlign.start,
+                                              ),
+                                              if (a.description.isNotEmpty) ...[
+                                                const SizedBox(height: 4),
+                                                Text(
+                                                  a.description,
+                                                  style: AppVisual.caption,
+                                                  textAlign: TextAlign.start,
+                                                  maxLines: 2,
+                                                  overflow:
+                                                      TextOverflow.ellipsis,
+                                                ),
+                                              ],
+                                              const SizedBox(height: 8),
+                                              _TalleInfo(
+                                                talle: _config!.saved(
+                                                  a.id,
+                                                )['talle'],
+                                                orientacion: a.annualNotice,
+                                              ),
+                                            ],
+                                          ),
                                         ),
-                                        child: Text(
-                                          a.description,
-                                          textAlign: TextAlign.center,
-                                        ),
-                                      ),
-                                    Text(
-                                      'Talle guardado: ${_config!.saved(a.id)['talle'] ?? 'Sin definir'}',
-                                      textAlign: TextAlign.center,
+                                      ],
                                     ),
-                                    if (a.annualNotice > 0)
-                                      Text(
-                                        'Orientación anual: ${a.annualNotice} unidades. No es un límite.',
-                                        textAlign: TextAlign.center,
-                                      ),
-                                    const SizedBox(height: 8),
-                                    OutlinedButton(
-                                      onPressed: () => _size(a),
-                                      child: const Text(
-                                        'Configurar talle',
-                                        textAlign: TextAlign.center,
+                                    Align(
+                                      alignment: AlignmentDirectional.centerEnd,
+                                      child: TextButton.icon(
+                                        onPressed: () => _size(a),
+                                        icon: const Icon(
+                                          Icons.straighten,
+                                          size: 18,
+                                        ),
+                                        label: const Text(
+                                          'Configurar talle',
+                                        ),
                                       ),
                                     ),
                                   ],
@@ -283,7 +310,7 @@ class _EppPageState extends State<EppPage> with WidgetsBindingObserver {
                         if (_tab == 1) ...[
                           Text(
                             'Tus pedidos',
-                            style: Theme.of(context).textTheme.headlineSmall,
+                            style: Theme.of(context).textTheme.titleMedium,
                             textAlign: TextAlign.center,
                           ),
                           const SizedBox(height: 6),
@@ -391,7 +418,7 @@ class _EppPageState extends State<EppPage> with WidgetsBindingObserver {
                         if (_tab == 2) ...[
                           Text(
                             'Tus entregas del año',
-                            style: Theme.of(context).textTheme.headlineSmall,
+                            style: Theme.of(context).textTheme.titleMedium,
                             textAlign: TextAlign.center,
                           ),
                           const SizedBox(height: 8),
@@ -486,6 +513,47 @@ String _orderDate(dynamic value) {
   return '${match[3]}/${match[2]}/${match[1]}';
 }
 
+/// Talle guardado como etiqueta y la orientacion anual en una linea (lista de Mis talles).
+class _TalleInfo extends StatelessWidget {
+  const _TalleInfo({required this.talle, required this.orientacion});
+  final Object? talle;
+  final int orientacion;
+
+  @override
+  Widget build(BuildContext context) {
+    final cs = Theme.of(context).colorScheme;
+    final definido = talle != null && '$talle'.trim().isNotEmpty;
+    return Wrap(
+      spacing: 8,
+      runSpacing: 4,
+      crossAxisAlignment: WrapCrossAlignment.center,
+      children: [
+        Container(
+          padding: const EdgeInsets.symmetric(horizontal: 10, vertical: 4),
+          decoration: BoxDecoration(
+            color: definido ? cs.primaryContainer : cs.surfaceContainerHigh,
+            borderRadius: BorderRadius.circular(999),
+          ),
+          child: Text(
+            definido ? 'Talle $talle' : 'Talle sin definir',
+            style: TextStyle(
+              fontSize: 13,
+              fontWeight: FontWeight.w700,
+              color: definido ? cs.onPrimaryContainer : cs.onSurfaceVariant,
+            ),
+          ),
+        ),
+        if (orientacion > 0)
+          Text(
+            'Orientación: $orientacion por año (no es un límite)',
+            style: AppVisual.caption,
+            textAlign: TextAlign.start,
+          ),
+      ],
+    );
+  }
+}
+
 class _OrderCard extends StatelessWidget {
   const _OrderCard({required this.order, required this.onTap});
   final EppData order;
@@ -513,8 +581,8 @@ class _OrderCard extends StatelessWidget {
                   Expanded(
                     child: Text(
                       'Pedido #${order['id']}',
-                      style: Theme.of(context).textTheme.titleMedium,
-                      textAlign: TextAlign.center,
+                      style: Theme.of(context).textTheme.titleSmall,
+                      textAlign: TextAlign.start,
                     ),
                   ),
                   const SizedBox(width: 8),
@@ -540,7 +608,7 @@ class _OrderCard extends StatelessWidget {
                         ? colors.onErrorContainer
                         : colors.onSecondaryContainer,
                   ),
-                  textAlign: TextAlign.center,
+                  textAlign: TextAlign.start,
                 ),
               ),
               const SizedBox(height: 12),
@@ -549,7 +617,7 @@ class _OrderCard extends StatelessWidget {
                 style: Theme.of(
                   context,
                 ).textTheme.bodySmall?.copyWith(color: colors.onSurfaceVariant),
-                textAlign: TextAlign.center,
+                textAlign: TextAlign.start,
               ),
               if (reason.isNotEmpty) ...[
                 const SizedBox(height: 8),
@@ -557,7 +625,7 @@ class _OrderCard extends StatelessWidget {
                   reason,
                   maxLines: 2,
                   overflow: TextOverflow.ellipsis,
-                  textAlign: TextAlign.center,
+                  textAlign: TextAlign.start,
                 ),
               ],
             ],
@@ -594,9 +662,13 @@ class _PrivateImage extends StatefulWidget {
     required this.api,
     required this.token,
     required this.path,
+    this.size,
   });
   final MobileApiClient api;
   final String token, path;
+
+  /// Miniatura cuadrada (en listas). Sin size, la imagen se muestra grande (detalle).
+  final double? size;
   @override
   State<_PrivateImage> createState() => _PrivateImageState();
 }
@@ -625,22 +697,25 @@ class _PrivateImageState extends State<_PrivateImage> {
   Widget build(BuildContext context) => FutureBuilder<Uint8List>(
     future: _bytes,
     builder: (context, s) {
+      final size = widget.size;
       if (s.hasError) {
-        return TextButton.icon(
+        return IconButton(
+          tooltip: 'Reintentar imagen',
           onPressed: () => setState(_load),
           icon: const Icon(Icons.broken_image_outlined),
-          label: const Text('Reintentar imagen', textAlign: TextAlign.center),
         );
       }
       if (!s.hasData) {
-        return const SizedBox(
-          height: 80,
-          child: Center(child: CircularProgressIndicator()),
+        return SizedBox(
+          height: size ?? 80,
+          width: size,
+          child: const Center(child: CircularProgressIndicator()),
         );
       }
       return Padding(
-        padding: const EdgeInsets.only(bottom: 12),
+        padding: EdgeInsets.only(bottom: size == null ? 12 : 0),
         child: InkWell(
+          borderRadius: BorderRadius.circular(10),
           onTap: () => showDialog<void>(
             context: context,
             builder: (context) => Dialog(
@@ -671,13 +746,30 @@ class _PrivateImageState extends State<_PrivateImage> {
               ),
             ),
           ),
-          child: Image.memory(
-            s.data!,
-            height: 160,
-            fit: BoxFit.contain,
-            errorBuilder: (_, e, st) =>
-                const Text('Imagen no disponible', textAlign: TextAlign.center),
-          ),
+          child: size == null
+              ? Image.memory(
+                  s.data!,
+                  height: 160,
+                  fit: BoxFit.contain,
+                  errorBuilder: (_, e, st) => const Text(
+                    'Imagen no disponible',
+                    textAlign: TextAlign.center,
+                  ),
+                )
+              : ClipRRect(
+                  borderRadius: BorderRadius.circular(10),
+                  child: Image.memory(
+                    s.data!,
+                    width: size,
+                    height: size,
+                    fit: BoxFit.cover,
+                    errorBuilder: (_, e, st) => SizedBox(
+                      width: size,
+                      height: size,
+                      child: const Icon(Icons.image_not_supported_outlined),
+                    ),
+                  ),
+                ),
         ),
       );
     },
@@ -849,6 +941,7 @@ class _EppEditor extends StatefulWidget {
 
 class _EppEditorState extends State<_EppEditor> with WidgetsBindingObserver {
   final _reason = TextEditingController();
+  final _scroll = ScrollController();
   int _conceptId = 0;
   bool _conceptChanged = false;
   final List<_Line> _lines = [];
@@ -882,6 +975,7 @@ class _EppEditorState extends State<_EppEditor> with WidgetsBindingObserver {
   void dispose() {
     WidgetsBinding.instance.removeObserver(this);
     _reason.dispose();
+    _scroll.dispose();
     for (final l in _lines) {
       l.dispose();
     }
@@ -1043,6 +1137,9 @@ class _EppEditorState extends State<_EppEditor> with WidgetsBindingObserver {
         final error = _validate(config, confirm: action != 'borrador');
         if (error != null) {
           setState(() => _failure = error);
+          WidgetsBinding.instance.addPostFrameCallback((_) {
+            if (mounted && _scroll.hasClients) _scroll.jumpTo(0);
+          });
           return;
         }
         _pending = {
@@ -1145,14 +1242,37 @@ class _EppEditorState extends State<_EppEditor> with WidgetsBindingObserver {
             textAlign: TextAlign.center,
           ),
         ),
+        bottomNavigationBar: _conflict || _pending != null
+            ? null
+            : AppSubmissionBar(
+                summary: '${_lines.length} artículos en la solicitud',
+                actions: [
+                  OutlinedButton(
+                    onPressed: locked ? null : () => _save('borrador'),
+                    child: const Text('Guardar borrador'),
+                  ),
+                  FilledButton(
+                    onPressed: locked ? null : () => _save('enviar'),
+                    child: Text(_busy ? 'Guardando…' : 'Enviar solicitud'),
+                  ),
+                ],
+              ),
         body: SafeArea(
           child: Center(
             child: ConstrainedBox(
               constraints: const BoxConstraints(maxWidth: 760),
               child: ListView(
+                controller: _scroll,
+                keyboardDismissBehavior:
+                    ScrollViewKeyboardDismissBehavior.onDrag,
                 padding: const EdgeInsets.all(16),
                 children: [
                   if (_busy) const LinearProgressIndicator(),
+                  if (_failure != null)
+                    _Failure(
+                      _failure!,
+                      retry: _config == null && !_busy ? _refresh : null,
+                    ),
                   const Text(
                     'Usamos tus talles guardados por artículo. Podés cambiarlos para este pedido. Confirmalos antes de enviar; para guardar un borrador no hace falta confirmarlos.',
                     textAlign: TextAlign.center,
@@ -1189,11 +1309,7 @@ class _EppEditorState extends State<_EppEditor> with WidgetsBindingObserver {
                       'No hay artículos habilitados. Contactá al responsable de EPP.',
                       textAlign: TextAlign.center,
                     ),
-                  if (_failure != null)
-                    _Failure(
-                      _failure!,
-                      retry: _config == null && !_busy ? _refresh : null,
-                    ),
+
                   if (_conflict) ...[
                     const Text(
                       'El pedido cambió o la clave de envío está en conflicto. Tus datos siguen visibles. Revisá el estado actual antes de volver a editar.',
@@ -1231,23 +1347,6 @@ class _EppEditorState extends State<_EppEditor> with WidgetsBindingObserver {
                       onPressed: () => _save(eppText(_pending!['accion'])),
                       child: const Text(
                         'Reintentar mismo envío',
-                        textAlign: TextAlign.center,
-                      ),
-                    ),
-                  ] else ...[
-                    const SizedBox(height: 16),
-                    FilledButton(
-                      onPressed: locked ? null : () => _save('enviar'),
-                      child: Text(
-                        _busy ? 'Guardando…' : 'Enviar solicitud',
-                        textAlign: TextAlign.center,
-                      ),
-                    ),
-                    const SizedBox(height: 8),
-                    OutlinedButton(
-                      onPressed: locked ? null : () => _save('borrador'),
-                      child: const Text(
-                        'Guardar borrador',
                         textAlign: TextAlign.center,
                       ),
                     ),
@@ -1356,32 +1455,32 @@ class _EppEditorState extends State<_EppEditor> with WidgetsBindingObserver {
           children: [
             Text(
               l.name,
-              style: Theme.of(context).textTheme.titleMedium,
-              textAlign: TextAlign.center,
+              style: AppVisual.sectionTitle,
+              textAlign: TextAlign.start,
             ),
             if (matches.isEmpty && _config != null)
               const Text(
                 'Artículo no disponible en el catálogo actual.',
-                textAlign: TextAlign.center,
+                textAlign: TextAlign.start,
               ),
             if (matches.isNotEmpty && matches.first.description.isNotEmpty)
-              Text(matches.first.description, textAlign: TextAlign.center),
+              Text(matches.first.description, textAlign: TextAlign.start),
             const SizedBox(height: 12),
             Text(
               savedSize.isEmpty
                   ? 'No tenés un talle habitual guardado para este artículo.'
                   : 'Tu talle guardado: $savedSize',
-              textAlign: TextAlign.center,
+              textAlign: TextAlign.start,
             ),
             if (savedSize.isNotEmpty && !sizes.contains(savedSize))
               const Text(
                 'Tu talle guardado ya no está disponible. Elegí uno del catálogo actual.',
-                textAlign: TextAlign.center,
+                textAlign: TextAlign.start,
               ),
             if (valid && !l.editingSize) ...[
               Text(
                 'Talle para este pedido: ${l.size}',
-                textAlign: TextAlign.center,
+                textAlign: TextAlign.start,
               ),
               Align(
                 alignment: Alignment.centerLeft,
@@ -1391,7 +1490,7 @@ class _EppEditorState extends State<_EppEditor> with WidgetsBindingObserver {
                       : () => setState(() => l.editingSize = true),
                   child: const Text(
                     'Cambiar talle',
-                    textAlign: TextAlign.center,
+                    textAlign: TextAlign.start,
                   ),
                 ),
               ),
@@ -1405,7 +1504,7 @@ class _EppEditorState extends State<_EppEditor> with WidgetsBindingObserver {
                   for (final t in sizes)
                     DropdownMenuItem(
                       value: t,
-                      child: Text(t, textAlign: TextAlign.center),
+                      child: Text(t, textAlign: TextAlign.start),
                     ),
                 ],
                 onChanged: locked
@@ -1420,7 +1519,7 @@ class _EppEditorState extends State<_EppEditor> with WidgetsBindingObserver {
               controlAffinity: ListTileControlAffinity.leading,
               title: const Text(
                 'Confirmo que este es mi talle',
-                textAlign: TextAlign.center,
+                textAlign: TextAlign.start,
               ),
               value: l.confirmed,
               onChanged: locked
@@ -1431,7 +1530,7 @@ class _EppEditorState extends State<_EppEditor> with WidgetsBindingObserver {
               controller: l.quantity,
               enabled: !locked,
               keyboardType: TextInputType.number,
-              textAlign: TextAlign.center,
+              textAlign: TextAlign.start,
               decoration: const InputDecoration(
                 labelText: 'Cantidad (1 a 1000)',
               ),
@@ -1448,13 +1547,13 @@ class _EppEditorState extends State<_EppEditor> with WidgetsBindingObserver {
             ),
             const Text(
               'Los cambios se aplican solo a este pedido, salvo que los guardes como habituales.',
-              textAlign: TextAlign.center,
+              textAlign: TextAlign.start,
             ),
             TextButton(
               onPressed: locked || !valid ? null : () => _saveUsualSize(l),
               child: const Text(
                 'Guardar como mi talle habitual',
-                textAlign: TextAlign.center,
+                textAlign: TextAlign.start,
               ),
             ),
             TextButton.icon(
@@ -1465,7 +1564,7 @@ class _EppEditorState extends State<_EppEditor> with WidgetsBindingObserver {
                       l.dispose();
                     },
               icon: const Icon(Icons.delete_outline_rounded),
-              label: const Text('Quitar artículo', textAlign: TextAlign.center),
+              label: const Text('Quitar artículo', textAlign: TextAlign.start),
             ),
           ],
         ),
@@ -1612,7 +1711,7 @@ class _EppDetailState extends State<_EppDetail> {
               if (_order != null) ...[
                 Text(
                   eppStates[_order!['estado']] ?? eppText(_order!['estado']),
-                  style: Theme.of(context).textTheme.headlineSmall,
+                  style: Theme.of(context).textTheme.titleMedium,
                   textAlign: TextAlign.center,
                 ),
                 if (eppText(_order!['concepto_reposicion']).isNotEmpty)

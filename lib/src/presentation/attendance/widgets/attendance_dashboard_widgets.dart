@@ -1,3 +1,5 @@
+import '../../theme/app_visual.dart';
+import '../../theme/app_layout.dart';
 import 'package:ficharqr/src/presentation/widgets/app_card.dart';
 import '../../theme/app_palette.dart';
 import '../../theme/card_typography.dart';
@@ -145,11 +147,6 @@ class AttendanceHeroCard extends StatelessWidget {
     required this.employeeName,
     required this.employeeDni,
     this.employeeCompany,
-    required this.syncText,
-    required this.sessionText,
-    required this.sessionColor,
-    required this.sessionForeground,
-    required this.gpsStatusText,
   });
 
   final String photoUrl;
@@ -158,27 +155,19 @@ class AttendanceHeroCard extends StatelessWidget {
   final String employeeName;
   final String employeeDni;
   final String? employeeCompany;
-  final String syncText;
-  final String sessionText;
-  final Color sessionColor;
-  final Color sessionForeground;
-  final String gpsStatusText;
 
   @override
   Widget build(BuildContext context) {
+    final cs = Theme.of(context).colorScheme;
     // First name only for the greeting
     final firstName = employeeName.split(' ').first;
     return Container(
       decoration: BoxDecoration(
-        borderRadius: BorderRadius.circular(18),
-        gradient: LinearGradient(
-          begin: Alignment.topLeft,
-          end: Alignment.bottomRight,
-          colors: AppColors.of(context).brandGradient,
-        ),
+        borderRadius: BorderRadius.circular(AppVisual.cardRadius),
+        color: cs.surface,
       ),
       child: Padding(
-        padding: const EdgeInsets.fromLTRB(16, 16, 16, 14),
+        padding: const EdgeInsets.all(AppVisual.cardPadding),
         child: Column(
           crossAxisAlignment: CrossAxisAlignment.center,
           children: [
@@ -186,51 +175,49 @@ class AttendanceHeroCard extends StatelessWidget {
               builder: (context, constraints) {
                 final scale = MediaQuery.textScalerOf(context).scale(16) / 16;
                 final stacked =
-                    constraints.maxWidth < 280 ||
+                    constraints.maxWidth < 230 ||
                     (scale > 1.4 && constraints.maxWidth < 500);
                 final photo = Container(
                   padding: const EdgeInsets.all(4),
                   decoration: BoxDecoration(
                     shape: BoxShape.circle,
-                    color: Colors.white.withValues(alpha: .08),
-                    border: Border.all(color: Colors.white24, width: 1.5),
+                    color: cs.primaryContainer,
+                    border: Border.all(
+                      color: cs.primary.withValues(alpha: .25),
+                      width: 1.5,
+                    ),
                   ),
                   child: EmployeePhotoWidget(
                     photoUrl: photoUrl,
                     token: token,
-                    radius: 34,
+                    radius: 28,
                   ),
                 );
                 final identity = Column(
                   mainAxisSize: MainAxisSize.min,
-                  crossAxisAlignment: CrossAxisAlignment.center,
+                  crossAxisAlignment: stacked
+                      ? CrossAxisAlignment.center
+                      : CrossAxisAlignment.start,
                   children: [
                     Text(
                       '$greeting,',
-                      textAlign: TextAlign.center,
-                      style: const TextStyle(
-                        color: Colors.white70,
-                        fontSize: 14,
+                      textAlign: stacked ? TextAlign.center : TextAlign.start,
+                      style: AppVisual.body.copyWith(
+                        color: cs.onSurfaceVariant,
                       ),
                     ),
                     const SizedBox(height: 4),
                     Text(
                       firstName,
-                      textAlign: TextAlign.center,
-                      style: const TextStyle(
-                        color: Colors.white,
-                        fontSize: 24,
-                        fontWeight: FontWeight.w800,
-                        height: 1.15,
-                      ),
+                      textAlign: stacked ? TextAlign.center : TextAlign.start,
+                      style: AppVisual.identity.copyWith(color: cs.onSurface),
                     ),
                     const SizedBox(height: 6),
                     Text(
                       'DNI: $employeeDni',
-                      textAlign: TextAlign.center,
-                      style: const TextStyle(
-                        color: Colors.white70,
-                        fontSize: 13,
+                      textAlign: stacked ? TextAlign.center : TextAlign.start,
+                      style: AppVisual.caption.copyWith(
+                        color: cs.onSurfaceVariant,
                       ),
                     ),
                   ],
@@ -258,7 +245,7 @@ class AttendanceHeroCard extends StatelessWidget {
               },
             ),
             const SizedBox(height: 12),
-            const Divider(color: Colors.white24, height: 1),
+            Divider(color: cs.outlineVariant.withValues(alpha: .5), height: 1),
             const SizedBox(height: 10),
             // ── Status pills ──────────────────────────────────────────────
             Row(
@@ -267,38 +254,14 @@ class AttendanceHeroCard extends StatelessWidget {
                 Expanded(
                   child: Text(
                     _heroDate(),
-                    style: const TextStyle(color: Colors.white70, fontSize: 13),
+                    style: AppVisual.caption.copyWith(
+                      color: cs.onSurfaceVariant,
+                    ),
                     textAlign: TextAlign.center,
                   ),
                 ),
                 const SizedBox(width: 12),
                 const _LiveClock(),
-              ],
-            ),
-            const SizedBox(height: 8),
-            Wrap(
-              spacing: 8,
-              runSpacing: 6,
-              alignment: WrapAlignment.center,
-              children: [
-                DashboardStatusPill(
-                  icon: Icons.cloud_done_rounded,
-                  text: syncText,
-                  background: const Color(0x26FFFFFF),
-                  foreground: Colors.white,
-                ),
-                DashboardStatusPill(
-                  icon: Icons.shield_moon_rounded,
-                  text: sessionText,
-                  background: sessionColor.withAlpha(225),
-                  foreground: sessionForeground,
-                ),
-                DashboardStatusPill(
-                  icon: Icons.place_rounded,
-                  text: gpsStatusText,
-                  background: const Color(0x26FFFFFF),
-                  foreground: Colors.white,
-                ),
               ],
             ),
           ],
@@ -330,6 +293,7 @@ class AttendanceStatusBanner extends StatelessWidget {
 
   @override
   Widget build(BuildContext context) {
+    final cs = Theme.of(context).colorScheme;
     final hasPendingErrors = pendingFailed > 0;
     final hasPending = pendingTotal > 0;
 
@@ -342,28 +306,28 @@ class AttendanceStatusBanner extends StatelessWidget {
 
     if (hasPendingErrors) {
       bg = const Color(0xFFB71C1C);
-      fg = Colors.white;
+      fg = AppColors.of(context).foreground(bg);
       icon = Icons.error_rounded;
       title = 'Fichadas con error';
       subtitle = 'Revisar y reintentar';
       badge = '$pendingFailed';
     } else if (hasPending) {
       bg = const Color(0xFFE65100);
-      fg = Colors.white;
+      fg = AppColors.of(context).foreground(bg);
       icon = Icons.cloud_upload_rounded;
       title = 'Fichadas en cola';
       subtitle = 'Pendientes de sincronización';
       badge = '$pendingTotal';
     } else if (!hasClockToday) {
       bg = const Color(0xFF1565C0);
-      fg = Colors.white;
+      fg = AppColors.of(context).foreground(bg);
       icon = Icons.qr_code_scanner_rounded;
       title = 'Sin fichar hoy';
       subtitle = 'Escanea el QR para registrar ingreso';
       badge = '!';
     } else {
       bg = const Color(0xFF1B5E20);
-      fg = Colors.white;
+      fg = AppColors.of(context).foreground(bg);
       icon = Icons.check_circle_rounded;
       title = 'Jornada registrada';
       subtitle = 'Última fichada: $lastClockText';
@@ -374,10 +338,10 @@ class AttendanceStatusBanner extends StatelessWidget {
       onTap: onTap,
       child: Container(
         decoration: BoxDecoration(
-          color: AppColors.of(context).surface(bg),
+          color: Color.alphaBlend(bg.withValues(alpha: .10), cs.surface),
           borderRadius: BorderRadius.circular(14),
         ),
-        padding: const EdgeInsets.symmetric(horizontal: 16, vertical: 14),
+        padding: const EdgeInsets.symmetric(horizontal: 16, vertical: 12),
         child: Row(
           mainAxisAlignment: MainAxisAlignment.center,
           children: [
@@ -387,7 +351,7 @@ class AttendanceStatusBanner extends StatelessWidget {
               decoration: BoxDecoration(
                 color: AppColors.of(
                   context,
-                ).surface(Colors.white.withValues(alpha: 0.15)),
+                ).surface(fg.withValues(alpha: 0.10)),
                 shape: BoxShape.circle,
               ),
               child: Icon(
@@ -399,7 +363,7 @@ class AttendanceStatusBanner extends StatelessWidget {
             const SizedBox(width: 14),
             Expanded(
               child: Column(
-                crossAxisAlignment: CrossAxisAlignment.center,
+                crossAxisAlignment: CrossAxisAlignment.start,
                 children: [
                   Text(
                     title,
@@ -408,7 +372,7 @@ class AttendanceStatusBanner extends StatelessWidget {
                       fontWeight: FontWeight.w700,
                       fontSize: 15,
                     ),
-                    textAlign: TextAlign.center,
+                    textAlign: TextAlign.start,
                   ),
                   Text(
                     subtitle,
@@ -418,17 +382,18 @@ class AttendanceStatusBanner extends StatelessWidget {
                       ).foreground(fg.withValues(alpha: 0.8)),
                       fontSize: 13,
                     ),
-                    textAlign: TextAlign.center,
+                    textAlign: TextAlign.start,
                   ),
                 ],
               ),
             ),
+            const SizedBox(width: 8),
             Container(
-              padding: const EdgeInsets.symmetric(horizontal: 12, vertical: 6),
+              padding: const EdgeInsets.symmetric(horizontal: 8, vertical: 6),
               decoration: BoxDecoration(
                 color: AppColors.of(
                   context,
-                ).surface(Colors.white.withValues(alpha: 0.20)),
+                ).surface(fg.withValues(alpha: 0.10)),
                 borderRadius: BorderRadius.circular(20),
               ),
               child: Row(
@@ -440,9 +405,9 @@ class AttendanceStatusBanner extends StatelessWidget {
                     style: TextStyle(
                       color: AppColors.of(context).foreground(fg),
                       fontWeight: FontWeight.w900,
-                      fontSize: 18,
+                      fontSize: 13,
                     ),
-                    textAlign: TextAlign.center,
+                    textAlign: TextAlign.start,
                   ),
                   if (onTap != null) ...[
                     const SizedBox(width: 4),
@@ -810,22 +775,21 @@ class AttendanceQuickActionsCard extends StatelessWidget {
   @override
   Widget build(BuildContext context) {
     if (items.isEmpty) return const SizedBox.shrink();
-    return AppCard(
+    return Semantics(
+      container: true,
       child: Padding(
-        padding: const EdgeInsets.fromLTRB(14, 14, 14, 14),
+        padding: const EdgeInsets.symmetric(vertical: AppVisual.sectionGap),
         child: Column(
           crossAxisAlignment: CrossAxisAlignment.center,
           children: [
             Row(
               mainAxisAlignment: MainAxisAlignment.center,
               children: [
-                const Icon(Icons.widgets_rounded),
-                const SizedBox(width: 8),
                 Expanded(
                   child: Text(
-                    'Accesos rapidos',
-                    style: Theme.of(context).textTheme.titleMedium,
-                    textAlign: TextAlign.center,
+                    'Accesos r\u00e1pidos',
+                    style: AppVisual.sectionTitle,
+                    textAlign: TextAlign.start,
                   ),
                 ),
               ],
@@ -833,14 +797,14 @@ class AttendanceQuickActionsCard extends StatelessWidget {
             const SizedBox(height: 12),
             LayoutBuilder(
               builder: (context, constraints) {
-                const spacing = 8.0;
-                final textScale =
-                    MediaQuery.textScalerOf(context).scale(14) / 14;
-                final cols =
-                    ((constraints.maxWidth + spacing) /
-                            (120 * textScale + spacing))
-                        .floor()
-                        .clamp(1, 4);
+                const spacing = 10.0;
+                final cols = AppLayout.columns(
+                  context,
+                  constraints.maxWidth,
+                  minWidth: 156,
+                  maxColumns: 3,
+                  spacing: spacing,
+                );
                 return Column(
                   children: [
                     for (var start = 0; start < items.length; start += cols)
@@ -858,7 +822,7 @@ class AttendanceQuickActionsCard extends StatelessWidget {
                                           icon: items[start + column].icon,
                                           label: items[start + column].label,
                                           onTap: items[start + column].onTap,
-                                          horizontal: cols == 1,
+                                          horizontal: true,
                                         )
                                       : const SizedBox.shrink(),
                                 ),
@@ -895,62 +859,73 @@ class _QuickActionGridItem extends StatelessWidget {
   Widget build(BuildContext context) {
     final cs = Theme.of(context).colorScheme;
     final enabled = onTap != null;
-    final fg = enabled
-        ? cs.onSurfaceVariant
-        : cs.onSurface.withValues(alpha: 0.38);
+    final fg = enabled ? cs.onSurface : cs.onSurface.withValues(alpha: 0.38);
     return Material(
       color: enabled ? cs.surfaceContainerLow : cs.surfaceContainerLowest,
       shape: RoundedRectangleBorder(
-        borderRadius: BorderRadius.circular(12),
-        side: BorderSide(color: cs.outline.withValues(alpha: .65)),
+        borderRadius: BorderRadius.circular(AppVisual.cardRadius),
+        side: BorderSide(color: cs.outlineVariant.withValues(alpha: .6)),
       ),
       child: InkWell(
-        borderRadius: BorderRadius.circular(12),
+        borderRadius: BorderRadius.circular(AppVisual.cardRadius),
         onTap: onTap,
-        child: Padding(
-          padding: const EdgeInsets.symmetric(horizontal: 12, vertical: 13),
-          child: horizontal
-              ? Row(
-                  children: [
-                    Icon(
-                      icon,
-                      size: 24,
-                      color: AppColors.of(context).foreground(fg),
-                    ),
-                    const SizedBox(width: 12),
-                    Expanded(
-                      child: Text(
+        child: ConstrainedBox(
+          constraints: const BoxConstraints(minHeight: AppVisual.actionHeight),
+          child: Padding(
+            padding: const EdgeInsets.symmetric(horizontal: 12, vertical: 12),
+            child: horizontal
+                ? Row(
+                    children: [
+                      Container(
+                        padding: const EdgeInsets.all(8),
+                        decoration: BoxDecoration(
+                          color: enabled
+                              ? cs.primaryContainer
+                              : cs.surfaceContainerHighest,
+                          borderRadius: BorderRadius.circular(10),
+                        ),
+                        child: Icon(
+                          icon,
+                          size: 21,
+                          color: enabled ? cs.onPrimaryContainer : fg,
+                        ),
+                      ),
+                      const SizedBox(width: 10),
+                      Expanded(
+                        child: Text(
+                          label,
+                          textAlign: TextAlign.start,
+                          style: TextStyle(
+                            color: fg,
+                            fontSize: 14,
+                            fontWeight: FontWeight.w600,
+                          ),
+                        ),
+                      ),
+                    ],
+                  )
+                : Column(
+                    mainAxisSize: MainAxisSize.min,
+                    crossAxisAlignment: CrossAxisAlignment.stretch,
+                    children: [
+                      Icon(
+                        icon,
+                        size: 24,
+                        color: AppColors.of(context).foreground(fg),
+                      ),
+                      const SizedBox(height: 10),
+                      Text(
                         label,
+                        textAlign: TextAlign.center,
                         style: TextStyle(
-                          color: fg,
+                          color: AppColors.of(context).foreground(fg),
                           fontSize: 14,
                           fontWeight: FontWeight.w600,
                         ),
                       ),
-                    ),
-                  ],
-                )
-              : Column(
-                  mainAxisSize: MainAxisSize.min,
-                  crossAxisAlignment: CrossAxisAlignment.stretch,
-                  children: [
-                    Icon(
-                      icon,
-                      size: 24,
-                      color: AppColors.of(context).foreground(fg),
-                    ),
-                    const SizedBox(height: 10),
-                    Text(
-                      label,
-                      textAlign: TextAlign.center,
-                      style: TextStyle(
-                        color: AppColors.of(context).foreground(fg),
-                        fontSize: 14,
-                        fontWeight: FontWeight.w600,
-                      ),
-                    ),
-                  ],
-                ),
+                    ],
+                  ),
+          ),
         ),
       ),
     );
@@ -1543,9 +1518,9 @@ class _LiveClockState extends State<_LiveClock> {
     // en pantallas angostas.
     return Text(
       '$h:$m',
-      style: const TextStyle(
-        color: Colors.white,
-        fontSize: 18,
+      style: TextStyle(
+        color: Theme.of(context).colorScheme.onSurface,
+        fontSize: 14,
         fontWeight: FontWeight.w700,
         letterSpacing: 1.0,
       ),
@@ -1595,6 +1570,67 @@ class _OutlinedActionButton extends StatelessWidget {
             )
           : Icon(action.icon),
       label: Text(action.label),
+    );
+  }
+}
+
+class AttendanceConnectionCard extends StatelessWidget {
+  const AttendanceConnectionCard({
+    super.key,
+    required this.syncText,
+    required this.sessionText,
+    required this.sessionColor,
+    required this.sessionForeground,
+    required this.gpsStatusText,
+  });
+  final String syncText, sessionText, gpsStatusText;
+  final Color sessionColor, sessionForeground;
+  @override
+  Widget build(BuildContext context) {
+    final cs = Theme.of(context).colorScheme;
+    return AppCard(
+      margin: EdgeInsets.zero,
+      shape: RoundedRectangleBorder(
+        borderRadius: BorderRadius.circular(16),
+        side: BorderSide(color: cs.outlineVariant),
+      ),
+      child: Padding(
+        padding: const EdgeInsets.all(16),
+        child: Column(
+          children: [
+            Text(
+              'Estado de la app',
+              style: Theme.of(context).textTheme.titleSmall,
+            ),
+            const SizedBox(height: 12),
+            Wrap(
+              spacing: 8,
+              runSpacing: 8,
+              alignment: WrapAlignment.center,
+              children: [
+                DashboardStatusPill(
+                  icon: Icons.cloud_done_rounded,
+                  text: syncText,
+                  background: cs.surfaceContainerHighest,
+                  foreground: cs.onSurface,
+                ),
+                DashboardStatusPill(
+                  icon: Icons.shield_moon_rounded,
+                  text: sessionText,
+                  background: sessionColor,
+                  foreground: sessionForeground,
+                ),
+                DashboardStatusPill(
+                  icon: Icons.place_rounded,
+                  text: gpsStatusText,
+                  background: cs.surfaceContainerHighest,
+                  foreground: cs.onSurface,
+                ),
+              ],
+            ),
+          ],
+        ),
+      ),
     );
   }
 }

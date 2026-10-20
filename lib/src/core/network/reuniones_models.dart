@@ -14,7 +14,7 @@ class ReunionOccurrence {
   String get estado => data['estado'] as String? ?? 'pendiente';
   bool get cancelada => data['cancelada'] == true || estado == 'cancelada';
   DateTime get inicio => DateTime.parse(data['inicio'] as String);
-  String get key => '$reunionId:$fecha';
+  String get key => data['id']?.toString() ?? '$reunionId:$fecha';
   String get location => [
     data['sucursal_nombre'],
     data['lugar'],

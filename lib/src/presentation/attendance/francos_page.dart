@@ -170,7 +170,7 @@ class _FrancoCard extends StatelessWidget {
         title: Text(
           item.fecha ?? '—',
           style: const TextStyle(fontWeight: FontWeight.w600),
-          textAlign: TextAlign.center,
+          textAlign: TextAlign.start,
         ),
         subtitle: item.motivo != null
             ? Text(
@@ -178,7 +178,7 @@ class _FrancoCard extends StatelessWidget {
                 style: Theme.of(context).textTheme.bodySmall?.copyWith(
                   color: Theme.of(context).colorScheme.onSurfaceVariant,
                 ),
-                textAlign: TextAlign.center,
+                textAlign: TextAlign.start,
               )
             : null,
       ),

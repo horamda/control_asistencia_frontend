@@ -1,3 +1,4 @@
+import '../theme/app_layout.dart';
 import 'package:ficharqr/src/presentation/widgets/app_card.dart';
 import 'package:ficharqr/src/presentation/theme/app_palette.dart';
 import 'package:flutter/material.dart';
@@ -609,11 +610,13 @@ class _SummaryHero extends StatelessWidget {
                           color: cs.onSurfaceVariant,
                         ),
                         const SizedBox(width: 5),
-                        Text(
-                          '$desde — $hasta  ·  ${stats.periodo.dias} días',
-                          style: Theme.of(context).textTheme.bodySmall
-                              ?.copyWith(color: cs.onSurfaceVariant),
-                          textAlign: TextAlign.center,
+                        Flexible(
+                          child: Text(
+                            '$desde — $hasta  ·  ${stats.periodo.dias} días',
+                            style: Theme.of(context).textTheme.bodySmall
+                                ?.copyWith(color: cs.onSurfaceVariant),
+                            textAlign: TextAlign.center,
+                          ),
                         ),
                       ],
                     ),
@@ -738,9 +741,9 @@ class _StatPill extends StatelessWidget {
           color: AppColors.of(context).border(color.withValues(alpha: 0.25)),
         ),
       ),
-      child: Row(
-        mainAxisSize: MainAxisSize.min,
-        mainAxisAlignment: MainAxisAlignment.center,
+      child: Wrap(
+        alignment: WrapAlignment.center,
+        crossAxisAlignment: WrapCrossAlignment.center,
         children: [
           Text(
             value,
@@ -866,11 +869,19 @@ class _KpiSectionState extends State<_KpiSection> {
         ),
         LayoutBuilder(
           builder: (context, constraints) {
-            final wide = constraints.maxWidth >= 520;
+            final wide =
+                constraints.maxWidth >= 520 ||
+                MediaQuery.textScalerOf(context).scale(14) > 18;
 
             if (wide) {
               // Grilla de 2 o 3 columnas
-              final cols = constraints.maxWidth >= 760 ? 3 : 2;
+              final cols = AppLayout.columns(
+                context,
+                constraints.maxWidth,
+                minWidth: 220,
+                maxColumns: 3,
+                spacing: 8,
+              );
               final itemW = (constraints.maxWidth - (8.0 * (cols - 1))) / cols;
               return Wrap(
                 spacing: 8,
@@ -880,7 +891,6 @@ class _KpiSectionState extends State<_KpiSection> {
                     .map(
                       (item) => SizedBox(
                         width: itemW,
-                        height: 150,
                         child: _KpiCard(
                           icon: item.icon,
                           label: item.label,
@@ -898,7 +908,7 @@ class _KpiSectionState extends State<_KpiSection> {
               crossAxisAlignment: CrossAxisAlignment.center,
               children: [
                 SizedBox(
-                  height: 158,
+                  height: 150 + MediaQuery.textScalerOf(context).scale(32),
                   child: PageView.builder(
                     controller: _controller,
                     itemCount: items.length,
@@ -990,8 +1000,6 @@ class _KpiCard extends StatelessWidget {
                   child: Text(
                     label,
                     textAlign: TextAlign.center,
-                    maxLines: 1,
-                    overflow: TextOverflow.ellipsis,
                     style: Theme.of(context).textTheme.labelMedium?.copyWith(
                       color: cs.onSurfaceVariant,
                     ),
@@ -1119,18 +1127,22 @@ class _HorasRachaCard extends StatelessWidget {
               children: [
                 const Icon(Icons.insights_rounded, size: 18),
                 const SizedBox(width: 8),
-                Text(
-                  'Horas y racha',
-                  style: Theme.of(context).textTheme.titleMedium,
-                  textAlign: TextAlign.center,
+                Expanded(
+                  child: Text(
+                    'Horas y racha',
+                    style: Theme.of(context).textTheme.titleMedium,
+                    textAlign: TextAlign.center,
+                  ),
                 ),
                 const Spacer(),
-                Text(
-                  '${kpis.diasConRegistro} / ${kpis.diasLaborables} días',
-                  style: Theme.of(
-                    context,
-                  ).textTheme.bodySmall?.copyWith(color: cs.onSurfaceVariant),
-                  textAlign: TextAlign.center,
+                Flexible(
+                  child: Text(
+                    '${kpis.diasConRegistro} / ${kpis.diasLaborables} días',
+                    style: Theme.of(
+                      context,
+                    ).textTheme.bodySmall?.copyWith(color: cs.onSurfaceVariant),
+                    textAlign: TextAlign.center,
+                  ),
                 ),
               ],
             ),
@@ -1273,18 +1285,22 @@ class _StatusCard extends StatelessWidget {
               children: [
                 const Icon(Icons.donut_small_rounded, size: 18),
                 const SizedBox(width: 8),
-                Text(
-                  'Distribución de estados',
-                  style: Theme.of(context).textTheme.titleMedium,
-                  textAlign: TextAlign.center,
+                Flexible(
+                  child: Text(
+                    'Distribución de estados',
+                    style: Theme.of(context).textTheme.titleMedium,
+                    textAlign: TextAlign.center,
+                  ),
                 ),
                 const Spacer(),
-                Text(
-                  '${t.registros} registros',
-                  style: Theme.of(
-                    context,
-                  ).textTheme.bodySmall?.copyWith(color: cs.onSurfaceVariant),
-                  textAlign: TextAlign.center,
+                Flexible(
+                  child: Text(
+                    '${t.registros} registros',
+                    style: Theme.of(
+                      context,
+                    ).textTheme.bodySmall?.copyWith(color: cs.onSurfaceVariant),
+                    textAlign: TextAlign.center,
+                  ),
                 ),
               ],
             ),
@@ -1596,12 +1612,14 @@ class _DetailTile extends StatelessWidget {
                   ),
                 ),
                 const SizedBox(width: 8),
-                Text(
-                  title,
-                  style: Theme.of(
-                    context,
-                  ).textTheme.titleSmall?.copyWith(fontWeight: FontWeight.w700),
-                  textAlign: TextAlign.center,
+                Flexible(
+                  child: Text(
+                    title,
+                    style: Theme.of(context).textTheme.titleSmall?.copyWith(
+                      fontWeight: FontWeight.w700,
+                    ),
+                    textAlign: TextAlign.center,
+                  ),
                 ),
               ],
             ),
@@ -1620,20 +1638,24 @@ class _DetailTile extends StatelessWidget {
                   Row(
                     mainAxisAlignment: MainAxisAlignment.spaceBetween,
                     children: [
-                      Text(
-                        row.$1,
-                        style: Theme.of(context).textTheme.bodySmall?.copyWith(
-                          color: cs.onSurfaceVariant,
+                      Flexible(
+                        child: Text(
+                          row.$1,
+                          style: Theme.of(context).textTheme.bodySmall
+                              ?.copyWith(color: cs.onSurfaceVariant),
+                          textAlign: TextAlign.center,
                         ),
-                        textAlign: TextAlign.center,
                       ),
-                      Text(
-                        row.$2,
-                        style: Theme.of(context).textTheme.bodySmall?.copyWith(
-                          fontWeight: FontWeight.w700,
-                          color: cs.onSurface,
+                      Flexible(
+                        child: Text(
+                          row.$2,
+                          style: Theme.of(context).textTheme.bodySmall
+                              ?.copyWith(
+                                fontWeight: FontWeight.w700,
+                                color: cs.onSurface,
+                              ),
+                          textAlign: TextAlign.center,
                         ),
-                        textAlign: TextAlign.center,
                       ),
                     ],
                   ),
@@ -1668,10 +1690,12 @@ class _DailyChart extends StatelessWidget {
               children: [
                 const Icon(Icons.bar_chart_rounded, size: 18),
                 const SizedBox(width: 8),
-                Text(
-                  'Tendencia diaria',
-                  style: Theme.of(context).textTheme.titleMedium,
-                  textAlign: TextAlign.center,
+                Flexible(
+                  child: Text(
+                    'Tendencia diaria',
+                    style: Theme.of(context).textTheme.titleMedium,
+                    textAlign: TextAlign.center,
+                  ),
                 ),
               ],
             ),

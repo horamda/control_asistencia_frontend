@@ -396,7 +396,11 @@ void main() {
       fail = false;
       await tester.tap(find.text('Reintentar'));
       await tester.pumpAndSettle();
+      await tester.drag(find.byType(ListView).first, const Offset(0, -250));
+      await tester.pumpAndSettle();
       expect(find.text('No hay reuniones para mostrar.'), findsOneWidget);
+      await tester.drag(find.byType(ListView).first, const Offset(0, 500));
+      await tester.pumpAndSettle();
       await tester.tap(find.text('Historial'));
       await tester.pumpAndSettle();
       await tester.tap(find.text('Siguiente'));

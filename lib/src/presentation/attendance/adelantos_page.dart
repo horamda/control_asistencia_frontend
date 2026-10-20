@@ -93,6 +93,7 @@ class _AdelantosPageState extends State<AdelantosPage> {
     final confirmed = await showDialog<bool>(
       context: context,
       builder: (ctx) => AlertDialog(
+        scrollable: true,
         title: const Text('Solicitar adelanto', textAlign: TextAlign.center),
         content: Text(
           '¿Confirmás la solicitud de adelanto de sueldo para $mes?',
@@ -273,11 +274,13 @@ class _PeriodoHeader extends StatelessWidget {
           color: Theme.of(context).colorScheme.primary,
         ),
         const SizedBox(width: 8),
-        Text(
-          label,
-          style: Theme.of(
-            context,
-          ).textTheme.titleMedium?.copyWith(fontWeight: FontWeight.w600),
+        Expanded(
+          child: Text(
+            label,
+            style: Theme.of(
+              context,
+            ).textTheme.titleMedium?.copyWith(fontWeight: FontWeight.w600),
+          ),
         ),
       ],
     );

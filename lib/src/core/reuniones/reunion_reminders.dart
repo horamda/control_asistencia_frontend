@@ -1,3 +1,4 @@
+import 'dart:convert';
 import 'package:flutter/foundation.dart';
 import 'package:flutter_local_notifications/flutter_local_notifications.dart';
 import 'package:timezone/data/latest.dart' as tzdata;
@@ -124,7 +125,9 @@ class ReunionReminders {
     String body,
     int? meetingId, {
     String? route,
+    int? notificationId,
     bool urgent = false,
+    Map<String, dynamic>? receipt,
   }) async {
     if (!supported) return;
     await prepareChannel();
@@ -133,7 +136,11 @@ class ReunionReminders {
       title,
       body,
       _details(urgent: urgent),
-      payload: RegExp(r'^/comunicados/[1-9][0-9]*/?$').hasMatch(route ?? '')
+      payload: receipt != null
+          ? jsonEncode({'owner': _owner, 'data': receipt})
+          : notificationId != null
+          ? 'notificacion:$_owner:$notificationId:push'
+          : RegExp(r'^/comunicados/[1-9][0-9]*/?$').hasMatch(route ?? '')
           ? 'comunicado:$_owner:${route!.split('/')[2]}:push'
           : meetingId == null
           ? null

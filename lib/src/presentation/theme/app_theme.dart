@@ -1,3 +1,5 @@
+import 'app_visual.dart';
+import 'app_layout.dart';
 import 'app_palette.dart';
 import 'package:flutter/material.dart';
 
@@ -103,18 +105,14 @@ ThemeData buildAppTheme({Brightness brightness = Brightness.light}) {
             height: 1.3,
             fontWeight: FontWeight.w700,
           ),
-          titleMedium: const TextStyle(
-            fontSize: 18,
-            height: 1.35,
-            fontWeight: FontWeight.w600,
-          ),
+          titleMedium: AppVisual.sectionTitle,
           titleSmall: const TextStyle(
             fontSize: 16,
             height: 1.35,
             fontWeight: FontWeight.w600,
           ),
           bodyLarge: const TextStyle(fontSize: 16, height: 1.5),
-          bodyMedium: const TextStyle(fontSize: 15, height: 1.45),
+          bodyMedium: AppVisual.body,
           bodySmall: const TextStyle(fontSize: 13, height: 1.4),
           labelLarge: const TextStyle(
             fontSize: 15,
@@ -161,7 +159,7 @@ ThemeData buildAppTheme({Brightness brightness = Brightness.light}) {
       color: colors.surface,
       margin: const EdgeInsets.symmetric(vertical: 4),
       shape: RoundedRectangleBorder(
-        borderRadius: BorderRadius.circular(16),
+        borderRadius: BorderRadius.circular(AppVisual.cardRadius),
         side: BorderSide(
           color: dark
               ? colors.outline.withValues(alpha: .65)
@@ -197,7 +195,7 @@ ThemeData buildAppTheme({Brightness brightness = Brightness.light}) {
       surfaceTintColor: Colors.transparent,
       elevation: 6,
       shape: RoundedRectangleBorder(
-        borderRadius: BorderRadius.circular(16),
+        borderRadius: BorderRadius.circular(AppVisual.cardRadius),
         side: BorderSide(color: colors.outlineVariant),
       ),
     ),
@@ -270,7 +268,9 @@ class AppViewport extends StatelessWidget {
   @override
   Widget build(BuildContext context) => LayoutBuilder(
     builder: (context, box) {
-      final width = box.maxWidth > 1440 ? 1440.0 : box.maxWidth;
+      final width = box.maxWidth > AppLayout.viewportMaxWidth
+          ? AppLayout.viewportMaxWidth
+          : box.maxWidth;
       return ColoredBox(
         color: Theme.of(context).scaffoldBackgroundColor,
         child: Center(
@@ -305,10 +305,12 @@ class ResponsiveCards extends StatelessWidget {
   @override
   Widget build(BuildContext context) => LayoutBuilder(
     builder: (context, box) {
-      final scale = MediaQuery.textScalerOf(context).scale(16) / 16;
-      final columns = ((box.maxWidth + 12) / (minWidth * scale + 12))
-          .floor()
-          .clamp(1, maxColumns);
+      final columns = AppLayout.columns(
+        context,
+        box.maxWidth,
+        minWidth: minWidth,
+        maxColumns: maxColumns,
+      );
       final width = (box.maxWidth - 12 * (columns - 1)) / columns;
       return Wrap(
         spacing: 12,

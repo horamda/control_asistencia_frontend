@@ -1,3 +1,4 @@
+import 'package:ficharqr/src/presentation/attendance/notifications_page.dart';
 import 'package:package_info_plus/package_info_plus.dart';
 import 'package:ficharqr/src/presentation/attendance/reintegros_page.dart';
 import 'package:ficharqr/src/presentation/attendance/epp_page.dart';
@@ -48,9 +49,62 @@ void main() {
           (_) async => null,
         );
   });
+  testWidgets('login retains input through tablet rotation and keyboard', (
+    tester,
+  ) async {
+    await tester.binding.setSurfaceSize(const Size(800, 1024));
+    addTearDown(() => tester.binding.setSurfaceSize(null));
+    final api = _Api();
+    addTearDown(api.dispose);
+    final keyboard = ValueNotifier<double>(0);
+    addTearDown(keyboard.dispose);
+    await tester.pumpWidget(
+      MaterialApp(
+        theme: buildAppTheme(),
+        builder: (context, child) => ValueListenableBuilder<double>(
+          valueListenable: keyboard,
+          builder: (context, bottom, _) => MediaQuery(
+            data: MediaQuery.of(
+              context,
+            ).copyWith(viewInsets: EdgeInsets.only(bottom: bottom)),
+            child: child!,
+          ),
+        ),
+        home: LoginPage(apiClient: api, onLoginSuccess: (_) async {}),
+      ),
+    );
+    await tester.pumpAndSettle();
+    await tester.enterText(find.byType(TextFormField).first, '12345678');
+    await tester.enterText(find.byType(TextFormField).last, 'test-password');
+    for (final size in [
+      const Size(1024, 800),
+      const Size(740, 360),
+      const Size(390, 844),
+    ]) {
+      await tester.binding.setSurfaceSize(size);
+      keyboard.value = size.height == 360 ? 180 : 0;
+      await tester.pumpAndSettle();
+      expect(tester.takeException(), isNull);
+      expect(
+        tester
+            .widget<TextFormField>(find.byType(TextFormField).first)
+            .controller!
+            .text,
+        '12345678',
+      );
+      expect(
+        tester
+            .widget<TextFormField>(find.byType(TextFormField).last)
+            .controller!
+            .text,
+        'test-password',
+      );
+    }
+  });
   final scenarios = [
     (size: const Size(320, 568), scale: 2.0, keyboard: 0.0),
     (size: const Size(740, 360), scale: 1.5, keyboard: 0.0),
+    (size: const Size(740, 360), scale: 2.0, keyboard: 180.0),
     (size: const Size(390, 844), scale: 1.3, keyboard: 300.0),
     (size: const Size(800, 1024), scale: 1.0, keyboard: 0.0),
     (size: const Size(600, 960), scale: 1.3, keyboard: 0.0),
@@ -80,6 +134,7 @@ void main() {
         'JustificacionesPage',
         'EppPage',
         'ReintegrosPage',
+        'NotificationsPage',
       ]) {
         testWidgets(
           '$name $brightness fits ${s.size}, text ${s.scale}, keyboard ${s.keyboard}',
@@ -119,6 +174,11 @@ void main() {
                 token: 'test',
               ),
               'EppPage' => EppPage(api: api, token: 'test'),
+              'NotificationsPage' => NotificationsPage(
+                api: api,
+                token: 'test',
+                onDestination: (_) async {},
+              ),
               'ReintegrosPage' => ReintegrosPage(api: api, token: 'test'),
               'QR' => QrDisplayPage(apiClient: api, token: 'test'),
               'Trivia' => TriviaResultScreen(

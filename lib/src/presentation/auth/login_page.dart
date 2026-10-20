@@ -406,7 +406,10 @@ class _NarrowLayout extends StatelessWidget {
       padding: EdgeInsets.symmetric(horizontal: hPad, vertical: vPad),
       child: ConstrainedBox(
         constraints: BoxConstraints(
-          minHeight: constraints.maxHeight - vPad * 2,
+          minHeight: (constraints.maxHeight - vPad * 2).clamp(
+            0,
+            double.infinity,
+          ),
         ),
         child: Center(
           child: ConstrainedBox(

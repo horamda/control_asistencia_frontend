@@ -225,10 +225,10 @@ class _AdelantoHistorialCard extends StatelessWidget {
         title: Text(
           mesLabel,
           style: const TextStyle(fontWeight: FontWeight.w600),
-          textAlign: TextAlign.center,
+          textAlign: TextAlign.start,
         ),
         subtitle: Column(
-          crossAxisAlignment: CrossAxisAlignment.center,
+          crossAxisAlignment: CrossAxisAlignment.start,
           children: [
             Text(
               label,
@@ -236,7 +236,7 @@ class _AdelantoHistorialCard extends StatelessWidget {
                 color: AppColors.of(context).foreground(color),
                 fontWeight: FontWeight.w500,
               ),
-              textAlign: TextAlign.center,
+              textAlign: TextAlign.start,
             ),
             if (item.fechaSolicitud != null)
               Text(
@@ -244,7 +244,7 @@ class _AdelantoHistorialCard extends StatelessWidget {
                 style: Theme.of(context).textTheme.bodySmall?.copyWith(
                   color: Theme.of(context).colorScheme.onSurfaceVariant,
                 ),
-                textAlign: TextAlign.center,
+                textAlign: TextAlign.start,
               ),
             if (item.resueltoAt != null)
               Text(
@@ -252,7 +252,7 @@ class _AdelantoHistorialCard extends StatelessWidget {
                 style: Theme.of(context).textTheme.bodySmall?.copyWith(
                   color: Theme.of(context).colorScheme.onSurfaceVariant,
                 ),
-                textAlign: TextAlign.center,
+                textAlign: TextAlign.start,
               ),
           ],
         ),

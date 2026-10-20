@@ -1,3 +1,5 @@
+import '../widgets/app_submission_bar.dart';
+import '../theme/app_visual.dart';
 import 'package:ficharqr/src/presentation/widgets/app_card.dart';
 import 'dart:convert';
 import 'package:crypto/crypto.dart';
@@ -194,41 +196,35 @@ class _ReintegrosPageState extends State<ReintegrosPage> {
           ),
         ],
       ),
-      floatingActionButton:
-          monthly['habilitado'] == true &&
-              (monthly['periodos_habilitados'] as List? ?? []).isNotEmpty
-          ? AppFloatingActionButton(
-              onPressed: loading || opening ? null : selectPeriod,
-              icon: const Icon(Icons.add_rounded),
-              label: Text(
-                opening ? 'Abriendo…' : 'Cargar gastos',
-                textAlign: TextAlign.center,
-              ),
-            )
-          : null,
       body: _Body(
         child: RefreshIndicator(
           onRefresh: load,
           child: ListView(
-            padding: EdgeInsets.fromLTRB(
-              16,
-              16,
-              16,
-              AppFloatingActionButton.bottomPadding(context),
-            ),
+            padding: const EdgeInsets.all(16),
             physics: const AlwaysScrollableScrollPhysics(),
             children: [
               if (loading) const LinearProgressIndicator(),
               if (error != null) _ErrorBox(message: error!, retry: load),
               if (config != null) ...[
                 _Section(
-                  title: 'Tu rendición mensual',
+                  title: 'Tus gastos, mes a mes',
                   children: [
+                    if (monthly['habilitado'] == true &&
+                        (monthly['periodos_habilitados'] as List? ?? [])
+                            .isNotEmpty)
+                      FilledButton.icon(
+                        onPressed: loading || opening ? null : selectPeriod,
+                        icon: const Icon(Icons.add_rounded),
+                        label: Text(
+                          opening ? 'Abriendo\u2026' : 'Cargar gastos',
+                        ),
+                      ),
                     const Text(
-                      'Reuní los gastos y kilómetros de cada mes en una sola rendición. Los kilómetros son informativos y no se suman al importe.',
+                      'Carg\u00e1 comprobantes, guard\u00e1 un borrador y envi\u00e1 el mes para su revisi\u00f3n.',
                       textAlign: TextAlign.center,
                     ),
-                    const SizedBox(height: 12),
+                    const SizedBox(height: 16),
+                    const SizedBox(height: 8),
                     if (monthly['habilitado'] == true) ...[
                       for (final reopened in reintegroMaps(
                         monthly['reaperturas'],
@@ -303,84 +299,106 @@ class _ReintegrosPageState extends State<ReintegrosPage> {
                 _Section(
                   title: 'Mis rendiciones',
                   children: [
-                    DropdownButtonFormField<String>(
-                      initialValue: state,
-                      isExpanded: true,
-                      itemHeight: null,
-                      decoration: const InputDecoration(labelText: 'Estado'),
-                      items: [
-                        const DropdownMenuItem(
-                          value: '',
-                          child: Text('Todos', textAlign: TextAlign.center),
-                        ),
-                        for (final entry in reintegroStates.entries)
-                          DropdownMenuItem(
-                            value: entry.key,
-                            child: Text(
-                              entry.value,
-                              textAlign: TextAlign.center,
-                            ),
-                          ),
-                      ],
-                      onChanged: loading
-                          ? null
-                          : (value) {
-                              state = value!;
-                              page = 1;
-                              load();
-                            },
-                    ),
-                    const SizedBox(height: 16),
-                    TextField(
-                      controller: periodController,
-                      decoration: const InputDecoration(
-                        labelText: 'Período (AAAA-MM)',
-                        hintText: '2026-10',
+                    ExpansionTile(
+                      tilePadding: EdgeInsets.zero,
+                      title: Text(
+                        state.isNotEmpty ||
+                                period.isNotEmpty ||
+                                from != null ||
+                                to != null
+                            ? 'Filtros aplicados'
+                            : 'Filtrar historial',
                       ),
-                      onSubmitted: (_) => applyPeriod(),
-                    ),
-                    Wrap(
-                      spacing: 8,
-                      runSpacing: 8,
-                      alignment: WrapAlignment.center,
+                      leading: const Icon(Icons.filter_list_rounded),
                       children: [
-                        TextButton(
-                          onPressed: loading ? null : applyPeriod,
-                          child: const Text(
-                            'Filtrar mes',
-                            textAlign: TextAlign.center,
+                        DropdownButtonFormField<String>(
+                          initialValue: state,
+                          isExpanded: true,
+                          itemHeight: null,
+                          decoration: const InputDecoration(
+                            labelText: 'Estado',
                           ),
-                        ),
-                        OutlinedButton(
-                          onPressed: loading ? null : () => selectDate(true),
-                          child: Text(
-                            from == null
-                                ? 'Creada desde'
-                                : 'Desde ${_date(from!)}',
-                            textAlign: TextAlign.center,
-                          ),
-                        ),
-                        OutlinedButton(
-                          onPressed: loading ? null : () => selectDate(false),
-                          child: Text(
-                            to == null ? 'Creada hasta' : 'Hasta ${_date(to!)}',
-                            textAlign: TextAlign.center,
-                          ),
-                        ),
-                        TextButton(
-                          onPressed: loading
+                          items: [
+                            const DropdownMenuItem(
+                              value: '',
+                              child: Text('Todos', textAlign: TextAlign.center),
+                            ),
+                            for (final entry in reintegroStates.entries)
+                              DropdownMenuItem(
+                                value: entry.key,
+                                child: Text(
+                                  entry.value,
+                                  textAlign: TextAlign.center,
+                                ),
+                              ),
+                          ],
+                          onChanged: loading
                               ? null
-                              : () {
-                                  periodController.clear();
-                                  period = '';
-                                  from = to = null;
+                              : (value) {
+                                  state = value!;
                                   page = 1;
                                   load();
                                 },
-                          child: const Text(
-                            'Limpiar fechas',
-                            textAlign: TextAlign.center,
+                        ),
+                        const SizedBox(height: 16),
+                        TextField(
+                          controller: periodController,
+                          decoration: const InputDecoration(
+                            labelText: 'Período (AAAA-MM)',
+                            hintText: '2026-10',
                           ),
+                          onSubmitted: (_) => applyPeriod(),
+                        ),
+                        Wrap(
+                          spacing: 8,
+                          runSpacing: 8,
+                          alignment: WrapAlignment.center,
+                          children: [
+                            TextButton(
+                              onPressed: loading ? null : applyPeriod,
+                              child: const Text(
+                                'Filtrar mes',
+                                textAlign: TextAlign.center,
+                              ),
+                            ),
+                            OutlinedButton(
+                              onPressed: loading
+                                  ? null
+                                  : () => selectDate(true),
+                              child: Text(
+                                from == null
+                                    ? 'Creada desde'
+                                    : 'Desde ${_date(from!)}',
+                                textAlign: TextAlign.center,
+                              ),
+                            ),
+                            OutlinedButton(
+                              onPressed: loading
+                                  ? null
+                                  : () => selectDate(false),
+                              child: Text(
+                                to == null
+                                    ? 'Creada hasta'
+                                    : 'Hasta ${_date(to!)}',
+                                textAlign: TextAlign.center,
+                              ),
+                            ),
+                            TextButton(
+                              onPressed: loading
+                                  ? null
+                                  : () {
+                                      periodController.clear();
+                                      period = '';
+                                      from = to = null;
+                                      page = 1;
+                                      load();
+                                    },
+                              child: const Text(
+                                'Limpiar fechas',
+                                textAlign: TextAlign.center,
+                              ),
+                            ),
+                          ],
                         ),
                       ],
                     ),
@@ -390,13 +408,9 @@ class _ReintegrosPageState extends State<ReintegrosPage> {
                 _Section(
                   title: 'Totales del filtro',
                   children: [
-                    Text(
-                      'Solicitado: ${_money(history!['total_solicitado'])}',
-                      textAlign: TextAlign.center,
-                    ),
-                    Text(
-                      'Aprobado: ${_money(history!['total_aprobado'])}',
-                      textAlign: TextAlign.center,
+                    _Amounts(
+                      requested: history!['total_solicitado'],
+                      approved: history!['total_aprobado'],
                     ),
                   ],
                 ),
@@ -622,13 +636,9 @@ class _ReintegroDetailState extends State<_ReintegroDetail> {
               _Section(
                 title: _state(d['estado']),
                 children: [
-                  Text(
-                    'Solicitado: ${_money(d['total_solicitado'])}',
-                    textAlign: TextAlign.center,
-                  ),
-                  Text(
-                    'Aprobado: ${_money(d['total_aprobado'])}',
-                    textAlign: TextAlign.center,
+                  _Amounts(
+                    requested: d['total_solicitado'],
+                    approved: d['total_aprobado'],
                   ),
                   Text(
                     'Kilómetros: ${d['kilometros'] ?? 'No informados'}',
@@ -1335,38 +1345,29 @@ class _ReintegroEditorState extends State<ReintegroEditor>
             ),
           ],
         ),
-        bottomNavigationBar: Material(
-          color: Theme.of(context).colorScheme.surface,
-          elevation: 3,
-          child: SafeArea(
-            top: false,
-            child: Padding(
-              padding: const EdgeInsets.symmetric(horizontal: 16, vertical: 12),
-              child: AppAdaptiveActions(
-                minWidth: 220,
-                children: [
-                  OutlinedButton(
-                    onPressed: busy || blocked || refreshing
-                        ? null
-                        : () => save(false),
-                    child: const Text(
-                      'Guardar borrador',
-                      textAlign: TextAlign.center,
-                    ),
-                  ),
-                  FilledButton(
-                    onPressed: busy || blocked || refreshing
-                        ? null
-                        : () => save(true),
-                    child: const Text(
-                      'Enviar rendición',
-                      textAlign: TextAlign.center,
-                    ),
-                  ),
-                ],
+        bottomNavigationBar: AppSubmissionBar(
+          summary:
+              'Total orientativo: ARS ${cents ~/ 100}.${(cents % 100).toString().padLeft(2, '0')}',
+          actions: [
+            OutlinedButton(
+              onPressed: busy || blocked || refreshing
+                  ? null
+                  : () => save(false),
+              child: const Text(
+                'Guardar borrador',
+                textAlign: TextAlign.center,
               ),
             ),
-          ),
+            FilledButton(
+              onPressed: busy || blocked || refreshing
+                  ? null
+                  : () => save(true),
+              child: const Text(
+                'Enviar rendición',
+                textAlign: TextAlign.center,
+              ),
+            ),
+          ],
         ),
         body: _Body(
           child: Form(
@@ -1563,29 +1564,36 @@ class _ReintegroEditorState extends State<ReintegroEditor>
     key: ObjectKey(e),
     title: 'Gasto ${index + 1}',
     children: [
-      OutlinedButton(
-        onPressed: () => chooseDate(e),
-        child: Text(e.date ?? 'Seleccionar fecha', textAlign: TextAlign.center),
-      ),
-      const SizedBox(height: 16),
-      OutlinedButton.icon(
-        onPressed: () => selectConcept(e),
-        icon: const Icon(Icons.search_rounded),
-        label: Text(
-          'Concepto: ${concepts.where((c) => c['id'] == e.category).firstOrNull?['nombre'] ?? e.categoryName ?? 'Seleccionar'}',
-          textAlign: TextAlign.center,
-        ),
+      AppAdaptiveActions(
+        minWidth: 260,
+        children: [
+          OutlinedButton(
+            onPressed: () => chooseDate(e),
+            child: Text(
+              e.date ?? 'Seleccionar fecha',
+              textAlign: TextAlign.start,
+            ),
+          ),
+          OutlinedButton.icon(
+            onPressed: () => selectConcept(e),
+            icon: const Icon(Icons.search_rounded),
+            label: Text(
+              'Concepto: ${concepts.where((c) => c['id'] == e.category).firstOrNull?['nombre'] ?? e.categoryName ?? 'Seleccionar'}',
+              textAlign: TextAlign.start,
+            ),
+          ),
+        ],
       ),
       if (e.category != null && !concepts.any((c) => c['id'] == e.category))
         Text(
           'El concepto seleccionado ya no está disponible. Elegí otro o dejalo sin concepto para guardar un borrador.',
           style: TextStyle(color: Theme.of(context).colorScheme.error),
-          textAlign: TextAlign.center,
+          textAlign: TextAlign.start,
         ),
       if (concepts.isEmpty)
         const Text(
           'No hay conceptos disponibles. Contactá a Administración.',
-          textAlign: TextAlign.center,
+          textAlign: TextAlign.start,
         ),
       const SizedBox(height: 16),
       TextFormField(
@@ -1612,21 +1620,31 @@ class _ReintegroEditorState extends State<ReintegroEditor>
         },
       ),
       const SizedBox(height: 16),
-      TextFormField(
-        controller: e.number,
-        maxLength: 100,
-        decoration: const InputDecoration(
-          labelText: 'Número de comprobante (opcional)',
-        ),
+      ExpansionTile(
+        key: ValueKey('receipt-details-$index'),
+        tilePadding: EdgeInsets.zero,
+        title: const Text('Datos del comprobante'),
+        subtitle: const Text('Opcionales: n\u00famero y emisor'),
+        initiallyExpanded: e.number.text.isNotEmpty || e.issuer.text.isNotEmpty,
+        children: [
+          TextFormField(
+            controller: e.number,
+            maxLength: 100,
+            decoration: const InputDecoration(
+              labelText: 'Número de comprobante (opcional)',
+            ),
+          ),
+          TextFormField(
+            controller: e.issuer,
+            maxLength: 180,
+            decoration: const InputDecoration(labelText: 'Emisor (opcional)'),
+          ),
+        ],
       ),
-      TextFormField(
-        controller: e.issuer,
-        maxLength: 180,
-        decoration: const InputDecoration(labelText: 'Emisor (opcional)'),
-      ),
+      const SizedBox(height: 12),
       const Text(
         'Comprobantes: hasta 3 fotos. Al enviar se necesita al menos una.',
-        textAlign: TextAlign.center,
+        textAlign: TextAlign.start,
       ),
       Wrap(
         spacing: 8,
@@ -1647,7 +1665,7 @@ class _ReintegroEditorState extends State<ReintegroEditor>
                     }),
                     child: const Text(
                       'Quitar foto',
-                      textAlign: TextAlign.center,
+                      textAlign: TextAlign.start,
                     ),
                   ),
                 ],
@@ -1667,7 +1685,7 @@ class _ReintegroEditorState extends State<ReintegroEditor>
                     }),
                     child: const Text(
                       'Quitar foto',
-                      textAlign: TextAlign.center,
+                      textAlign: TextAlign.start,
                     ),
                   ),
                 ],
@@ -1693,7 +1711,7 @@ class _ReintegroEditorState extends State<ReintegroEditor>
           }
         },
         icon: const Icon(Icons.delete_outline_rounded),
-        label: const Text('Quitar gasto', textAlign: TextAlign.center),
+        label: const Text('Quitar gasto', textAlign: TextAlign.start),
       ),
     ],
   );
@@ -1793,12 +1811,10 @@ class _Section extends StatelessWidget {
         children: [
           Text(
             title,
-            style: Theme.of(
-              context,
-            ).textTheme.titleMedium?.copyWith(fontWeight: FontWeight.w700),
-            textAlign: TextAlign.center,
+            style: AppVisual.sectionTitle,
+            textAlign: TextAlign.start,
           ),
-          const SizedBox(height: 16),
+          const SizedBox(height: 12),
           ...children,
         ],
       ),

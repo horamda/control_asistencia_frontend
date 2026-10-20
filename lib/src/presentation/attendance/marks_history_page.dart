@@ -278,10 +278,12 @@ class _DateRangeFilterBar extends StatelessWidget {
                   color: cs.onSurfaceVariant,
                 ),
                 const SizedBox(width: 6),
-                Text(
-                  'Filtrar por fecha',
-                  style: Theme.of(context).textTheme.labelLarge,
-                  textAlign: TextAlign.center,
+                Flexible(
+                  child: Text(
+                    'Filtrar por fecha',
+                    style: Theme.of(context).textTheme.labelLarge,
+                    textAlign: TextAlign.center,
+                  ),
                 ),
                 if (hasFilter) ...[
                   const Spacer(),
@@ -425,7 +427,7 @@ class _MarcaCard extends StatelessWidget {
               child: Padding(
                 padding: const EdgeInsets.fromLTRB(12, 10, 12, 10),
                 child: Column(
-                  crossAxisAlignment: CrossAxisAlignment.center,
+                  crossAxisAlignment: CrossAxisAlignment.start,
                   children: [
                     Row(
                       mainAxisAlignment: MainAxisAlignment.center,
@@ -447,7 +449,7 @@ class _MarcaCard extends StatelessWidget {
                         const SizedBox(width: 8),
                         Expanded(
                           child: Column(
-                            crossAxisAlignment: CrossAxisAlignment.center,
+                            crossAxisAlignment: CrossAxisAlignment.start,
                             children: [
                               Text(
                                 item.esAutomatica
@@ -455,7 +457,7 @@ class _MarcaCard extends StatelessWidget {
                                     : _accionLabel(item.accion),
                                 style: Theme.of(context).textTheme.titleSmall
                                     ?.copyWith(fontWeight: FontWeight.w700),
-                                textAlign: TextAlign.center,
+                                textAlign: TextAlign.start,
                               ),
                               Text(
                                 DateFormatter.formatApiDateForDisplay(
@@ -463,7 +465,7 @@ class _MarcaCard extends StatelessWidget {
                                 ),
                                 style: Theme.of(context).textTheme.bodySmall
                                     ?.copyWith(color: cs.onSurfaceVariant),
-                                textAlign: TextAlign.center,
+                                textAlign: TextAlign.start,
                               ),
                             ],
                           ),
@@ -494,7 +496,7 @@ class _MarcaCard extends StatelessWidget {
                                 context,
                               ).foreground(estadoColor),
                             ),
-                            textAlign: TextAlign.center,
+                            textAlign: TextAlign.start,
                           ),
                         ),
                         if (item.gpsDistanciaM != null) ...[
@@ -509,7 +511,7 @@ class _MarcaCard extends StatelessWidget {
                             '${item.gpsDistanciaM!.toStringAsFixed(0)} m',
                             style: Theme.of(context).textTheme.labelSmall
                                 ?.copyWith(color: cs.onSurfaceVariant),
-                            textAlign: TextAlign.center,
+                            textAlign: TextAlign.start,
                           ),
                         ],
                       ],
@@ -523,7 +525,7 @@ class _MarcaCard extends StatelessWidget {
                         ),
                         maxLines: 1,
                         overflow: TextOverflow.ellipsis,
-                        textAlign: TextAlign.center,
+                        textAlign: TextAlign.start,
                       ),
                     ],
                   ],
@@ -818,7 +820,7 @@ class _DetailCell extends StatelessWidget {
         borderRadius: BorderRadius.circular(10),
       ),
       child: Column(
-        crossAxisAlignment: CrossAxisAlignment.center,
+        crossAxisAlignment: CrossAxisAlignment.start,
         children: [
           Row(
             mainAxisAlignment: MainAxisAlignment.center,
@@ -830,7 +832,7 @@ class _DetailCell extends StatelessWidget {
                 style: Theme.of(
                   context,
                 ).textTheme.labelSmall?.copyWith(color: cs.onSurfaceVariant),
-                textAlign: TextAlign.center,
+                textAlign: TextAlign.start,
               ),
             ],
           ),
@@ -840,7 +842,7 @@ class _DetailCell extends StatelessWidget {
             style: Theme.of(
               context,
             ).textTheme.bodyMedium?.copyWith(fontWeight: FontWeight.w600),
-            textAlign: TextAlign.center,
+            textAlign: TextAlign.start,
           ),
         ],
       ),

@@ -19,6 +19,69 @@ class MobileApiClient {
 
   final String baseUrl;
 
+  Future<Map<String, dynamic>> getVacationWorkflow({
+    required String token,
+    String path = '/semanas',
+    bool team = false,
+    Map<String, String>? query,
+  }) async => _reunionesResponse(
+    await _safeGet(
+      _uri(
+        '/me/${team ? 'equipo/' : ''}vacaciones$path',
+      ).replace(queryParameters: query),
+      headers: _headers(token: token),
+      actionLabel: 'consultar vacaciones',
+    ),
+  );
+
+  Future<Map<String, dynamic>> postVacationWorkflow({
+    required String token,
+    required String path,
+    bool team = false,
+    Map<String, dynamic> body = const {},
+  }) async => _reunionesResponse(
+    await _safePost(
+      _uri('/me/${team ? 'equipo/' : ''}vacaciones$path'),
+      headers: _headers(token: token),
+      body: jsonEncode(body),
+      actionLabel: 'actualizar vacaciones',
+    ),
+  );
+
+  Future<Map<String, dynamic>> getNotifications({
+    required String token,
+    String suffix = '',
+    Map<String, String>? query,
+  }) async => _reunionesResponse(
+    await _safeGet(
+      _uri('/me/notificaciones$suffix').replace(queryParameters: query),
+      headers: _headers(token: token),
+      actionLabel: 'consultar notificaciones',
+    ),
+  );
+
+  Future<Map<String, dynamic>> readNotifications({
+    required String token,
+    int? id,
+    int? cutoff,
+    String? module,
+  }) async => _reunionesResponse(
+    await _safePost(
+      _uri(
+        id == null
+            ? '/me/notificaciones/leer-todas'
+            : '/me/notificaciones/$id/leer',
+      ),
+      headers: _headers(token: token),
+      body: jsonEncode(
+        id == null
+            ? {'hasta_id': cutoff, if (module != null) 'modulo': module}
+            : {},
+      ),
+      actionLabel: 'marcar notificaciones como leidas',
+    ),
+  );
+
   Future<Map<String, dynamic>> getComunicados({
     required String token,
     int page = 1,

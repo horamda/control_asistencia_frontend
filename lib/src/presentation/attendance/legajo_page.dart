@@ -370,35 +370,39 @@ class _TipoCard extends StatelessWidget {
               ),
             ),
             if (tieneEventos)
-              Column(
-                crossAxisAlignment: CrossAxisAlignment.end,
-                children: [
-                  Text(
-                    '${item.total}',
-                    maxLines: 1,
-                    overflow: TextOverflow.ellipsis,
-                    style: Theme.of(context).textTheme.titleSmall?.copyWith(
-                      fontWeight: FontWeight.w700,
-                      color: cs.primary,
+              Flexible(
+                child: Column(
+                  crossAxisAlignment: CrossAxisAlignment.end,
+                  children: [
+                    Text(
+                      '${item.total}',
+                      maxLines: 1,
+                      overflow: TextOverflow.ellipsis,
+                      style: Theme.of(context).textTheme.titleSmall?.copyWith(
+                        fontWeight: FontWeight.w700,
+                        color: cs.primary,
+                      ),
+                      textAlign: TextAlign.center,
                     ),
-                    textAlign: TextAlign.center,
-                  ),
-                  Text(
-                    '${item.vigentes} vigente${item.vigentes != 1 ? 's' : ''}',
-                    style: Theme.of(
-                      context,
-                    ).textTheme.bodySmall?.copyWith(color: cs.onSurfaceVariant),
-                    textAlign: TextAlign.center,
-                  ),
-                ],
+                    Text(
+                      '${item.vigentes} vigente${item.vigentes != 1 ? 's' : ''}',
+                      style: Theme.of(context).textTheme.bodySmall?.copyWith(
+                        color: cs.onSurfaceVariant,
+                      ),
+                      textAlign: TextAlign.center,
+                    ),
+                  ],
+                ),
               )
             else
-              Text(
-                'Sin eventos',
-                style: Theme.of(
-                  context,
-                ).textTheme.bodySmall?.copyWith(color: cs.onSurfaceVariant),
-                textAlign: TextAlign.center,
+              Flexible(
+                child: Text(
+                  'Sin eventos',
+                  style: Theme.of(
+                    context,
+                  ).textTheme.bodySmall?.copyWith(color: cs.onSurfaceVariant),
+                  textAlign: TextAlign.center,
+                ),
               ),
           ],
         ),
@@ -681,7 +685,7 @@ class _LegajoEventoCard extends StatelessWidget {
       child: Padding(
         padding: const EdgeInsets.all(16),
         child: Column(
-          crossAxisAlignment: CrossAxisAlignment.center,
+          crossAxisAlignment: CrossAxisAlignment.start,
           children: [
             Row(
               crossAxisAlignment: CrossAxisAlignment.start,
@@ -701,16 +705,18 @@ class _LegajoEventoCard extends StatelessWidget {
                       decoration: anulado ? TextDecoration.lineThrough : null,
                       color: anulado ? cs.onSurfaceVariant : null,
                     ),
-                    textAlign: TextAlign.center,
+                    textAlign: TextAlign.start,
                   ),
                 ),
                 if (item.fechaEvento != null)
-                  Text(
-                    item.fechaEvento!,
-                    style: Theme.of(
-                      context,
-                    ).textTheme.bodySmall?.copyWith(color: cs.onSurfaceVariant),
-                    textAlign: TextAlign.center,
+                  Flexible(
+                    child: Text(
+                      item.fechaEvento!,
+                      style: Theme.of(context).textTheme.bodySmall?.copyWith(
+                        color: cs.onSurfaceVariant,
+                      ),
+                      textAlign: TextAlign.start,
+                    ),
                   ),
               ],
             ),
@@ -719,7 +725,7 @@ class _LegajoEventoCard extends StatelessWidget {
               Text(
                 item.titulo!,
                 style: const TextStyle(fontWeight: FontWeight.w500),
-                textAlign: TextAlign.center,
+                textAlign: TextAlign.start,
               ),
             ],
             if (!compact && item.descripcion != null) ...[
@@ -729,7 +735,7 @@ class _LegajoEventoCard extends StatelessWidget {
                 style: Theme.of(
                   context,
                 ).textTheme.bodySmall?.copyWith(color: cs.onSurfaceVariant),
-                textAlign: TextAlign.center,
+                textAlign: TextAlign.start,
               ),
             ],
             if (severidad != null || anulado) ...[
@@ -758,7 +764,7 @@ class _LegajoEventoCard extends StatelessWidget {
                             context,
                           ).foreground(severidadColor),
                         ),
-                        textAlign: TextAlign.center,
+                        textAlign: TextAlign.start,
                       ),
                     ),
                   if (anulado) ...[
@@ -769,7 +775,7 @@ class _LegajoEventoCard extends StatelessWidget {
                         fontSize: 13,
                         color: cs.onSurfaceVariant,
                       ),
-                      textAlign: TextAlign.center,
+                      textAlign: TextAlign.start,
                     ),
                   ],
                 ],
@@ -783,7 +789,7 @@ class _LegajoEventoCard extends StatelessWidget {
                 style: Theme.of(
                   context,
                 ).textTheme.bodySmall?.copyWith(color: cs.onSurfaceVariant),
-                textAlign: TextAlign.center,
+                textAlign: TextAlign.start,
               ),
             ],
           ],

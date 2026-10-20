@@ -27,6 +27,7 @@ void main() {
                         'inicio': '2026-10-16T10:00:00',
                         'nombre': 'Reunión $id',
                         'estado': id == 3 ? 'abierta' : 'pendiente',
+                        'puede_registrar': id == 3,
                       }),
                   ],
                   summary: const {

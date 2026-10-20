@@ -1,779 +1,416 @@
-import 'package:ficharqr/src/presentation/widgets/app_card.dart';
-import 'package:ficharqr/src/presentation/theme/app_palette.dart';
-import '../widgets/scrollable_error_state.dart';
-import 'dart:async';
-
 import 'package:flutter/material.dart';
-import '../widgets/app_page_layout.dart';
-
 import '../../core/network/mobile_api_client.dart';
+import '../../core/reuniones/notifications_navigation.dart';
 import '../../core/utils/date_formatter.dart';
+import '../widgets/app_card.dart';
+
+List<Map<String, dynamic>> vacationItems(dynamic value) => value is List
+    ? value.whereType<Map>().map((e) => Map<String, dynamic>.from(e)).toList()
+    : [];
+String vacationDate(dynamic value) =>
+    DateFormatter.formatApiDateForDisplay(value?.toString());
+String vacationError(Object e) => e is ApiException
+    ? e.message
+    : 'No se pudo completar la operación. Volvé a intentar.';
 
 class VacacionesPage extends StatefulWidget {
   const VacacionesPage({
     super.key,
     required this.apiClient,
     required this.token,
+    this.initialId,
+    this.team = false,
   });
-
   final MobileApiClient apiClient;
   final String token;
-
+  final int? initialId;
+  final bool team;
   @override
   State<VacacionesPage> createState() => _VacacionesPageState();
 }
 
 class _VacacionesPageState extends State<VacacionesPage> {
-  bool _loading = true;
-  bool _requesting = false;
-  String? _error;
-  int _anio = DateTime.now().year;
-  VacacionesResumenResponse? _resumen;
-  List<VacacionesMovimiento> _movimientos = [];
-
-  bool get _puedeSolicitar {
-    final resumen = _resumen?.vacaciones;
-    if (resumen == null) return false;
-    return _anio >= DateTime.now().year &&
-        resumen.diasDisponiblesConPendientes > 0;
-  }
-
+  int year = DateTime.now().year;
+  DateTime month = DateTime(DateTime.now().year, DateTime.now().month);
+  int tab = 0, request = 0;
+  bool loading = true;
+  String? error, teamError;
+  Map<String, dynamic> data = {}, team = {};
+  String teamView = 'Pendientes';
+  String get monthKey =>
+      '${month.year}-${month.month.toString().padLeft(2, '0')}';
   @override
   void initState() {
     super.initState();
-    _load();
+    tab = widget.team ? 2 : 0;
+    load();
+    if (widget.initialId != null) {
+      WidgetsBinding.instance.addPostFrameCallback(
+        (_) => detail(widget.initialId!, team: widget.team),
+      );
+    }
   }
 
-  Future<void> _load() async {
+  Future<void> load() async {
+    final generation = ++request;
     setState(() {
-      _loading = true;
-      _error = null;
+      loading = true;
+      error = null;
     });
     try {
-      final results = await Future.wait([
-        widget.apiClient.getVacacionesResumen(token: widget.token, anio: _anio),
-        widget.apiClient.getVacacionesMovimientos(
-          token: widget.token,
-          anio: _anio,
-        ),
-      ]);
-      if (!mounted) return;
-      setState(() {
-        _resumen = results[0] as VacacionesResumenResponse;
-        _movimientos =
-            (results[1] as VacacionesMovimientosResponse).movimientos;
-        _loading = false;
-      });
-    } on ApiException catch (e) {
-      if (!mounted) return;
-      setState(() {
-        _error = e.message;
-        _loading = false;
-      });
-    } catch (_) {
-      if (!mounted) return;
-      setState(() {
-        _error = 'Error inesperado al cargar vacaciones.';
-        _loading = false;
-      });
-    }
-  }
-
-  Future<void> _changeYear(int delta) async {
-    final next = _anio + delta;
-    if (next < 2000 || next > 2100 || _loading) return;
-    setState(() => _anio = next);
-    await _load();
-  }
-
-  Future<void> _solicitar() async {
-    if (!_puedeSolicitar || _requesting) return;
-    final result = await showDialog<_VacacionFormResult>(
-      context: context,
-      builder: (ctx) => _VacacionFormDialog(
-        anio: _anio,
-        saldoDisponible: _resumen!.vacaciones.diasDisponiblesConPendientes,
-      ),
-    );
-    if (result == null || !mounted) return;
-
-    setState(() => _requesting = true);
-    try {
-      final response = await widget.apiClient.solicitarVacaciones(
+      final result = await widget.apiClient.getVacationWorkflow(
         token: widget.token,
-        fechaDesde: result.fechaDesde,
-        fechaHasta: result.fechaHasta,
-        observacion: result.observacion,
+        team: tab == 2,
+        path: tab == 0
+            ? '/semanas'
+            : tab == 1
+            ? '/solicitudes'
+            : teamView == 'Calendario'
+            ? '/calendario'
+            : teamView == 'Saldos'
+            ? '/saldos'
+            : '',
+        query: tab == 2 && teamView == 'Calendario'
+            ? {'mes': monthKey}
+            : {
+                'anio': '$year',
+                if (tab == 2 && teamView == 'Pendientes') 'estado': 'pendiente',
+              },
       );
-      if (!mounted) return;
-      setState(() => _requesting = false);
-      final dias = response.solicitud.diasSolicitados;
-      ScaffoldMessenger.of(context).showSnackBar(
-        SnackBar(
-          content: Text(
-            dias > 0
-                ? 'Solicitud enviada ($dias dia${dias == 1 ? '' : 's'}).'
-                : 'Solicitud de vacaciones enviada.',
-            textAlign: TextAlign.center,
-          ),
-        ),
+      if (!mounted || generation != request) return;
+      setState(() {
+        data = result;
+        loading = false;
+      });
+    } catch (e) {
+      if (mounted && generation == request) {
+        setState(() {
+          error = vacationError(e);
+          loading = false;
+        });
+      }
+    }
+    try {
+      final result = await widget.apiClient.getVacationWorkflow(
+        token: widget.token,
+        team: true,
+        path: '',
+        query: {'anio': '$year', 'estado': 'pendiente'},
       );
-      unawaited(_load());
-    } on ApiException catch (e) {
-      if (!mounted) return;
-      setState(() => _requesting = false);
-      ScaffoldMessenger.of(context).showSnackBar(
-        SnackBar(
-          content: Text(e.message, textAlign: TextAlign.center),
-          backgroundColor: AppColors.of(
-            context,
-          ).optionalSurface(Colors.red[700]),
-        ),
-      );
-    } catch (_) {
-      if (!mounted) return;
-      setState(() => _requesting = false);
-      ScaffoldMessenger.of(context).showSnackBar(
-        SnackBar(
-          content: const Text(
-            'No se pudo enviar la solicitud.',
-            textAlign: TextAlign.center,
-          ),
-          backgroundColor: AppColors.of(context).surface(Colors.red),
-        ),
-      );
+      if (mounted && generation == request) {
+        setState(() {
+          team = result;
+          teamError = null;
+        });
+      }
+    } catch (e) {
+      if (mounted && generation == request) {
+        setState(() => teamError = vacationError(e));
+      }
     }
   }
 
-  @override
-  Widget build(BuildContext context) {
-    return Scaffold(
-      appBar: AppBar(
-        title: const Text('Vacaciones', textAlign: TextAlign.center),
-        actions: [
-          if (_loading)
-            const Padding(
-              padding: EdgeInsets.symmetric(horizontal: 16),
-              child: SizedBox(
-                width: 18,
-                height: 18,
-                child: CircularProgressIndicator(strokeWidth: 2),
-              ),
-            )
-          else
-            IconButton(
-              icon: const Icon(Icons.refresh_rounded),
-              tooltip: 'Actualizar',
-              onPressed: _load,
-            ),
-        ],
-      ),
-      floatingActionButton: _puedeSolicitar
-          ? AppFloatingActionButton(
-              onPressed: _requesting ? null : _solicitar,
-              icon: _requesting
-                  ? const SizedBox(
-                      width: 18,
-                      height: 18,
-                      child: CircularProgressIndicator(strokeWidth: 2),
-                    )
-                  : const Icon(Icons.add_rounded),
-              label: Text(
-                _requesting ? 'Enviando...' : 'Solicitar',
-                textAlign: TextAlign.center,
-              ),
-            )
-          : null,
-      body: AppPageBody(
-        child: RefreshIndicator(onRefresh: _load, child: _buildBody()),
+  Future<void> detail(int id, {bool team = false}) async {
+    await Navigator.of(context).push(
+      MaterialPageRoute<void>(
+        builder: (_) => VacationRequestPage(
+          api: widget.apiClient,
+          token: widget.token,
+          id: id,
+          team: team,
+        ),
       ),
     );
+    if (mounted) await load();
   }
 
-  Widget _buildBody() {
-    if (_loading) {
-      return const Center(child: CircularProgressIndicator());
-    }
-
-    if (_error != null) {
-      return ScrollableErrorState(message: _error!, onRetry: _load);
-    }
-
-    final resumen = _resumen;
-    if (resumen == null) {
-      return const Center(
-        child: Text('Sin datos de vacaciones.', textAlign: TextAlign.center),
-      );
-    }
-
-    return ListView(
-      physics: const AlwaysScrollableScrollPhysics(),
-      padding: EdgeInsets.fromLTRB(
-        16,
-        12,
-        16,
-        _puedeSolicitar ? AppFloatingActionButton.bottomPadding(context) : 20,
+  Future<void> selectWeeks() async {
+    final id = await Navigator.of(context).push<int>(
+      MaterialPageRoute(
+        builder: (_) =>
+            VacationWeekPicker(api: widget.apiClient, token: widget.token),
       ),
+    );
+    if (!mounted) return;
+    if (id != null) {
+      tab = 1;
+      await detail(id);
+    } else {
+      await load();
+    }
+  }
+
+  Widget card(Widget child) => AppCard(
+    child: Padding(padding: const EdgeInsets.all(16), child: child),
+  );
+  Widget requestCard(Map<String, dynamic> item) => card(
+    Column(
+      crossAxisAlignment: CrossAxisAlignment.start,
       children: [
-        _YearSelector(
-          anio: _anio,
-          onPrevious: () => _changeYear(-1),
-          onNext: () => _changeYear(1),
-        ),
-        const SizedBox(height: 12),
-        _SaldoResumenCard(resumen: resumen, puedeSolicitar: _puedeSolicitar),
-        const SizedBox(height: 18),
-        _SectionTitle(
-          title: 'Movimientos',
-          subtitle: _movimientos.isEmpty
-              ? 'No hay movimientos en $_anio.'
-              : '${_movimientos.length} movimiento${_movimientos.length == 1 ? '' : 's'}',
-        ),
-        const SizedBox(height: 8),
-        if (_movimientos.isEmpty)
-          const _EmptyMovimientos()
-        else
-          ..._movimientos.map((m) => _MovimientoCard(movimiento: m)),
-      ],
-    );
-  }
-}
-
-class _YearSelector extends StatelessWidget {
-  const _YearSelector({
-    required this.anio,
-    required this.onPrevious,
-    required this.onNext,
-  });
-
-  final int anio;
-  final VoidCallback onPrevious;
-  final VoidCallback onNext;
-
-  @override
-  Widget build(BuildContext context) {
-    final cs = Theme.of(context).colorScheme;
-    return Row(
-      children: [
-        IconButton(
-          icon: const Icon(Icons.chevron_left_rounded),
-          tooltip: 'Anio anterior',
-          onPressed: anio > 2000 ? onPrevious : null,
-        ),
-        Expanded(
-          child: Row(
-            mainAxisAlignment: MainAxisAlignment.center,
-            children: [
-              Icon(Icons.calendar_month_rounded, size: 18, color: cs.primary),
-              const SizedBox(width: 8),
-              Text(
-                '$anio',
-                style: Theme.of(
-                  context,
-                ).textTheme.titleMedium?.copyWith(fontWeight: FontWeight.w700),
-              ),
-            ],
-          ),
-        ),
-        IconButton(
-          icon: const Icon(Icons.chevron_right_rounded),
-          tooltip: 'Anio siguiente',
-          onPressed: anio < 2100 ? onNext : null,
-        ),
-      ],
-    );
-  }
-}
-
-class _SaldoResumenCard extends StatelessWidget {
-  const _SaldoResumenCard({
-    required this.resumen,
-    required this.puedeSolicitar,
-  });
-
-  final VacacionesResumenResponse resumen;
-  final bool puedeSolicitar;
-
-  @override
-  Widget build(BuildContext context) {
-    final cs = Theme.of(context).colorScheme;
-    final saldo = resumen.vacaciones;
-    return AppCard(
-      margin: EdgeInsets.zero,
-      child: Padding(
-        padding: const EdgeInsets.all(16),
-        child: Column(
-          crossAxisAlignment: CrossAxisAlignment.center,
-          children: [
-            Row(
-              mainAxisAlignment: MainAxisAlignment.center,
-              children: [
-                Icon(Icons.beach_access_outlined, color: cs.primary),
-                const SizedBox(width: 10),
-                Expanded(
-                  child: Text(
-                    resumen.empleado.nombre ?? 'Resumen anual',
-                    style: Theme.of(context).textTheme.titleMedium?.copyWith(
-                      fontWeight: FontWeight.w700,
-                    ),
-                    textAlign: TextAlign.center,
-                  ),
-                ),
-              ],
-            ),
-            const SizedBox(height: 14),
-            Wrap(
-              spacing: 8,
-              runSpacing: 8,
-              alignment: WrapAlignment.center,
-              children: [
-                _MetricPill(
-                  label: 'Disponible',
-                  value: _formatDias(saldo.diasDisponiblesConPendientes),
-                  color: saldo.diasDisponiblesConPendientes > 0
-                      ? Colors.green.shade700
-                      : cs.error,
-                ),
-                _MetricPill(
-                  label: 'Pendiente',
-                  value: _formatDias(saldo.diasPendientes),
-                  color: Colors.amber.shade800,
-                ),
-                _MetricPill(
-                  label: 'Tomado',
-                  value: _formatDias(saldo.diasTomados),
-                  color: cs.primary,
-                ),
-                _MetricPill(
-                  label: 'Corresponde',
-                  value: _formatDias(saldo.diasCorresponden),
-                  color: cs.onSurfaceVariant,
-                ),
-              ],
-            ),
-            const SizedBox(height: 14),
-            if (saldo.desgloseCorresponde.isNotEmpty)
-              _DesgloseCorresponde(desglose: saldo.desgloseCorresponde)
-            else ...[
-              _ResumenLine(
-                label: 'Base calculada',
-                value: '${_formatDias(saldo.diasBase)} dias',
-              ),
-              if (saldo.diasCompensatorios + saldo.diasAjustes != 0)
-                _ResumenLine(
-                  label: 'Compensatorios y ajustes',
-                  value:
-                      '${_formatDias(saldo.diasCompensatorios + saldo.diasAjustes)} dias',
-                ),
-            ],
-            _ResumenLine(
-              label: 'Antiguedad al 31/12',
-              value: '${saldo.antiguedadAl3112} anios',
-            ),
-            _ResumenLine(
-              label: 'Dias trabajados',
-              value: saldo.diasTrabajadosPorcentaje != null
-                  ? '${saldo.diasTrabajadosAnio} de ${saldo.diasHabilesAnio} (${saldo.diasTrabajadosPorcentaje!.toStringAsFixed(1)}%)'
-                  : '${saldo.diasTrabajadosAnio}/${saldo.diasHabilesAnio}',
-            ),
-            if (saldo.aplicaControlProporcional && !saldo.calculoProporcional)
-              Padding(
-                padding: const EdgeInsets.only(top: 8),
-                child: _InfoBanner(
-                  text:
-                      'Tenes menos de 1 anio de antiguedad. Si trabajas menos del ${saldo.umbralProporcionalPct.toStringAsFixed(0)}% de los dias habiles, el saldo se recalcula proporcionalmente.',
-                  icon: Icons.info_outline,
-                  color: cs.primaryContainer,
-                  onColor: cs.onPrimaryContainer,
-                ),
-              ),
-            if (saldo.calculoProporcional)
-              Padding(
-                padding: const EdgeInsets.only(top: 8),
-                child: _InfoBanner(
-                  text:
-                      'El saldo se calculo proporcionalmente por dias trabajados.',
-                  icon: Icons.info_outline,
-                  color: cs.primaryContainer,
-                  onColor: cs.onPrimaryContainer,
-                ),
-              ),
-            if (!puedeSolicitar) ...[
-              const SizedBox(height: 10),
-              _InfoBanner(
-                text: saldo.diasDisponiblesConPendientes <= 0
-                    ? 'No hay saldo disponible para nuevas solicitudes.'
-                    : 'Solo se pueden crear solicitudes para el anio actual o posterior.',
-                icon: Icons.lock_outline,
-                color: cs.surfaceContainerHighest,
-                onColor: cs.onSurfaceVariant,
-              ),
-            ],
-          ],
-        ),
-      ),
-    );
-  }
-}
-
-class _MetricPill extends StatelessWidget {
-  const _MetricPill({
-    required this.label,
-    required this.value,
-    required this.color,
-  });
-
-  final String label;
-  final String value;
-  final Color color;
-
-  @override
-  Widget build(BuildContext context) {
-    final cs = Theme.of(context).colorScheme;
-    return ConstrainedBox(
-      constraints: const BoxConstraints(minWidth: 118, maxWidth: 142),
-      child: Container(
-        padding: const EdgeInsets.symmetric(horizontal: 12, vertical: 10),
-        decoration: BoxDecoration(
-          color: cs.surfaceContainerHighest,
-          borderRadius: BorderRadius.circular(8),
-        ),
-        child: Column(
-          crossAxisAlignment: CrossAxisAlignment.center,
-          mainAxisSize: MainAxisSize.min,
-          children: [
-            Text(
-              label,
-              textAlign: TextAlign.center,
-              maxLines: 1,
-              overflow: TextOverflow.ellipsis,
-              style: Theme.of(
-                context,
-              ).textTheme.labelSmall?.copyWith(color: cs.onSurfaceVariant),
-            ),
-            const SizedBox(height: 4),
-            Text(
-              '$value dias',
-              textAlign: TextAlign.center,
-              maxLines: 1,
-              overflow: TextOverflow.ellipsis,
-              style: Theme.of(context).textTheme.titleMedium?.copyWith(
-                color: AppColors.of(context).foreground(color),
-                fontWeight: FontWeight.w800,
-              ),
-            ),
-          ],
-        ),
-      ),
-    );
-  }
-}
-
-class _DesgloseCorresponde extends StatelessWidget {
-  const _DesgloseCorresponde({required this.desglose});
-  final List<VacacionesDesgloseDia> desglose;
-
-  @override
-  Widget build(BuildContext context) {
-    final cs = Theme.of(context).colorScheme;
-    final partes = desglose
-        .map((d) => '${_formatDias(d.dias)} ${d.concepto}')
-        .join('  +  ');
-    final total = desglose.fold<double>(0, (s, d) => s + d.dias);
-    return Padding(
-      padding: const EdgeInsets.symmetric(vertical: 4),
-      child: Row(
-        children: [
-          Expanded(
-            child: Text(
-              'Corresponde',
-              style: Theme.of(
-                context,
-              ).textTheme.bodySmall?.copyWith(color: cs.onSurfaceVariant),
-            ),
-          ),
-          const SizedBox(width: 12),
-          Flexible(
-            child: Text(
-              desglose.length > 1
-                  ? '$partes  =  ${_formatDias(total)} dias'
-                  : '${_formatDias(total)} dias',
-              textAlign: TextAlign.end,
-              style: Theme.of(
-                context,
-              ).textTheme.bodySmall?.copyWith(fontWeight: FontWeight.w600),
-            ),
-          ),
-        ],
-      ),
-    );
-  }
-}
-
-class _ResumenLine extends StatelessWidget {
-  const _ResumenLine({required this.label, required this.value});
-
-  final String label;
-  final String value;
-
-  @override
-  Widget build(BuildContext context) {
-    final cs = Theme.of(context).colorScheme;
-    return Padding(
-      padding: const EdgeInsets.symmetric(vertical: 3),
-      child: Row(
-        children: [
-          Expanded(
-            child: Text(
-              label,
-              style: Theme.of(
-                context,
-              ).textTheme.bodySmall?.copyWith(color: cs.onSurfaceVariant),
-            ),
-          ),
-          const SizedBox(width: 12),
-          Flexible(
-            child: Text(
-              value,
-              textAlign: TextAlign.end,
-              maxLines: 2,
-              overflow: TextOverflow.ellipsis,
-              style: Theme.of(
-                context,
-              ).textTheme.bodySmall?.copyWith(fontWeight: FontWeight.w600),
-            ),
-          ),
-        ],
-      ),
-    );
-  }
-}
-
-class _InfoBanner extends StatelessWidget {
-  const _InfoBanner({
-    required this.text,
-    required this.icon,
-    required this.color,
-    required this.onColor,
-  });
-
-  final String text;
-  final IconData icon;
-  final Color color;
-  final Color onColor;
-
-  @override
-  Widget build(BuildContext context) {
-    return Container(
-      padding: const EdgeInsets.symmetric(horizontal: 12, vertical: 10),
-      decoration: BoxDecoration(
-        color: AppColors.of(context).surface(color),
-        borderRadius: BorderRadius.circular(8),
-      ),
-      child: Row(
-        mainAxisAlignment: MainAxisAlignment.center,
-        children: [
-          Icon(
-            icon,
-            size: 18,
-            color: AppColors.of(context).foreground(onColor),
-          ),
-          const SizedBox(width: 8),
-          Expanded(
-            child: Text(
-              text,
-              style: Theme.of(context).textTheme.bodySmall?.copyWith(
-                color: AppColors.of(context).foreground(onColor),
-              ),
-              textAlign: TextAlign.center,
-            ),
-          ),
-        ],
-      ),
-    );
-  }
-}
-
-class _SectionTitle extends StatelessWidget {
-  const _SectionTitle({required this.title, required this.subtitle});
-
-  final String title;
-  final String subtitle;
-
-  @override
-  Widget build(BuildContext context) {
-    final cs = Theme.of(context).colorScheme;
-    return Row(
-      children: [
-        Expanded(
-          child: Text(
-            title,
-            style: Theme.of(
-              context,
-            ).textTheme.titleSmall?.copyWith(fontWeight: FontWeight.w700),
-          ),
-        ),
-        Flexible(
-          child: Text(
-            subtitle,
-            textAlign: TextAlign.end,
-            maxLines: 1,
-            overflow: TextOverflow.ellipsis,
-            style: Theme.of(
-              context,
-            ).textTheme.bodySmall?.copyWith(color: cs.onSurfaceVariant),
-          ),
-        ),
-      ],
-    );
-  }
-}
-
-class _EmptyMovimientos extends StatelessWidget {
-  const _EmptyMovimientos();
-
-  @override
-  Widget build(BuildContext context) {
-    final cs = Theme.of(context).colorScheme;
-    return Container(
-      padding: const EdgeInsets.symmetric(horizontal: 16, vertical: 28),
-      decoration: BoxDecoration(
-        border: Border.all(color: cs.outlineVariant),
-        borderRadius: BorderRadius.circular(8),
-      ),
-      child: Column(
-        crossAxisAlignment: CrossAxisAlignment.center,
-        children: [
-          Icon(Icons.event_available_outlined, size: 34, color: cs.primary),
-          const SizedBox(height: 10),
+        if (tab == 2)
           Text(
-            'Sin movimientos de vacaciones.',
-            style: Theme.of(
-              context,
-            ).textTheme.bodyMedium?.copyWith(color: cs.onSurfaceVariant),
-            textAlign: TextAlign.center,
+            '${(item['empleado'] as Map?)?['nombre'] ?? ''}',
+            style: Theme.of(context).textTheme.titleMedium,
+            textAlign: TextAlign.start,
           ),
-        ],
-      ),
-    );
-  }
-}
-
-class _MovimientoCard extends StatelessWidget {
-  const _MovimientoCard({required this.movimiento});
-
-  final VacacionesMovimiento movimiento;
-
+        Text(
+          'Solicitud #${item['id']} · ${item['estado'] ?? ''}',
+          textAlign: TextAlign.start,
+        ),
+        for (final t in vacationItems(item['tandas']))
+          Text(
+            '${vacationDate(t['fecha_desde'])} — ${vacationDate(t['fecha_hasta'])} · ${t['dias']} días',
+            textAlign: TextAlign.start,
+          ),
+        if (item['cancelacion_pedida'] == true)
+          const Text(
+            'Cancelación pendiente de aprobación',
+            textAlign: TextAlign.start,
+          ),
+        TextButton(
+          onPressed: () => detail((item['id'] as num).toInt(), team: tab == 2),
+          child: const Text('Ver solicitud'),
+        ),
+      ],
+    ),
+  );
   @override
   Widget build(BuildContext context) {
-    final cs = Theme.of(context).colorScheme;
-    final esReversion = movimiento.esReversion;
-    final afectaSaldo = movimiento.afectaSaldo;
-    final opacity = afectaSaldo ? 1.0 : 0.55;
-
-    return Opacity(
-      opacity: opacity,
-      child: AppCard(
-        margin: const EdgeInsets.only(bottom: 10),
-        shape: esReversion
-            ? RoundedRectangleBorder(
-                borderRadius: BorderRadius.circular(12),
-                side: BorderSide(
-                  color: cs.outlineVariant,
-                  style: BorderStyle.solid,
-                ),
-              )
-            : null,
-        color: esReversion ? cs.surfaceContainerHighest : null,
-        child: Padding(
-          padding: const EdgeInsets.all(16),
-          child: Column(
-            crossAxisAlignment: CrossAxisAlignment.center,
-            children: [
-              Row(
-                mainAxisAlignment: MainAxisAlignment.center,
+    final hasTeam = team['alcance'] != null && team['alcance'] != 'sin_equipo';
+    final saldo = data['saldo'] as Map? ?? {};
+    final items = vacationItems(data['items']);
+    return Scaffold(
+      appBar: AppBar(title: const Text('Vacaciones')),
+      body: SafeArea(
+        child: Center(
+          child: ConstrainedBox(
+            constraints: const BoxConstraints(maxWidth: 1040),
+            child: RefreshIndicator(
+              onRefresh: load,
+              child: ListView(
+                padding: const EdgeInsets.all(16),
                 children: [
-                  Icon(
-                    esReversion ? Icons.undo : _tipoIcon(movimiento.tipo),
-                    size: 22,
-                    color: esReversion ? cs.onSurfaceVariant : cs.primary,
+                  Wrap(
+                    alignment: WrapAlignment.center,
+                    spacing: 8,
+                    runSpacing: 8,
+                    children: [
+                      for (final entry in {
+                        0: 'Mi saldo',
+                        1: 'Mis solicitudes',
+                        if (hasTeam || widget.team)
+                          2: 'Mi equipo (${team['por_resolver'] ?? 0})',
+                      }.entries)
+                        ChoiceChip(
+                          label: Text(entry.value),
+                          selected: tab == entry.key,
+                          onSelected: loading
+                              ? null
+                              : (_) {
+                                  setState(() => tab = entry.key);
+                                  load();
+                                },
+                        ),
+                    ],
                   ),
-                  const SizedBox(width: 8),
-                  Expanded(
-                    child: Text(
-                      esReversion ? 'Reversión' : _tipoLabel(movimiento.tipo),
-                      maxLines: 2,
-                      overflow: TextOverflow.ellipsis,
-                      style: TextStyle(
-                        fontWeight: FontWeight.w700,
-                        color: esReversion ? cs.onSurfaceVariant : null,
+                  if (teamError != null)
+                    TextButton(
+                      onPressed: load,
+                      child: const Text(
+                        'No se pudo consultar Mi equipo. Reintentar',
                       ),
-                      textAlign: TextAlign.center,
                     ),
+                  if (tab == 2)
+                    Wrap(
+                      alignment: WrapAlignment.center,
+                      spacing: 8,
+                      children: [
+                        for (final view in [
+                          'Pendientes',
+                          'Todas',
+                          'Calendario',
+                          'Saldos',
+                        ])
+                          ChoiceChip(
+                            label: Text(view),
+                            selected: teamView == view,
+                            onSelected: loading
+                                ? null
+                                : (_) {
+                                    setState(() => teamView = view);
+                                    load();
+                                  },
+                          ),
+                      ],
+                    ),
+                  Row(
+                    mainAxisAlignment: MainAxisAlignment.center,
+                    children: [
+                      IconButton(
+                        tooltip: 'Anterior',
+                        onPressed: loading
+                            ? null
+                            : () {
+                                setState(() {
+                                  if (tab == 2 && teamView == 'Calendario') {
+                                    month = DateTime(
+                                      month.year,
+                                      month.month - 1,
+                                    );
+                                  } else {
+                                    year--;
+                                  }
+                                });
+                                load();
+                              },
+                        icon: const Icon(Icons.chevron_left),
+                      ),
+                      Flexible(
+                        child: Text(
+                          tab == 2 && teamView == 'Calendario'
+                              ? monthKey
+                              : '$year',
+                          textAlign: TextAlign.center,
+                        ),
+                      ),
+                      IconButton(
+                        tooltip: 'Siguiente',
+                        onPressed: loading
+                            ? null
+                            : () {
+                                setState(() {
+                                  if (tab == 2 && teamView == 'Calendario') {
+                                    month = DateTime(
+                                      month.year,
+                                      month.month + 1,
+                                    );
+                                  } else {
+                                    year++;
+                                  }
+                                });
+                                load();
+                              },
+                        icon: const Icon(Icons.chevron_right),
+                      ),
+                    ],
                   ),
-                  if (!esReversion) _EstadoChip(estado: movimiento.estado),
+                  if (loading)
+                    const Center(child: CircularProgressIndicator())
+                  else if (error != null)
+                    card(
+                      Column(
+                        children: [
+                          Text(error!, textAlign: TextAlign.center),
+                          TextButton(
+                            onPressed: load,
+                            child: const Text('Reintentar'),
+                          ),
+                        ],
+                      ),
+                    )
+                  else if (tab == 0) ...[
+                    card(
+                      Column(
+                        children: [
+                          Text(
+                            '${saldo['semanas_disponibles'] ?? '—'} semanas disponibles',
+                            textAlign: TextAlign.center,
+                            style: Theme.of(context).textTheme.titleLarge,
+                          ),
+                          Text(
+                            '${saldo['dias_disponibles'] ?? '—'} días de saldo · ${saldo['dias_pendientes'] ?? '—'} pendientes',
+                            textAlign: TextAlign.center,
+                          ),
+                          if ((saldo['dias_fuera_de_semanas'] as num? ?? 0) > 0)
+                            Text(
+                              '${saldo['dias_fuera_de_semanas']} días para coordinar con RR. HH.',
+                              textAlign: TextAlign.center,
+                            ),
+                          const SizedBox(height: 12),
+                          FilledButton.icon(
+                            onPressed: selectWeeks,
+                            icon: const Icon(Icons.calendar_month),
+                            label: const Text('Pedir vacaciones'),
+                          ),
+                        ],
+                      ),
+                    ),
+                    if (data['feriados_cargados'] == false)
+                      card(
+                        const Text(
+                          'Las fechas pueden ajustarse si hay feriados. El calendario de este año todavía no está cargado.',
+                          textAlign: TextAlign.center,
+                        ),
+                      ),
+                    card(
+                      Text(
+                        '${data['reglas'] ?? 'Seleccioná semanas completas. El servidor determina las fechas y el saldo.'}',
+                        textAlign: TextAlign.center,
+                      ),
+                    ),
+                  ] else if (items.isEmpty)
+                    card(
+                      const Text(
+                        'No hay registros para este período.',
+                        textAlign: TextAlign.center,
+                      ),
+                    )
+                  else if (tab == 2 && teamView == 'Saldos')
+                    ...items.map(
+                      (e) => card(
+                        Column(
+                          children: [
+                            Text(
+                              '${(e['empleado'] as Map?)?['nombre'] ?? ''}',
+                              textAlign: TextAlign.center,
+                            ),
+                            Text(
+                              e['error']?.toString() ??
+                                  '${e['semanas_disponibles'] ?? '—'} semanas · ${e['dias_disponibles'] ?? '—'} días disponibles',
+                              textAlign: TextAlign.center,
+                            ),
+                            if (e['error'] == null)
+                              Text(
+                                'Tomados: ${e['dias_tomados'] ?? '—'} · Pendientes: ${e['dias_pendientes'] ?? '—'}',
+                                textAlign: TextAlign.center,
+                              ),
+                          ],
+                        ),
+                      ),
+                    )
+                  else if (tab == 2 && teamView == 'Calendario')
+                    ...items.map(
+                      (e) => card(
+                        Column(
+                          children: [
+                            Text(
+                              '${(e['empleado'] as Map?)?['nombre'] ?? ''}',
+                              textAlign: TextAlign.center,
+                            ),
+                            Text(
+                              '${vacationDate(e['fecha_desde'])} — ${vacationDate(e['fecha_hasta'])}',
+                              textAlign: TextAlign.center,
+                            ),
+                            Text(
+                              '${e['estado'] ?? ''}',
+                              textAlign: TextAlign.center,
+                            ),
+                            TextButton(
+                              onPressed: () => detail(
+                                (e['solicitud_id'] as num).toInt(),
+                                team: true,
+                              ),
+                              child: const Text('Ver solicitud'),
+                            ),
+                          ],
+                        ),
+                      ),
+                    )
+                  else
+                    ...items.map(requestCard),
                 ],
               ),
-              const SizedBox(height: 10),
-              Row(
-                mainAxisAlignment: MainAxisAlignment.center,
-                children: [
-                  Icon(Icons.date_range_outlined, size: 16, color: cs.outline),
-                  const SizedBox(width: 6),
-                  Expanded(
-                    child: Text(
-                      _dateRange(movimiento.fechaDesde, movimiento.fechaHasta),
-                      style: Theme.of(context).textTheme.bodySmall?.copyWith(
-                        color: cs.onSurfaceVariant,
-                      ),
-                      textAlign: TextAlign.center,
-                    ),
-                  ),
-                  Flexible(
-                    child: Text(
-                      '${_formatDias(movimiento.dias)} dia${movimiento.dias == 1 ? '' : 's'}',
-                      textAlign: TextAlign.end,
-                      maxLines: 1,
-                      overflow: TextOverflow.ellipsis,
-                      style: Theme.of(context).textTheme.bodySmall?.copyWith(
-                        fontWeight: FontWeight.w700,
-                      ),
-                    ),
-                  ),
-                ],
-              ),
-              if (movimiento.observacion != null) ...[
-                const SizedBox(height: 8),
-                Text(
-                  movimiento.observacion!,
-                  style: Theme.of(
-                    context,
-                  ).textTheme.bodySmall?.copyWith(color: cs.onSurfaceVariant),
-                  textAlign: TextAlign.center,
-                ),
-              ],
-              if (!afectaSaldo) ...[
-                const SizedBox(height: 8),
-                Row(
-                  mainAxisAlignment: MainAxisAlignment.center,
-                  children: [
-                    Icon(
-                      Icons.info_outline,
-                      size: 14,
-                      color: cs.onSurfaceVariant,
-                    ),
-                    const SizedBox(width: 4),
-                    Text(
-                      'No afecta tu saldo',
-                      style: Theme.of(context).textTheme.labelSmall?.copyWith(
-                        color: cs.onSurfaceVariant,
-                      ),
-                      textAlign: TextAlign.center,
-                    ),
-                  ],
-                ),
-              ],
-            ],
+            ),
           ),
         ),
       ),
@@ -781,247 +418,462 @@ class _MovimientoCard extends StatelessWidget {
   }
 }
 
-class _EstadoChip extends StatelessWidget {
-  const _EstadoChip({this.estado});
-
-  final String? estado;
-
+class VacationWeekPicker extends StatefulWidget {
+  const VacationWeekPicker({super.key, required this.api, required this.token});
+  final MobileApiClient api;
+  final String token;
   @override
-  Widget build(BuildContext context) {
-    final cs = Theme.of(context).colorScheme;
-    final (label, bg, fg) = switch (estado) {
-      'aprobado' => ('Aprobado', Colors.green.shade100, Colors.green.shade900),
-      'rechazado' => ('Rechazado', cs.errorContainer, cs.onErrorContainer),
-      _ => ('Pendiente', cs.primaryContainer, cs.onPrimaryContainer),
-    };
-    return Container(
-      padding: const EdgeInsets.symmetric(horizontal: 8, vertical: 3),
-      decoration: BoxDecoration(
-        color: AppColors.of(context).surface(bg),
-        borderRadius: BorderRadius.circular(12),
-      ),
-      child: Text(
-        label,
-        maxLines: 1,
-        overflow: TextOverflow.ellipsis,
-        style: Theme.of(context).textTheme.labelSmall?.copyWith(
-          color: AppColors.of(context).foreground(fg),
-          fontWeight: FontWeight.w700,
-        ),
-        textAlign: TextAlign.center,
-      ),
-    );
+  State<VacationWeekPicker> createState() => _VacationWeekPickerState();
+}
+
+class _VacationWeekPickerState extends State<VacationWeekPicker> {
+  final selected = <String>{};
+  final observation = TextEditingController();
+  final calendars = <Map<String, dynamic>>[];
+  bool loading = true, saving = false;
+  String? error;
+  @override
+  void initState() {
+    super.initState();
+    load();
   }
-}
-
-class _VacacionFormResult {
-  const _VacacionFormResult({
-    required this.fechaDesde,
-    required this.fechaHasta,
-    this.observacion,
-  });
-
-  final String fechaDesde;
-  final String fechaHasta;
-  final String? observacion;
-}
-
-class _VacacionFormDialog extends StatefulWidget {
-  const _VacacionFormDialog({
-    required this.anio,
-    required this.saldoDisponible,
-  });
-
-  final int anio;
-  final double saldoDisponible;
-
-  @override
-  State<_VacacionFormDialog> createState() => _VacacionFormDialogState();
-}
-
-class _VacacionFormDialogState extends State<_VacacionFormDialog> {
-  DateTime? _inicio;
-  DateTime? _fin;
-  final _observacionCtrl = TextEditingController();
 
   @override
   void dispose() {
-    _observacionCtrl.dispose();
+    observation.dispose();
     super.dispose();
   }
 
-  DateTime get _firstDate {
-    final yearStart = DateTime(widget.anio);
-    final today = DateTime.now();
-    final normalizedToday = DateTime(today.year, today.month, today.day);
-    if (widget.anio == normalizedToday.year &&
-        normalizedToday.isAfter(yearStart)) {
-      return normalizedToday;
-    }
-    return yearStart;
-  }
-
-  DateTime get _lastDate => DateTime(widget.anio, 12, 31);
-
-  Future<void> _pickDate({required bool isInicio}) async {
-    final first = _firstDate;
-    final last = _lastDate;
-    final initial = isInicio ? (_inicio ?? first) : (_fin ?? _inicio ?? first);
-    final picked = await showDatePicker(
-      context: context,
-      initialDate: initial.isAfter(last) ? last : initial,
-      firstDate: first,
-      lastDate: last,
-    );
-    if (picked == null) return;
+  Future<void> load() async {
     setState(() {
-      if (isInicio) {
-        _inicio = picked;
-        if (_fin != null && _fin!.isBefore(picked)) _fin = null;
-      } else {
-        _fin = picked;
-      }
+      loading = true;
+      error = null;
     });
+    try {
+      final now = DateTime.now();
+      final result = await Future.wait([
+        for (final y in [now.year, if (now.month >= 10) now.year + 1])
+          widget.api.getVacationWorkflow(
+            token: widget.token,
+            query: {'anio': '$y'},
+          ),
+      ]);
+      if (!mounted) return;
+      setState(() {
+        calendars
+          ..clear()
+          ..addAll(result);
+        final available = result
+            .expand((c) => vacationItems(c['semanas']))
+            .where((w) => w['estado'] == 'disponible')
+            .map((w) => '${w['lunes']}')
+            .toSet();
+        selected.retainAll(available);
+      });
+    } catch (e) {
+      if (mounted) setState(() => error = vacationError(e));
+    } finally {
+      if (mounted) setState(() => loading = false);
+    }
   }
 
-  int get _diasSeleccionados {
-    final inicio = _inicio;
-    final fin = _fin;
-    if (inicio == null || fin == null || fin.isBefore(inicio)) return 0;
-    return fin.difference(inicio).inDays + 1;
+  Future<void> submit() async {
+    if (saving || selected.isEmpty) return;
+    final confirmed = await showDialog<bool>(
+      context: context,
+      builder: (ctx) => AlertDialog(
+        scrollable: true,
+        title: const Text('Confirmar solicitud'),
+        content: Text(
+          'Vas a pedir ${selected.length} semanas. Las tandas y sus fechas definitivas se mostrarán al enviar la solicitud.',
+        ),
+        actions: [
+          TextButton(
+            onPressed: () => Navigator.pop(ctx, false),
+            child: const Text('Volver'),
+          ),
+          FilledButton(
+            onPressed: () => Navigator.pop(ctx, true),
+            child: const Text('Enviar'),
+          ),
+        ],
+      ),
+    );
+    if (confirmed != true || !mounted) return;
+    setState(() {
+      saving = true;
+      error = null;
+    });
+    try {
+      final result = await widget.api.postVacationWorkflow(
+        token: widget.token,
+        path: '/semanas',
+        body: {
+          'semanas': selected.toList()..sort(),
+          'observaciones': observation.text.trim(),
+        },
+      );
+      NotificationsNavigation.refresh.value++;
+      if (mounted) Navigator.pop(context, (result['id'] as num).toInt());
+    } catch (e) {
+      if (mounted) setState(() => error = vacationError(e));
+    } finally {
+      if (mounted) setState(() => saving = false);
+    }
+  }
+
+  @override
+  Widget build(BuildContext context) => Scaffold(
+    appBar: AppBar(title: const Text('Pedir vacaciones')),
+    body: SafeArea(
+      child: Center(
+        child: ConstrainedBox(
+          constraints: const BoxConstraints(maxWidth: 820),
+          child: ListView(
+            padding: const EdgeInsets.all(16),
+            children: [
+              const Text(
+                'Elegí semanas completas. Podés combinar semanas seguidas o separadas.',
+                textAlign: TextAlign.center,
+              ),
+              if (error != null) ...[
+                Text(error!, textAlign: TextAlign.center),
+                TextButton(
+                  onPressed: saving ? null : load,
+                  child: const Text('Actualizar disponibilidad'),
+                ),
+              ],
+              if (loading)
+                const Center(child: CircularProgressIndicator())
+              else ...[
+                for (final c in calendars) ...[
+                  Text(
+                    '${c['anio']} · ${(c['saldo'] as Map?)?['semanas_disponibles'] ?? 0} semanas disponibles',
+                    textAlign: TextAlign.center,
+                    style: Theme.of(context).textTheme.titleMedium,
+                  ),
+                  if (c['feriados_cargados'] == false)
+                    const Text(
+                      'Las fechas pueden ajustarse si hay feriados.',
+                      textAlign: TextAlign.center,
+                    ),
+                  for (final w in vacationItems(
+                    c['semanas'],
+                  ).where((w) => w['estado'] != 'pasada'))
+                    Builder(
+                      builder: (context) {
+                        final monday = '${w['lunes']}';
+                        final count = vacationItems(c['semanas'])
+                            .where((v) => selected.contains('${v['lunes']}'))
+                            .length;
+                        final limit =
+                            ((c['saldo'] as Map?)?['semanas_disponibles']
+                                        as num? ??
+                                    0)
+                                .toInt();
+                        final enabled =
+                            !saving &&
+                            w['estado'] == 'disponible' &&
+                            (selected.contains(monday) || count < limit);
+                        return CheckboxListTile(
+                          controlAffinity: ListTileControlAffinity.leading,
+                          value: selected.contains(monday),
+                          onChanged: enabled
+                              ? (v) => setState(() {
+                                  if (v == true) {
+                                    selected.add(monday);
+                                  } else {
+                                    selected.remove(monday);
+                                  }
+                                })
+                              : null,
+                          title: Text(
+                            '${vacationDate(w['inicio'] ?? w['lunes'])} — ${vacationDate(w['fin'] ?? w['domingo'])}',
+                          ),
+                          subtitle: Text(
+                            w['feriado_lunes'] != null
+                                ? 'Inicio ajustado por ${w['feriado_lunes']}. Fechas mostradas para esta semana sola.'
+                                : '${w['estado']}',
+                          ),
+                        );
+                      },
+                    ),
+                ],
+                TextField(
+                  controller: observation,
+                  enabled: !saving,
+                  maxLines: 3,
+                  decoration: const InputDecoration(
+                    labelText: 'Observaciones (opcional)',
+                  ),
+                ),
+                const SizedBox(height: 16),
+                FilledButton(
+                  onPressed: selected.isEmpty || saving ? null : submit,
+                  child: Text(
+                    saving
+                        ? 'Enviando…'
+                        : 'Solicitar ${selected.length} semanas',
+                  ),
+                ),
+              ],
+            ],
+          ),
+        ),
+      ),
+    ),
+  );
+}
+
+class VacationRequestPage extends StatefulWidget {
+  const VacationRequestPage({
+    super.key,
+    required this.api,
+    required this.token,
+    required this.id,
+    this.team = false,
+  });
+  final MobileApiClient api;
+  final String token;
+  final int id;
+  final bool team;
+  @override
+  State<VacationRequestPage> createState() => _VacationRequestPageState();
+}
+
+class _VacationRequestPageState extends State<VacationRequestPage> {
+  Map<String, dynamic>? data;
+  bool loading = true, saving = false;
+  String? error;
+  @override
+  void initState() {
+    super.initState();
+    load();
+  }
+
+  Future<void> load() async {
+    setState(() {
+      loading = true;
+      error = null;
+    });
+    try {
+      final result = await widget.api.getVacationWorkflow(
+        token: widget.token,
+        team: widget.team,
+        path: '/solicitudes/${widget.id}',
+      );
+      if (mounted) setState(() => data = result);
+    } catch (e) {
+      if (mounted) setState(() => error = vacationError(e));
+    } finally {
+      if (mounted) setState(() => loading = false);
+    }
+  }
+
+  Future<void> act(String action, String title, {int? movement}) async {
+    final requiredReason = action.endsWith('rechazar');
+    final reason = TextEditingController();
+    final form = GlobalKey<FormState>();
+    final confirmed = await showDialog<bool>(
+      context: context,
+      builder: (ctx) => AlertDialog(
+        scrollable: true,
+        title: Text(title),
+        content: Form(
+          key: form,
+          child: TextFormField(
+            controller: reason,
+            maxLines: 3,
+            decoration: InputDecoration(
+              labelText: requiredReason
+                  ? 'Motivo obligatorio'
+                  : 'Motivo (opcional)',
+            ),
+            validator: (v) => requiredReason && (v?.trim().isEmpty ?? true)
+                ? 'Ingresá el motivo'
+                : null,
+          ),
+        ),
+        actions: [
+          TextButton(
+            onPressed: () => Navigator.pop(ctx, false),
+            child: const Text('Volver'),
+          ),
+          FilledButton(
+            onPressed: () {
+              if (form.currentState!.validate()) Navigator.pop(ctx, true);
+            },
+            child: const Text('Confirmar'),
+          ),
+        ],
+      ),
+    );
+    final text = reason.text.trim();
+    // Wait for the dialog transition before disposing its controller.
+    await Future<void>.delayed(const Duration(milliseconds: 250));
+    reason.dispose();
+    if (!mounted || confirmed != true || saving) return;
+    setState(() {
+      saving = true;
+      error = null;
+    });
+    try {
+      await widget.api.postVacationWorkflow(
+        token: widget.token,
+        team: widget.team,
+        path: '/solicitudes/${widget.id}/$action',
+        body: {
+          if (text.isNotEmpty) 'motivo': text,
+          if (movement != null) 'movimiento_id': movement,
+        },
+      );
+      NotificationsNavigation.refresh.value++;
+      if (mounted) await load();
+    } catch (e) {
+      if (mounted) setState(() => error = vacationError(e));
+    } finally {
+      if (mounted) setState(() => saving = false);
+    }
   }
 
   @override
   Widget build(BuildContext context) {
-    final cs = Theme.of(context).colorScheme;
-    final dias = _diasSeleccionados;
-    final saldo = widget.saldoDisponible;
-    final excedeSaldo = dias > 0 && dias > saldo;
-    final canSubmit = dias > 0 && !excedeSaldo;
-
-    return AlertDialog(
-      title: const Text('Solicitar vacaciones', textAlign: TextAlign.center),
-      content: SingleChildScrollView(
-        child: Column(
-          mainAxisSize: MainAxisSize.min,
-          crossAxisAlignment: CrossAxisAlignment.center,
-          children: [
-            _InfoBanner(
-              text: 'Saldo disponible: ${_formatDias(saldo)} dias',
-              icon: Icons.beach_access_outlined,
-              color: cs.surfaceContainerHighest,
-              onColor: cs.onSurfaceVariant,
-            ),
-            const SizedBox(height: 10),
-            ListTile(
-              contentPadding: EdgeInsets.zero,
-              leading: const Icon(Icons.calendar_today_outlined),
-              title: const Text('Fecha inicio', textAlign: TextAlign.center),
-              subtitle: Text(
-                _displayDate(_inicio),
-                textAlign: TextAlign.center,
-              ),
-              onTap: () => _pickDate(isInicio: true),
-            ),
-            ListTile(
-              contentPadding: EdgeInsets.zero,
-              leading: const Icon(Icons.calendar_today_outlined),
-              title: const Text('Fecha fin', textAlign: TextAlign.center),
-              subtitle: Text(_displayDate(_fin), textAlign: TextAlign.center),
-              onTap: () => _pickDate(isInicio: false),
-            ),
-            if (dias > 0) ...[
-              const SizedBox(height: 4),
-              Align(
-                alignment: Alignment.centerLeft,
-                child: Text(
-                  '$dias dia${dias == 1 ? '' : 's'} seleccionados',
-                  style: Theme.of(context).textTheme.bodySmall?.copyWith(
-                    color: excedeSaldo ? cs.error : cs.onSurfaceVariant,
-                    fontWeight: FontWeight.w600,
+    final d = data;
+    return Scaffold(
+      appBar: AppBar(title: Text('Solicitud #${widget.id}')),
+      body: SafeArea(
+        child: Center(
+          child: ConstrainedBox(
+            constraints: const BoxConstraints(maxWidth: 820),
+            child: ListView(
+              padding: const EdgeInsets.all(16),
+              children: [
+                if (loading) const Center(child: CircularProgressIndicator()),
+                if (error != null) ...[
+                  Text(error!, textAlign: TextAlign.center),
+                  TextButton(
+                    onPressed: saving ? null : load,
+                    child: const Text('Reintentar'),
                   ),
-                  textAlign: TextAlign.center,
-                ),
-              ),
-            ],
-            if (excedeSaldo) ...[
-              const SizedBox(height: 8),
-              _InfoBanner(
-                text: 'La solicitud supera el saldo disponible.',
-                icon: Icons.error_outline,
-                color: cs.errorContainer,
-                onColor: cs.onErrorContainer,
-              ),
-            ],
-            const SizedBox(height: 12),
-            TextField(
-              controller: _observacionCtrl,
-              decoration: const InputDecoration(
-                labelText: 'Observacion (opcional)',
-                border: OutlineInputBorder(),
-              ),
-              maxLines: 2,
+                ],
+                if (!loading && d != null) ...[
+                  Text(
+                    '${(d['empleado'] as Map?)?['nombre'] ?? ''}',
+                    textAlign: TextAlign.center,
+                    style: Theme.of(context).textTheme.titleLarge,
+                  ),
+                  Text(
+                    '${d['estado']} · ${d['dias']} días',
+                    textAlign: TextAlign.center,
+                  ),
+                  if (d['observacion'] != null)
+                    Text('${d['observacion']}', textAlign: TextAlign.center),
+                  for (final t in vacationItems(d['tandas']))
+                    AppCard(
+                      child: Padding(
+                        padding: const EdgeInsets.all(16),
+                        child: Column(
+                          children: [
+                            Text(
+                              '${vacationDate(t['fecha_desde'])} — ${vacationDate(t['fecha_hasta'])}',
+                              textAlign: TextAlign.center,
+                            ),
+                            Text(
+                              '${t['dias']} días · ${t['estado']}',
+                              textAlign: TextAlign.center,
+                            ),
+                            if (t['inicio_corrido'] == true)
+                              const Text(
+                                'Inicio ajustado por día no laborable.',
+                                textAlign: TextAlign.center,
+                              ),
+                            if (t['cancelacion_pedida'] == true)
+                              const Text(
+                                'Cancelación pendiente de aprobación',
+                                textAlign: TextAlign.center,
+                              ),
+                            for (final key in [
+                              'motivo_resolucion',
+                              'resuelto_por',
+                              'cancelacion_motivo',
+                            ])
+                              if (t[key] != null)
+                                Text('${t[key]}', textAlign: TextAlign.center),
+                            if (!widget.team &&
+                                d['puede_cancelar'] == true &&
+                                t['empezo'] != true &&
+                                t['cancelacion_pedida'] != true &&
+                                ['pendiente', 'aprobado'].contains(t['estado']))
+                              TextButton(
+                                onPressed: saving
+                                    ? null
+                                    : () => act(
+                                        'cancelar',
+                                        t['estado'] == 'aprobado'
+                                            ? 'Pedir cancelación'
+                                            : 'Cancelar tanda',
+                                        movement: (t['movimiento_id'] as num)
+                                            .toInt(),
+                                      ),
+                                child: Text(
+                                  t['estado'] == 'aprobado'
+                                      ? 'Pedir cancelación'
+                                      : 'Cancelar tanda',
+                                ),
+                              ),
+                          ],
+                        ),
+                      ),
+                    ),
+                  if (widget.team)
+                    Wrap(
+                      alignment: WrapAlignment.center,
+                      spacing: 8,
+                      runSpacing: 8,
+                      children: [
+                        if (d['puede_resolver'] == true) ...[
+                          FilledButton(
+                            onPressed: saving
+                                ? null
+                                : () => act('aprobar', 'Aprobar solicitud'),
+                            child: const Text('Aprobar'),
+                          ),
+                          OutlinedButton(
+                            onPressed: saving
+                                ? null
+                                : () => act('rechazar', 'Rechazar solicitud'),
+                            child: const Text('Rechazar'),
+                          ),
+                        ],
+                        if (d['puede_resolver_cancelacion'] == true) ...[
+                          FilledButton(
+                            onPressed: saving
+                                ? null
+                                : () => act(
+                                    'cancelacion/aprobar',
+                                    'Aceptar cancelación',
+                                  ),
+                            child: const Text('Aceptar cancelación'),
+                          ),
+                          OutlinedButton(
+                            onPressed: saving
+                                ? null
+                                : () => act(
+                                    'cancelacion/rechazar',
+                                    'Mantener vacaciones',
+                                  ),
+                            child: const Text('Mantener vacaciones'),
+                          ),
+                        ],
+                      ],
+                    ),
+                  if (saving) const Center(child: CircularProgressIndicator()),
+                ],
+              ],
             ),
-          ],
+          ),
         ),
       ),
-      actions: [
-        TextButton(
-          onPressed: () => Navigator.of(context).pop(),
-          child: const Text('Cancelar', textAlign: TextAlign.center),
-        ),
-        FilledButton(
-          onPressed: canSubmit
-              ? () => Navigator.of(context).pop(
-                  _VacacionFormResult(
-                    fechaDesde: DateFormatter.formatApiDate(_inicio!),
-                    fechaHasta: DateFormatter.formatApiDate(_fin!),
-                    observacion: _observacionCtrl.text.trim().isEmpty
-                        ? null
-                        : _observacionCtrl.text.trim(),
-                  ),
-                )
-              : null,
-          child: const Text('Enviar', textAlign: TextAlign.center),
-        ),
-      ],
     );
   }
-
-  String _displayDate(DateTime? date) {
-    if (date == null) return 'Sin seleccionar';
-    return DateFormatter.formatDisplayDate(date);
-  }
-}
-
-String _formatDias(double value) {
-  if (value == value.roundToDouble()) {
-    return value.toStringAsFixed(0);
-  }
-  return value.toStringAsFixed(1);
-}
-
-String _dateRange(String? desde, String? hasta) {
-  final start = DateFormatter.formatApiDateForDisplay(desde);
-  final end = DateFormatter.formatApiDateForDisplay(hasta);
-  if (start == '-' && end == '-') return 'Sin rango de fechas';
-  if (start == end || end == '-') return start;
-  if (start == '-') return end;
-  return '$start - $end';
-}
-
-String _tipoLabel(String? tipo) {
-  return switch (tipo) {
-    'compensatorio' => 'Compensatorio',
-    'ajuste' => 'Ajuste',
-    _ => 'Vacaciones tomadas',
-  };
-}
-
-IconData _tipoIcon(String? tipo) {
-  return switch (tipo) {
-    'compensatorio' => Icons.add_circle_outline,
-    'ajuste' => Icons.tune_outlined,
-    _ => Icons.beach_access_outlined,
-  };
 }

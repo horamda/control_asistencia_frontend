@@ -1,15 +1,17 @@
 /* Public Firebase configuration. No credentials or user JWTs belong in this file. */
 self.addEventListener('notificationclick', (event) => {
   const data = event.notification.data?.FCM_MSG?.data || event.notification.data || {};
-  const known = ['reunion_nueva', 'reunion_cambio', 'reunion_cancelada',
-    'reunion_reactivada', 'reunion_horario', 'recordatorio', 'prueba', 'comunicado'];
   event.stopImmediatePropagation();
   event.notification.close();
-  if (!known.includes(data.tipo)) return;
-  const route = /^\/(?:reuniones|comunicados)(?:\/[1-9][0-9]*)?\/?$/.test(data.ruta || '') ? data.ruta : '/';
+
+  const route = '/';
   // nginx.conf.template serves index.html for these application routes.
   const url = new URL(route, self.location.origin).href;
-  event.waitUntil(clients.matchAll({type: 'window', includeUncontrolled: true}).then(async windows => {
+  event.waitUntil((async () => {
+    // Keep receipt signatures out of URLs, navigation history and server logs.
+    const cache = await caches.open('fichaya-push-open');
+    await cache.put(new Request(new URL('/__pending_push', self.location.origin)), new Response(JSON.stringify({data, at: Date.now()}), {headers: {'Content-Type': 'application/json'}}));
+    const windows = await clients.matchAll({type: 'window', includeUncontrolled: true});
     for (const client of windows) {
       if (new URL(client.url).origin === self.location.origin) {
         await client.navigate(url);
@@ -17,7 +19,7 @@ self.addEventListener('notificationclick', (event) => {
       }
     }
     return clients.openWindow(url);
-  }));
+  })());
 });
 importScripts('https://www.gstatic.com/firebasejs/10.14.1/firebase-app-compat.js');
 importScripts('https://www.gstatic.com/firebasejs/10.14.1/firebase-messaging-compat.js');

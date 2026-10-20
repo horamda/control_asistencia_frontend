@@ -9,6 +9,51 @@ import 'package:ficharqr/src/core/network/mobile_api_client.dart';
 import 'package:ficharqr/src/presentation/attendance/justificaciones_page.dart';
 
 void main() {
+  for (final dark in [false, true]) {
+    testWidgets('justificaciones detalle responsive dark=$dark', (
+      tester,
+    ) async {
+      await tester.binding.setSurfaceSize(const Size(320, 640));
+      addTearDown(() => tester.binding.setSurfaceSize(null));
+      final api = MobileApiClient(
+        baseUrl: 'https://example.com',
+        httpClient: _JustificacionesTestClient(),
+      );
+      addTearDown(api.dispose);
+      await tester.pumpWidget(
+        MaterialApp(
+          theme: buildAppTheme(
+            brightness: dark ? Brightness.dark : Brightness.light,
+          ),
+          builder: (context, child) => MediaQuery(
+            data: MediaQuery.of(
+              context,
+            ).copyWith(textScaler: const TextScaler.linear(2)),
+            child: child!,
+          ),
+          home: JustificacionesPage(apiClient: api, token: 'abc'),
+        ),
+      );
+      await tester.pumpAndSettle();
+      expect(tester.takeException(), isNull);
+      await Scrollable.ensureVisible(
+        tester.element(find.text('Justificaci\u00f3n #10')),
+        alignment: 0.2,
+      );
+      await tester.pumpAndSettle();
+      await tester.tap(find.text('Justificaci\u00f3n #10'));
+      await tester.pumpAndSettle();
+      for (final size in [
+        const Size(320, 640),
+        const Size(740, 360),
+        const Size(800, 1024),
+      ]) {
+        await tester.binding.setSurfaceSize(size);
+        await tester.pumpAndSettle();
+        expect(tester.takeException(), isNull);
+      }
+    });
+  }
   testWidgets(
     'la edicion carga el detalle completo y muestra adjuntos reales',
     (WidgetTester tester) async {
