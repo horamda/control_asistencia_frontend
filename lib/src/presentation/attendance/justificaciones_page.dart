@@ -705,27 +705,26 @@ class _JustificacionCard extends StatelessWidget {
                             textAlign: TextAlign.start,
                           ),
                         ),
-                        Flexible(
-                          child: Container(
-                            padding: const EdgeInsets.symmetric(
-                              horizontal: 8,
-                              vertical: 3,
+                        const SizedBox(width: 8),
+                        Container(
+                          padding: const EdgeInsets.symmetric(
+                            horizontal: 8,
+                            vertical: 3,
+                          ),
+                          decoration: BoxDecoration(
+                            color: AppColors.of(
+                              context,
+                            ).surface(color.withValues(alpha: 0.12)),
+                            borderRadius: BorderRadius.circular(20),
+                          ),
+                          child: Text(
+                            _capitalize(item.estado ?? 'pendiente'),
+                            style: TextStyle(
+                              fontSize: 13,
+                              fontWeight: FontWeight.w700,
+                              color: AppColors.of(context).foreground(color),
                             ),
-                            decoration: BoxDecoration(
-                              color: AppColors.of(
-                                context,
-                              ).surface(color.withValues(alpha: 0.12)),
-                              borderRadius: BorderRadius.circular(20),
-                            ),
-                            child: Text(
-                              _capitalize(item.estado ?? 'pendiente'),
-                              style: TextStyle(
-                                fontSize: 13,
-                                fontWeight: FontWeight.w700,
-                                color: AppColors.of(context).foreground(color),
-                              ),
-                              textAlign: TextAlign.start,
-                            ),
+                            textAlign: TextAlign.start,
                           ),
                         ),
                       ],

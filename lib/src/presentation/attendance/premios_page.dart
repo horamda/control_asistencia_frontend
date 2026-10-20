@@ -458,13 +458,13 @@ class _PremioCard extends StatelessWidget {
             Container(width: 5, color: AppColors.of(context).surface(color)),
             Expanded(
               child: Padding(
-                padding: const EdgeInsets.fromLTRB(14, 12, 14, 12),
+                padding: const EdgeInsets.fromLTRB(12, 10, 12, 10),
                 child: Row(
-                  mainAxisAlignment: MainAxisAlignment.center,
+                  crossAxisAlignment: CrossAxisAlignment.start,
                   children: [
                     Container(
-                      width: 40,
-                      height: 40,
+                      width: 36,
+                      height: 36,
                       decoration: BoxDecoration(
                         color: AppColors.of(
                           context,
@@ -474,34 +474,37 @@ class _PremioCard extends StatelessWidget {
                       child: Icon(
                         _rankIcon(premio.ranking),
                         color: AppColors.of(context).foreground(color),
-                        size: 22,
+                        size: 20,
                       ),
                     ),
-                    const SizedBox(width: 12),
+                    const SizedBox(width: 10),
                     Expanded(
                       child: Column(
-                        crossAxisAlignment: CrossAxisAlignment.center,
-                        mainAxisAlignment: MainAxisAlignment.center,
+                        crossAxisAlignment: CrossAxisAlignment.start,
                         children: [
                           Text(
                             concursoNombre,
                             style: Theme.of(context).textTheme.bodyMedium
                                 ?.copyWith(fontWeight: FontWeight.w600),
-                            textAlign: TextAlign.center,
+                            textAlign: TextAlign.start,
+                            maxLines: 2,
+                            overflow: TextOverflow.ellipsis,
                           ),
                           if (premio.concurso?.alcance == 'global')
                             Text(
                               'Concurso general',
                               style: Theme.of(context).textTheme.labelSmall
                                   ?.copyWith(color: cs.onSurfaceVariant),
-                              textAlign: TextAlign.center,
+                              textAlign: TextAlign.start,
                             )
                           else if (premio.sectorEmpleado?.nombre != null)
                             Text(
                               premio.sectorEmpleado!.nombre!,
                               style: Theme.of(context).textTheme.labelSmall
                                   ?.copyWith(color: cs.onSurfaceVariant),
-                              textAlign: TextAlign.center,
+                              textAlign: TextAlign.start,
+                              maxLines: 1,
+                              overflow: TextOverflow.ellipsis,
                             ),
                           if ((premio.observaciones ?? '').isNotEmpty) ...[
                             const SizedBox(height: 3),
@@ -511,14 +514,16 @@ class _PremioCard extends StatelessWidget {
                                   ?.copyWith(color: cs.onSurfaceVariant),
                               maxLines: 2,
                               overflow: TextOverflow.ellipsis,
-                              textAlign: TextAlign.center,
+                              textAlign: TextAlign.start,
                             ),
                           ],
                         ],
                       ),
                     ),
                     const SizedBox(width: 8),
-                    Flexible(
+                    // Solo el ancho de la etiqueta: con Flexible le quitaba la mitad del renglon al texto.
+                    ConstrainedBox(
+                      constraints: const BoxConstraints(maxWidth: 110),
                       child: Container(
                         padding: const EdgeInsets.symmetric(
                           horizontal: 10,

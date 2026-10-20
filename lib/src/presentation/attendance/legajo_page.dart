@@ -335,9 +335,8 @@ class _TipoCard extends StatelessWidget {
     return AppCard(
       margin: const EdgeInsets.only(bottom: 8),
       child: Padding(
-        padding: const EdgeInsets.symmetric(horizontal: 16, vertical: 12),
+        padding: const EdgeInsets.symmetric(horizontal: 12, vertical: 10),
         child: Row(
-          mainAxisAlignment: MainAxisAlignment.center,
           children: [
             Icon(
               tieneEventos
@@ -349,14 +348,14 @@ class _TipoCard extends StatelessWidget {
             const SizedBox(width: 12),
             Expanded(
               child: Column(
-                crossAxisAlignment: CrossAxisAlignment.center,
+                crossAxisAlignment: CrossAxisAlignment.start,
                 children: [
                   Text(
                     item.nombre,
                     maxLines: 2,
                     overflow: TextOverflow.ellipsis,
                     style: const TextStyle(fontWeight: FontWeight.w600),
-                    textAlign: TextAlign.center,
+                    textAlign: TextAlign.start,
                   ),
                   if (item.ultimaFecha != null)
                     Text(
@@ -364,45 +363,41 @@ class _TipoCard extends StatelessWidget {
                       style: Theme.of(context).textTheme.bodySmall?.copyWith(
                         color: cs.onSurfaceVariant,
                       ),
-                      textAlign: TextAlign.center,
+                      textAlign: TextAlign.start,
                     ),
                 ],
               ),
             ),
             if (tieneEventos)
-              Flexible(
-                child: Column(
-                  crossAxisAlignment: CrossAxisAlignment.end,
-                  children: [
-                    Text(
-                      '${item.total}',
-                      maxLines: 1,
-                      overflow: TextOverflow.ellipsis,
-                      style: Theme.of(context).textTheme.titleSmall?.copyWith(
-                        fontWeight: FontWeight.w700,
-                        color: cs.primary,
-                      ),
-                      textAlign: TextAlign.center,
+              Column(
+                crossAxisAlignment: CrossAxisAlignment.end,
+                children: [
+                  Text(
+                    '${item.total}',
+                    maxLines: 1,
+                    overflow: TextOverflow.ellipsis,
+                    style: Theme.of(context).textTheme.titleSmall?.copyWith(
+                      fontWeight: FontWeight.w700,
+                      color: cs.primary,
                     ),
-                    Text(
-                      '${item.vigentes} vigente${item.vigentes != 1 ? 's' : ''}',
-                      style: Theme.of(context).textTheme.bodySmall?.copyWith(
-                        color: cs.onSurfaceVariant,
-                      ),
-                      textAlign: TextAlign.center,
-                    ),
-                  ],
-                ),
+                    textAlign: TextAlign.center,
+                  ),
+                  Text(
+                    '${item.vigentes} vigente${item.vigentes != 1 ? 's' : ''}',
+                    style: Theme.of(
+                      context,
+                    ).textTheme.bodySmall?.copyWith(color: cs.onSurfaceVariant),
+                    textAlign: TextAlign.center,
+                  ),
+                ],
               )
             else
-              Flexible(
-                child: Text(
-                  'Sin eventos',
-                  style: Theme.of(
-                    context,
-                  ).textTheme.bodySmall?.copyWith(color: cs.onSurfaceVariant),
-                  textAlign: TextAlign.center,
-                ),
+              Text(
+                'Sin eventos',
+                style: Theme.of(
+                  context,
+                ).textTheme.bodySmall?.copyWith(color: cs.onSurfaceVariant),
+                textAlign: TextAlign.end,
               ),
           ],
         ),
@@ -681,15 +676,14 @@ class _LegajoEventoCard extends StatelessWidget {
     final anulado = item.estado == 'anulado';
 
     return AppCard(
-      margin: const EdgeInsets.only(bottom: 10),
+      margin: const EdgeInsets.only(bottom: 8),
       child: Padding(
-        padding: const EdgeInsets.all(16),
+        padding: const EdgeInsets.fromLTRB(12, 10, 12, 10),
         child: Column(
           crossAxisAlignment: CrossAxisAlignment.start,
           children: [
             Row(
               crossAxisAlignment: CrossAxisAlignment.start,
-              mainAxisAlignment: MainAxisAlignment.center,
               children: [
                 Icon(
                   Icons.description_rounded,
@@ -708,16 +702,17 @@ class _LegajoEventoCard extends StatelessWidget {
                     textAlign: TextAlign.start,
                   ),
                 ),
-                if (item.fechaEvento != null)
-                  Flexible(
-                    child: Text(
-                      item.fechaEvento!,
-                      style: Theme.of(context).textTheme.bodySmall?.copyWith(
-                        color: cs.onSurfaceVariant,
-                      ),
-                      textAlign: TextAlign.start,
-                    ),
+                if (item.fechaEvento != null) ...[
+                  const SizedBox(width: 8),
+                  // Solo el ancho de la fecha (con Flexible le quitaba la mitad del renglon al titulo).
+                  Text(
+                    item.fechaEvento!,
+                    style: Theme.of(
+                      context,
+                    ).textTheme.bodySmall?.copyWith(color: cs.onSurfaceVariant),
+                    textAlign: TextAlign.end,
                   ),
+                ],
               ],
             ),
             if (item.titulo != null) ...[
@@ -739,9 +734,8 @@ class _LegajoEventoCard extends StatelessWidget {
               ),
             ],
             if (severidad != null || anulado) ...[
-              const SizedBox(height: 8),
+              const SizedBox(height: 6),
               Row(
-                mainAxisAlignment: MainAxisAlignment.center,
                 children: [
                   if (severidad != null)
                     Container(

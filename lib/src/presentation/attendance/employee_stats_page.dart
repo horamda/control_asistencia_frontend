@@ -335,21 +335,24 @@ class _FilterBar extends StatelessWidget {
         crossAxisAlignment: CrossAxisAlignment.center,
         children: [
           Padding(
-            padding: const EdgeInsets.fromLTRB(12, 10, 12, 4),
+            padding: const EdgeInsets.fromLTRB(8, 6, 4, 6),
             child: Row(
-              mainAxisAlignment: MainAxisAlignment.center,
               children: [
+                // Una sola fila que se desplaza de costado: en pantallas angostas no apila un periodo por renglon.
                 Expanded(
-                  child: Wrap(
-                    spacing: 6,
-                    runSpacing: 4,
-                    alignment: WrapAlignment.center,
-                    children: [
-                      _PresetChip(label: '7 días', onTap: onPreset7Days),
-                      _PresetChip(label: '30 días', onTap: onPreset30Days),
-                      _PresetChip(label: 'Este mes', onTap: onPresetMonth),
-                      _PresetChip(label: 'Este año', onTap: onPresetYear),
-                    ],
+                  child: SingleChildScrollView(
+                    scrollDirection: Axis.horizontal,
+                    child: Row(
+                      children: [
+                        _PresetChip(label: '7 días', onTap: onPreset7Days),
+                        const SizedBox(width: 6),
+                        _PresetChip(label: '30 días', onTap: onPreset30Days),
+                        const SizedBox(width: 6),
+                        _PresetChip(label: 'Este mes', onTap: onPresetMonth),
+                        const SizedBox(width: 6),
+                        _PresetChip(label: 'Este año', onTap: onPresetYear),
+                      ],
+                    ),
                   ),
                 ),
                 const SizedBox(width: 8),
@@ -524,7 +527,8 @@ class _PresetChip extends StatelessWidget {
           ? cs.secondaryContainer
           : cs.surfaceContainerHighest,
       side: BorderSide.none,
-      padding: const EdgeInsets.symmetric(horizontal: 4),
+      padding: const EdgeInsets.symmetric(horizontal: 2),
+      visualDensity: VisualDensity.compact,
       onPressed: onTap,
     );
   }
@@ -785,21 +789,6 @@ class _KpiSection extends StatefulWidget {
 }
 
 class _KpiSectionState extends State<_KpiSection> {
-  late final PageController _controller;
-  int _page = 0;
-
-  @override
-  void initState() {
-    super.initState();
-    _controller = PageController(viewportFraction: 0.72);
-  }
-
-  @override
-  void dispose() {
-    _controller.dispose();
-    super.dispose();
-  }
-
   List<({IconData icon, String label, double value, bool highIsGood})>
   _items() {
     final kpis = widget.stats.kpis;
@@ -903,48 +892,25 @@ class _KpiSectionState extends State<_KpiSection> {
               );
             }
 
-            // Carrusel en movil angosto
-            return Column(
-              crossAxisAlignment: CrossAxisAlignment.center,
+            // Movil angosto: grilla de tarjetas horizontales (anillo chico + nombre), todas a la vista.
+            final escala = MediaQuery.textScalerOf(context).scale(16) / 16;
+            final cols = constraints.maxWidth >= 300 * escala ? 2 : 1;
+            final itemW = (constraints.maxWidth - 8.0 * (cols - 1)) / cols;
+            return Wrap(
+              spacing: 8,
+              runSpacing: 8,
               children: [
-                SizedBox(
-                  height: 150 + MediaQuery.textScalerOf(context).scale(32),
-                  child: PageView.builder(
-                    controller: _controller,
-                    itemCount: items.length,
-                    onPageChanged: (i) => setState(() => _page = i),
-                    itemBuilder: (_, i) {
-                      final item = items[i];
-                      return Padding(
-                        padding: const EdgeInsets.symmetric(horizontal: 6),
-                        child: _KpiCard(
-                          icon: item.icon,
-                          label: item.label,
-                          value: item.value,
-                          highIsGood: item.highIsGood,
-                        ),
-                      );
-                    },
+                for (final item in items)
+                  SizedBox(
+                    width: itemW,
+                    child: _KpiCard(
+                      icon: item.icon,
+                      label: item.label,
+                      value: item.value,
+                      highIsGood: item.highIsGood,
+                      compacta: true,
+                    ),
                   ),
-                ),
-                const SizedBox(height: 10),
-                Row(
-                  mainAxisAlignment: MainAxisAlignment.center,
-                  children: [
-                    for (var i = 0; i < items.length; i++)
-                      AnimatedContainer(
-                        duration: const Duration(milliseconds: 220),
-                        curve: Curves.easeOut,
-                        margin: const EdgeInsets.symmetric(horizontal: 3),
-                        width: i == _page ? 18 : 6,
-                        height: 6,
-                        decoration: BoxDecoration(
-                          color: i == _page ? cs.primary : cs.outlineVariant,
-                          borderRadius: BorderRadius.circular(3),
-                        ),
-                      ),
-                  ],
-                ),
               ],
             );
           },
@@ -960,12 +926,16 @@ class _KpiCard extends StatelessWidget {
     required this.label,
     required this.value,
     required this.highIsGood,
+    this.compacta = false,
   });
 
   final IconData icon;
   final String label;
   final double value;
   final bool highIsGood;
+
+  /// En el celular: anillo chico a la izquierda y el nombre al lado (en lugar del bloque alto centrado).
+  final bool compacta;
 
   Color _color(BuildContext context) {
     if (highIsGood) {
@@ -983,6 +953,57 @@ class _KpiCard extends StatelessWidget {
   Widget build(BuildContext context) {
     final color = _color(context);
     final cs = Theme.of(context).colorScheme;
+    if (compacta) {
+      return AppCard(
+        margin: EdgeInsets.zero,
+        child: Padding(
+          padding: const EdgeInsets.fromLTRB(10, 10, 10, 10),
+          child: Row(
+            children: [
+              Stack(
+                alignment: Alignment.center,
+                children: [
+                  SizedBox(
+                    width: 42,
+                    height: 42,
+                    child: CircularProgressIndicator(
+                      value: (value / 100).clamp(0.0, 1.0),
+                      strokeWidth: 5,
+                      strokeCap: StrokeCap.round,
+                      backgroundColor: AppColors.of(
+                        context,
+                      ).surface(color.withValues(alpha: 0.12)),
+                      valueColor: AlwaysStoppedAnimation(color),
+                    ),
+                  ),
+                  Text(
+                    '${value.toStringAsFixed(0)}%',
+                    style: TextStyle(
+                      fontSize: 12,
+                      fontWeight: FontWeight.w800,
+                      color: AppColors.of(context).foreground(color),
+                      height: 1,
+                    ),
+                  ),
+                ],
+              ),
+              const SizedBox(width: 10),
+              Expanded(
+                child: Text(
+                  label,
+                  textAlign: TextAlign.start,
+                  maxLines: 2,
+                  overflow: TextOverflow.ellipsis,
+                  style: Theme.of(
+                    context,
+                  ).textTheme.labelMedium?.copyWith(color: cs.onSurfaceVariant),
+                ),
+              ),
+            ],
+          ),
+        ),
+      );
+    }
 
     return AppCard(
       child: Padding(
@@ -1123,7 +1144,6 @@ class _HorasRachaCard extends StatelessWidget {
           crossAxisAlignment: CrossAxisAlignment.center,
           children: [
             Row(
-              mainAxisAlignment: MainAxisAlignment.center,
               children: [
                 const Icon(Icons.insights_rounded, size: 18),
                 const SizedBox(width: 8),
@@ -1131,18 +1151,16 @@ class _HorasRachaCard extends StatelessWidget {
                   child: Text(
                     'Horas y racha',
                     style: Theme.of(context).textTheme.titleMedium,
-                    textAlign: TextAlign.center,
+                    textAlign: TextAlign.start,
                   ),
                 ),
-                const Spacer(),
-                Flexible(
-                  child: Text(
-                    '${kpis.diasConRegistro} / ${kpis.diasLaborables} días',
-                    style: Theme.of(
-                      context,
-                    ).textTheme.bodySmall?.copyWith(color: cs.onSurfaceVariant),
-                    textAlign: TextAlign.center,
-                  ),
+                const SizedBox(width: 8),
+                Text(
+                  '${kpis.diasConRegistro} / ${kpis.diasLaborables} días',
+                  style: Theme.of(
+                    context,
+                  ).textTheme.bodySmall?.copyWith(color: cs.onSurfaceVariant),
+                  textAlign: TextAlign.end,
                 ),
               ],
             ),
@@ -1281,26 +1299,23 @@ class _StatusCard extends StatelessWidget {
           crossAxisAlignment: CrossAxisAlignment.center,
           children: [
             Row(
-              mainAxisAlignment: MainAxisAlignment.center,
               children: [
                 const Icon(Icons.donut_small_rounded, size: 18),
                 const SizedBox(width: 8),
-                Flexible(
+                Expanded(
                   child: Text(
                     'Distribución de estados',
                     style: Theme.of(context).textTheme.titleMedium,
-                    textAlign: TextAlign.center,
+                    textAlign: TextAlign.start,
                   ),
                 ),
-                const Spacer(),
-                Flexible(
-                  child: Text(
-                    '${t.registros} registros',
-                    style: Theme.of(
-                      context,
-                    ).textTheme.bodySmall?.copyWith(color: cs.onSurfaceVariant),
-                    textAlign: TextAlign.center,
-                  ),
+                const SizedBox(width: 8),
+                Text(
+                  '${t.registros} registros',
+                  style: Theme.of(
+                    context,
+                  ).textTheme.bodySmall?.copyWith(color: cs.onSurfaceVariant),
+                  textAlign: TextAlign.end,
                 ),
               ],
             ),
@@ -1376,7 +1391,7 @@ class _StatusCard extends StatelessWidget {
                   style: Theme.of(
                     context,
                   ).textTheme.bodySmall?.copyWith(fontWeight: FontWeight.w600),
-                  textAlign: TextAlign.center,
+                  textAlign: TextAlign.start,
                 ),
               ),
               Text(

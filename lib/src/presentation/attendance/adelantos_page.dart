@@ -306,33 +306,43 @@ class _SinSolicitudCard extends StatelessWidget {
     return AppCard(
       margin: EdgeInsets.zero,
       child: Padding(
-        padding: const EdgeInsets.all(20),
+        padding: const EdgeInsets.all(14),
         child: Column(
           crossAxisAlignment: CrossAxisAlignment.stretch,
           children: [
-            Icon(
-              Icons.payments_rounded,
-              size: 48,
-              color: cs.primary.withValues(alpha: 0.8),
+            Row(
+              crossAxisAlignment: CrossAxisAlignment.start,
+              children: [
+                Icon(
+                  Icons.payments_rounded,
+                  size: 32,
+                  color: cs.primary.withValues(alpha: 0.8),
+                ),
+                const SizedBox(width: 12),
+                Expanded(
+                  child: Column(
+                    crossAxisAlignment: CrossAxisAlignment.start,
+                    children: [
+                      Text(
+                        'Sin solicitud este mes',
+                        style: Theme.of(context).textTheme.titleMedium
+                            ?.copyWith(fontWeight: FontWeight.w600),
+                        textAlign: TextAlign.start,
+                      ),
+                      const SizedBox(height: 4),
+                      Text(
+                        'Podés solicitar un adelanto de sueldo para $mes. '
+                        'Solo se permite una solicitud por mes.',
+                        style: Theme.of(context).textTheme.bodyMedium
+                            ?.copyWith(color: cs.onSurfaceVariant),
+                        textAlign: TextAlign.start,
+                      ),
+                    ],
+                  ),
+                ),
+              ],
             ),
-            const SizedBox(height: 16),
-            Text(
-              'Sin solicitud este mes',
-              style: Theme.of(
-                context,
-              ).textTheme.titleMedium?.copyWith(fontWeight: FontWeight.w600),
-              textAlign: TextAlign.center,
-            ),
-            const SizedBox(height: 8),
-            Text(
-              'Podés solicitar un adelanto de sueldo para $mes. '
-              'Solo se permite una solicitud por mes.',
-              style: Theme.of(
-                context,
-              ).textTheme.bodyMedium?.copyWith(color: cs.onSurfaceVariant),
-              textAlign: TextAlign.center,
-            ),
-            const SizedBox(height: 24),
+            const SizedBox(height: 14),
             SizedBox(
               height: 48,
               child: FilledButton.icon(

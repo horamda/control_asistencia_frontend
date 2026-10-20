@@ -975,12 +975,11 @@ class _ModuleSectionCard extends StatelessWidget {
     return AppCard(
       margin: EdgeInsets.zero,
       child: Padding(
-        padding: const EdgeInsets.all(16),
+        padding: const EdgeInsets.all(12),
         child: Column(
           crossAxisAlignment: CrossAxisAlignment.stretch,
           children: [
             Row(
-              mainAxisAlignment: MainAxisAlignment.center,
               children: [
                 Icon(icon, color: cs.primary),
                 const SizedBox(width: 10),
@@ -990,12 +989,12 @@ class _ModuleSectionCard extends StatelessWidget {
                     style: Theme.of(context).textTheme.titleMedium?.copyWith(
                       fontWeight: FontWeight.w700,
                     ),
-                    textAlign: TextAlign.center,
+                    textAlign: TextAlign.start,
                   ),
                 ),
                 TextButton(
                   onPressed: () => unawaited(onOpen()),
-                  child: const Text('Abrir', textAlign: TextAlign.center),
+                  child: const Text('Abrir', textAlign: TextAlign.start),
                 ),
               ],
             ),
@@ -1022,7 +1021,7 @@ class _MetricRow extends StatelessWidget {
     return Wrap(
       spacing: 8,
       runSpacing: 8,
-      alignment: WrapAlignment.center,
+      alignment: WrapAlignment.start,
       children: items,
     );
   }
@@ -1038,7 +1037,7 @@ class _MetricChip extends StatelessWidget {
   Widget build(BuildContext context) {
     final cs = Theme.of(context).colorScheme;
     return Container(
-      padding: const EdgeInsets.symmetric(horizontal: 12, vertical: 10),
+      padding: const EdgeInsets.symmetric(horizontal: 10, vertical: 6),
       decoration: BoxDecoration(
         color: cs.surfaceContainerHighest,
         borderRadius: BorderRadius.circular(12),
@@ -1046,14 +1045,13 @@ class _MetricChip extends StatelessWidget {
       ),
       child: Row(
         mainAxisSize: MainAxisSize.min,
-        mainAxisAlignment: MainAxisAlignment.center,
         children: [
           Text(
             label,
             style: Theme.of(
               context,
             ).textTheme.labelMedium?.copyWith(color: cs.onSurfaceVariant),
-            textAlign: TextAlign.center,
+            textAlign: TextAlign.start,
           ),
           const SizedBox(width: 8),
           Text(
@@ -1061,7 +1059,7 @@ class _MetricChip extends StatelessWidget {
             style: Theme.of(
               context,
             ).textTheme.labelLarge?.copyWith(fontWeight: FontWeight.w700),
-            textAlign: TextAlign.center,
+            textAlign: TextAlign.start,
           ),
         ],
       ),
@@ -1090,7 +1088,7 @@ class _ModuleAlertTile extends StatelessWidget {
   Widget build(BuildContext context) {
     final cs = Theme.of(context).colorScheme;
     return Container(
-      padding: const EdgeInsets.all(14),
+      padding: const EdgeInsets.all(12),
       decoration: BoxDecoration(
         color: cs.surfaceContainerLow,
         borderRadius: BorderRadius.circular(14),
@@ -1098,11 +1096,10 @@ class _ModuleAlertTile extends StatelessWidget {
       ),
       child: Row(
         crossAxisAlignment: CrossAxisAlignment.start,
-        mainAxisAlignment: MainAxisAlignment.center,
         children: [
           Container(
-            width: 40,
-            height: 40,
+            width: 36,
+            height: 36,
             decoration: BoxDecoration(
               color: AppColors.of(
                 context,
@@ -1112,20 +1109,20 @@ class _ModuleAlertTile extends StatelessWidget {
             child: Icon(
               icon,
               color: AppColors.of(context).foreground(color),
-              size: 22,
+              size: 20,
             ),
           ),
           const SizedBox(width: 12),
           Expanded(
             child: Column(
-              crossAxisAlignment: CrossAxisAlignment.center,
+              crossAxisAlignment: CrossAxisAlignment.start,
               children: [
                 LayoutBuilder(
                   builder: (context, constraints) => Wrap(
                     spacing: 8,
                     runSpacing: 6,
                     crossAxisAlignment: WrapCrossAlignment.center,
-                    alignment: WrapAlignment.center,
+                    alignment: WrapAlignment.start,
                     children: [
                       ConstrainedBox(
                         constraints: BoxConstraints(
@@ -1137,28 +1134,28 @@ class _ModuleAlertTile extends StatelessWidget {
                           overflow: TextOverflow.ellipsis,
                           style: Theme.of(context).textTheme.titleSmall
                               ?.copyWith(fontWeight: FontWeight.w700),
-                          textAlign: TextAlign.center,
+                          textAlign: TextAlign.start,
                         ),
                       ),
                       _StatusPill(label: statusLabel, color: color),
                     ],
                   ),
                 ),
-                const SizedBox(height: 6),
+                const SizedBox(height: 4),
                 Text(
                   message,
                   style: Theme.of(
                     context,
                   ).textTheme.bodyMedium?.copyWith(color: cs.onSurfaceVariant),
-                  textAlign: TextAlign.center,
+                  textAlign: TextAlign.start,
                 ),
-                const SizedBox(height: 6),
+                const SizedBox(height: 4),
                 Text(
                   detail,
                   style: Theme.of(
                     context,
                   ).textTheme.bodySmall?.copyWith(color: cs.onSurfaceVariant),
-                  textAlign: TextAlign.center,
+                  textAlign: TextAlign.start,
                 ),
               ],
             ),
@@ -1180,14 +1177,13 @@ class _AlertEntryCard extends StatelessWidget {
     return AppCard(
       margin: EdgeInsets.zero,
       child: Padding(
-        padding: const EdgeInsets.all(14),
+        padding: const EdgeInsets.all(12),
         child: Row(
           crossAxisAlignment: CrossAxisAlignment.start,
-          mainAxisAlignment: MainAxisAlignment.center,
           children: [
             Container(
-              width: 42,
-              height: 42,
+              width: 36,
+              height: 36,
               decoration: BoxDecoration(
                 color: AppColors.of(
                   context,
@@ -1197,20 +1193,20 @@ class _AlertEntryCard extends StatelessWidget {
               child: Icon(
                 entry.icon,
                 color: AppColors.of(context).foreground(entry.statusColor),
-                size: 22,
+                size: 20,
               ),
             ),
             const SizedBox(width: 12),
             Expanded(
               child: Column(
-                crossAxisAlignment: CrossAxisAlignment.center,
+                crossAxisAlignment: CrossAxisAlignment.start,
                 children: [
                   LayoutBuilder(
                     builder: (context, constraints) => Wrap(
                       spacing: 8,
                       runSpacing: 6,
                       crossAxisAlignment: WrapCrossAlignment.center,
-                      alignment: WrapAlignment.center,
+                      alignment: WrapAlignment.start,
                       children: [
                         ConstrainedBox(
                           constraints: BoxConstraints(
@@ -1222,7 +1218,7 @@ class _AlertEntryCard extends StatelessWidget {
                             overflow: TextOverflow.ellipsis,
                             style: Theme.of(context).textTheme.titleSmall
                                 ?.copyWith(fontWeight: FontWeight.w700),
-                            textAlign: TextAlign.center,
+                            textAlign: TextAlign.start,
                           ),
                         ),
                         _StatusPill(
@@ -1238,17 +1234,17 @@ class _AlertEntryCard extends StatelessWidget {
                     style: Theme.of(context).textTheme.labelMedium?.copyWith(
                       color: cs.onSurfaceVariant,
                     ),
-                    textAlign: TextAlign.center,
+                    textAlign: TextAlign.start,
                   ),
-                  const SizedBox(height: 6),
-                  Text(entry.message, textAlign: TextAlign.center),
-                  const SizedBox(height: 6),
+                  const SizedBox(height: 4),
+                  Text(entry.message, textAlign: TextAlign.start),
+                  const SizedBox(height: 4),
                   Text(
                     entry.details,
                     style: Theme.of(
                       context,
                     ).textTheme.bodySmall?.copyWith(color: cs.onSurfaceVariant),
-                    textAlign: TextAlign.center,
+                    textAlign: TextAlign.start,
                   ),
                 ],
               ),

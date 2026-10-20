@@ -261,14 +261,15 @@ class ReunionesAgendaOverview extends StatelessWidget {
             final columns = AppLayout.columns(
               context,
               constraints.maxWidth,
-              minWidth: 140,
+              // Los tres indicadores entran en una fila en un celular (antes quedaban 2 + 1 apilados).
+              minWidth: 96,
               maxColumns: 3,
-              spacing: 10,
+              spacing: 8,
             );
-            final width = (constraints.maxWidth - (columns - 1) * 10) / columns;
+            final width = (constraints.maxWidth - (columns - 1) * 8) / columns;
             return Wrap(
-              spacing: 10,
-              runSpacing: 10,
+              spacing: 8,
+              runSpacing: 8,
               children: [
                 _AgendaMetric(
                   width: width,
@@ -355,10 +356,10 @@ class _AgendaMetric extends StatelessWidget {
   @override
   Widget build(BuildContext context) => Container(
     width: width,
-    padding: const EdgeInsets.all(10),
+    padding: const EdgeInsets.symmetric(horizontal: 8, vertical: 8),
     decoration: BoxDecoration(
       color: AppColors.of(context).surface(color.withValues(alpha: .06)),
-      borderRadius: BorderRadius.circular(18),
+      borderRadius: BorderRadius.circular(14),
       border: Border.all(
         color: AppColors.of(context).border(color.withValues(alpha: .15)),
       ),
@@ -366,11 +367,11 @@ class _AgendaMetric extends StatelessWidget {
     child: Column(
       crossAxisAlignment: CrossAxisAlignment.center,
       children: [
-        Icon(icon, size: 22, color: AppColors.of(context).foreground(color)),
-        const SizedBox(height: 4),
+        Icon(icon, size: 18, color: AppColors.of(context).foreground(color)),
+        const SizedBox(height: 2),
         Text(
           value,
-          style: Theme.of(context).textTheme.titleLarge?.copyWith(
+          style: Theme.of(context).textTheme.titleMedium?.copyWith(
             fontWeight: FontWeight.w800,
             color: AppColors.of(context).foreground(color),
           ),
