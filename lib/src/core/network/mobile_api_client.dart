@@ -2158,6 +2158,25 @@ class MobileApiClient {
     return SecurityEventsPageResult.fromJson(json);
   }
 
+  /// Calidad de la ubicacion (contrato 1.54.0, opcional). El servidor rechaza
+  /// la fichada entera si un valor esta fuera de rango, asi que solo se manda
+  /// lo valido y el resto se omite: nunca hace fallar una fichada.
+  static Map<String, Object> gpsQualityPayload({
+    double? precisionM,
+    bool? simulada,
+    int? edadS,
+  }) {
+    return {
+      if (precisionM != null &&
+          precisionM.isFinite &&
+          precisionM >= 0 &&
+          precisionM <= 100000)
+        'gps_precision_m': (precisionM * 10).round() / 10,
+      if (simulada != null) 'gps_simulada': simulada,
+      if (edadS != null && edadS >= 0 && edadS <= 604800) 'gps_edad_s': edadS,
+    };
+  }
+
   Future<FichadaResponse> registrarScanQr({
     required String token,
     required String qrToken,
@@ -2165,6 +2184,9 @@ class MobileApiClient {
     double? lon,
     String? foto,
     DateTime? eventAt,
+    double? gpsPrecisionM,
+    bool? gpsSimulada,
+    int? gpsEdadS,
   }) async {
     if (lat == null || lon == null) {
       throw ApiException(
@@ -2179,6 +2201,11 @@ class MobileApiClient {
       'qr_token': qrToken,
       'lat': lat,
       'lon': lon,
+      ...gpsQualityPayload(
+        precisionM: gpsPrecisionM,
+        simulada: gpsSimulada,
+        edadS: gpsEdadS,
+      ),
     };
     if (foto != null && foto.trim().isNotEmpty) {
       payload['foto'] = foto;

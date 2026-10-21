@@ -32,6 +32,9 @@ class PendingClockSyncService {
     double? lat,
     double? lon,
     String? fotoPath,
+    double? gpsPrecisionM,
+    bool? gpsSimulada,
+    int? gpsEdadS,
   }) async {
     await _offlineClockQueue.enqueue(
       employeeId: employeeId,
@@ -40,6 +43,9 @@ class PendingClockSyncService {
       lat: lat,
       lon: lon,
       fotoPath: fotoPath,
+      gpsPrecisionM: gpsPrecisionM,
+      gpsSimulada: gpsSimulada,
+      gpsEdadS: gpsEdadS,
     );
     final snapshot = await readSnapshot(employeeId: employeeId);
     await pruneEmployeePhotos(
@@ -169,10 +175,7 @@ class PendingClockSyncService {
         );
       case _PendingClockAttemptStatus.failed:
       case _PendingClockAttemptStatus.pending:
-        await _upsertRecord(
-          employeeId: employeeId,
-          updated: attempt.record!,
-        );
+        await _upsertRecord(employeeId: employeeId, updated: attempt.record!);
         final snapshot = await readSnapshot(employeeId: employeeId);
         await pruneEmployeePhotos(
           employeeId: employeeId,
@@ -236,7 +239,8 @@ class PendingClockSyncService {
     required int employeeId,
     Iterable<OfflineClockRecord>? keepRecords,
   }) async {
-    final records = keepRecords?.toList(growable: false) ??
+    final records =
+        keepRecords?.toList(growable: false) ??
         (await _offlineClockQueue.readForEmployee(employeeId));
     final keepPaths = records
         .map((item) => (item.fotoPath ?? '').trim())
@@ -304,6 +308,9 @@ class PendingClockSyncService {
         lon: attempted.lon,
         foto: foto,
         eventAt: attempted.eventAt,
+        gpsPrecisionM: attempted.gpsPrecisionM,
+        gpsSimulada: attempted.gpsSimulada,
+        gpsEdadS: attempted.gpsEdadS,
       );
       await _clockPhotoCache.deleteFile(attempted.fotoPath);
       return const _PendingClockAttemptResult(
@@ -356,7 +363,9 @@ class PendingClockSnapshot {
       total = 0,
       failed = 0;
 
-  factory PendingClockSnapshot.fromRecords(Iterable<OfflineClockRecord> records) {
+  factory PendingClockSnapshot.fromRecords(
+    Iterable<OfflineClockRecord> records,
+  ) {
     final sorted = records.toList(growable: false)
       ..sort((a, b) => a.createdAt.compareTo(b.createdAt));
     var failed = 0;
@@ -427,8 +436,4 @@ class _PendingClockAttemptResult {
   final bool missingPhoto;
 }
 
-enum _PendingClockAttemptStatus {
-  synced,
-  pending,
-  failed,
-}
+enum _PendingClockAttemptStatus { synced, pending, failed }

@@ -47,8 +47,14 @@ const _fichayaSound = RawResourceAndroidNotificationSound('fichaya');
 // vibracion mas larga. Debe coincidir con CANAL_ANDROID_URGENTE del backend.
 const fichayaUrgentChannelId = 'fichaya_urgente';
 const _urgentChannelName = 'Avisos urgentes de FichaYa';
-const _urgentChannelDescription = 'Salida sin fichar y reunión por empezar';
-const urgentPushTypes = {'salida_pendiente', 'recordatorio'};
+const _urgentChannelDescription =
+    'Ingreso o salida sin fichar y reunión por empezar';
+const urgentPushTypes = {
+  'salida_pendiente',
+  'recordatorio',
+  'ingreso_pendiente',
+  'ingreso_equipo',
+};
 
 // Vibracion propia (ms: espera, vibra, pausa, vibra...). Como el sonido, queda
 // fija al crear el canal: avisos, dos pulsos cortos; urgentes, tres largos.

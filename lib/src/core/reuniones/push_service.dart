@@ -42,6 +42,9 @@ const pushTypes = {
   // Contrato 1.49.0: Seguridad e Higiene.
   'seguridad_resultado',
   'seguridad_accion',
+  // Contrato 1.54.0: ingreso sin fichar (al empleado y a su jefe directo).
+  'ingreso_pendiente',
+  'ingreso_equipo',
 };
 
 /// Contrato 1.47.0: avisa al servidor que el push llego (`recibido`) o que lo
@@ -263,7 +266,8 @@ class PushService {
       if (!(message.data['ruta']?.toString().startsWith('/reuniones') ??
               false) &&
           !(message.data['ruta']?.toString().startsWith('/comunicados') ??
-              false)) {
+              false) &&
+          !NotificationsNavigation.openHome(message.data['tipo'])) {
         NotificationsNavigation.open(0);
       }
     }

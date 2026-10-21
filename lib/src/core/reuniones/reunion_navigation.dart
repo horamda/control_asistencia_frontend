@@ -25,7 +25,7 @@ class ReunionNavigation {
       if (route?.startsWith('/reuniones') == true ||
           route?.startsWith('/comunicados') == true) {
         open(route);
-      } else {
+      } else if (!NotificationsNavigation.openHome(data['tipo'])) {
         NotificationsNavigation.open(0);
       }
     }
@@ -77,7 +77,7 @@ class ReunionNavigation {
           if (route?.startsWith('/reuniones') == true ||
               route?.startsWith('/comunicados') == true) {
             open(route);
-          } else {
+          } else if (!NotificationsNavigation.openHome(data['tipo'])) {
             NotificationsNavigation.open(0);
           }
         }

@@ -86,6 +86,9 @@ class QrClockSubmissionService {
         lat: gps.lat,
         lon: gps.lon,
         eventAt: eventAt,
+        gpsPrecisionM: gps.accuracyM,
+        gpsSimulada: gps.mocked,
+        gpsEdadS: gpsAgeSeconds(gps, eventAt),
       );
       apiWatch.stop();
       apiDuration = apiWatch.elapsed;
@@ -112,6 +115,9 @@ class QrClockSubmissionService {
             lat: gps.lat,
             lon: gps.lon,
             fotoPath: fotoPath,
+            gpsPrecisionM: gps.accuracyM,
+            gpsSimulada: gps.mocked,
+            gpsEdadS: gpsAgeSeconds(gps, eventAt),
           );
           queuedOffline = true;
           return QrClockSubmissionResult(
@@ -181,12 +187,30 @@ class ClockGpsPoint {
     required this.lon,
     this.accuracyM,
     this.capturedAt,
+    this.mocked,
   });
 
   final double lat;
   final double lon;
   final double? accuracyM;
   final DateTime? capturedAt;
+
+  /// `true` si el sistema marco la posicion como simulada (GPS falso); `null`
+  /// si la plataforma no lo informa (web).
+  final bool? mocked;
+}
+
+/// Segundos que tenia la posicion al momento de la fichada (contrato 1.54.0).
+/// Se mide contra la hora de la fichada, no la del envio: una fichada guardada
+/// sin conexion conserva su valor. Una diferencia negativa chica (la posicion
+/// llego despues del escaneo) cuenta como 0; si es grande (reloj del telefono
+/// desfasado) no se informa.
+int? gpsAgeSeconds(ClockGpsPoint gps, DateTime eventAt) {
+  final capturedAt = gps.capturedAt;
+  if (capturedAt == null) return null;
+  final seconds = eventAt.difference(capturedAt).inSeconds;
+  if (seconds < -120) return null;
+  return seconds < 0 ? 0 : seconds;
 }
 
 enum QrClockSubmissionStatus {

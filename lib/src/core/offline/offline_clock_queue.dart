@@ -37,7 +37,9 @@ class OfflineClockQueue {
       final items = <OfflineClockRecord>[];
       for (final value in decoded) {
         if (value is Map<String, dynamic>) {
-          final parsed = OfflineClockRecord.fromJson(value).compactPhotoPayload();
+          final parsed = OfflineClockRecord.fromJson(
+            value,
+          ).compactPhotoPayload();
           if (parsed.isValid) {
             items.add(parsed);
           }
@@ -94,6 +96,9 @@ class OfflineClockQueue {
     double? lon,
     String? foto,
     String? fotoPath,
+    double? gpsPrecisionM,
+    bool? gpsSimulada,
+    int? gpsEdadS,
   }) async {
     final all = await readAll();
     if (all.length >= _maxItems) {
@@ -114,6 +119,9 @@ class OfflineClockQueue {
         foto: shouldStoreInlinePhoto ? cleanFotoInline : null,
         fotoPath: cleanFotoPath.isEmpty ? null : cleanFotoPath,
         createdAt: DateTime.now(),
+        gpsPrecisionM: gpsPrecisionM,
+        gpsSimulada: gpsSimulada,
+        gpsEdadS: gpsEdadS,
       ),
     );
     all.sort((a, b) => a.createdAt.compareTo(b.createdAt));
@@ -182,6 +190,9 @@ class OfflineClockRecord {
     this.lon,
     this.foto,
     this.fotoPath,
+    this.gpsPrecisionM,
+    this.gpsSimulada,
+    this.gpsEdadS,
   });
 
   final String id;
@@ -198,12 +209,16 @@ class OfflineClockRecord {
   final String? foto;
   final String? fotoPath;
 
+  /// Calidad de la ubicacion al fichar (contrato 1.54.0). Los registros
+  /// guardados por versiones anteriores no la tienen y se envian sin ella.
+  final double? gpsPrecisionM;
+  final bool? gpsSimulada;
+  final int? gpsEdadS;
+
   bool get hasPhotoReference =>
       (foto ?? '').trim().isNotEmpty || (fotoPath ?? '').trim().isNotEmpty;
   bool get isValid =>
-      id.trim().isNotEmpty &&
-      employeeId > 0 &&
-      qrToken.trim().isNotEmpty;
+      id.trim().isNotEmpty && employeeId > 0 && qrToken.trim().isNotEmpty;
 
   OfflineClockRecord compactPhotoPayload() {
     final cleanPath = (fotoPath ?? '').trim();
@@ -211,10 +226,7 @@ class OfflineClockRecord {
     if (cleanPath.isEmpty || cleanInline.isEmpty) {
       return this;
     }
-    return copyWith(
-      foto: null,
-      fotoPath: cleanPath,
-    );
+    return copyWith(foto: null, fotoPath: cleanPath);
   }
 
   OfflineClockRecord copyWith({
@@ -252,6 +264,9 @@ class OfflineClockRecord {
       fotoPath: identical(fotoPath, _notSet)
           ? this.fotoPath
           : fotoPath as String?,
+      gpsPrecisionM: gpsPrecisionM,
+      gpsSimulada: gpsSimulada,
+      gpsEdadS: gpsEdadS,
     );
   }
 
@@ -276,6 +291,13 @@ class OfflineClockRecord {
       lon: _toDouble(json['lon']),
       foto: (json['foto'] as String?)?.trim(),
       fotoPath: (json['foto_path'] as String?)?.trim(),
+      gpsPrecisionM: _toDouble(json['gps_precision_m']),
+      gpsSimulada: json['gps_simulada'] is bool
+          ? json['gps_simulada'] as bool
+          : null,
+      gpsEdadS: (json['gps_edad_s'] is num)
+          ? (json['gps_edad_s'] as num).toInt()
+          : null,
     );
   }
 
@@ -294,6 +316,9 @@ class OfflineClockRecord {
       'lon': lon,
       'foto': foto,
       'foto_path': fotoPath,
+      if (gpsPrecisionM != null) 'gps_precision_m': gpsPrecisionM,
+      if (gpsSimulada != null) 'gps_simulada': gpsSimulada,
+      if (gpsEdadS != null) 'gps_edad_s': gpsEdadS,
     };
   }
 

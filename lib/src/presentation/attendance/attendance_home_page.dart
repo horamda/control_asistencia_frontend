@@ -297,6 +297,7 @@ class _AttendanceHomePageState extends State<AttendanceHomePage>
     NotificationsNavigation.route.addListener(_vacationRoute);
     WidgetsBinding.instance.addPostFrameCallback((_) => _vacationRoute());
     NotificationsNavigation.pending.addListener(_inboxRoute);
+    NotificationsNavigation.home.addListener(_homeRoute);
     NotificationsNavigation.refresh.addListener(_inboxRefresh);
     WidgetsBinding.instance.addPostFrameCallback((_) => _inboxRoute());
     ComunicadosNavigation.pending.addListener(_comunicadoRoute);
@@ -421,6 +422,7 @@ class _AttendanceHomePageState extends State<AttendanceHomePage>
     _pushMessages?.cancel();
     NotificationsNavigation.route.removeListener(_vacationRoute);
     NotificationsNavigation.pending.removeListener(_inboxRoute);
+    NotificationsNavigation.home.removeListener(_homeRoute);
     NotificationsNavigation.refresh.removeListener(_inboxRefresh);
     ComunicadosNavigation.pending.removeListener(_comunicadoRoute);
     ComunicadosNavigation.refresh.removeListener(_comunicadosRefresh);
@@ -552,6 +554,14 @@ class _AttendanceHomePageState extends State<AttendanceHomePage>
     if (route == null || !mounted || widget.sessionManager.isLocked) return;
     NotificationsNavigation.route.value = null;
     unawaited(_notificationDestination({'ruta': route}));
+  }
+
+  /// Aviso de fichada tocado: volver a esta pantalla (la de fichar).
+  void _homeRoute() {
+    if (!mounted || widget.sessionManager.isLocked) return;
+    final self = ModalRoute.of(context);
+    if (self == null || self.isCurrent) return;
+    Navigator.of(context).popUntil((route) => route == self);
   }
 
   void _inboxRoute() {

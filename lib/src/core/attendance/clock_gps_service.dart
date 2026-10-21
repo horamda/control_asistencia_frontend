@@ -92,6 +92,7 @@ class ClockGpsService {
       lon: position.longitude,
       accuracyM: position.accuracy,
       capturedAt: position.timestamp,
+      mocked: position.isMocked,
     );
   }
 
@@ -107,6 +108,7 @@ class ClockGpsService {
       lon: position.longitude,
       accuracyM: position.accuracy,
       capturedAt: DateTime.now(),
+      mocked: kIsWeb ? null : position.isMocked,
     );
   }
 }
