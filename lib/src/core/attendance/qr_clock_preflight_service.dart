@@ -27,7 +27,8 @@ class QrClockPreflightService {
     required ClockReadinessSnapshot current,
   }) async {
     final checkedAt = _nowProvider();
-    final snapshotFresh = current.checkedAt != null &&
+    final snapshotFresh =
+        current.checkedAt != null &&
         checkedAt.difference(current.checkedAt!) < snapshotTtl;
 
     if (config == null) {
@@ -50,17 +51,14 @@ class QrClockPreflightService {
     if (!cameraGranted) {
       return QrClockPreflightResult(
         status: QrClockPreflightStatus.cameraPermissionDenied,
-        readiness: current.copyWith(
-          cameraGranted: false,
-          checkedAt: checkedAt,
-        ),
+        readiness: current.copyWith(cameraGranted: false, checkedAt: checkedAt),
       );
     }
 
     final locationServiceEnabled =
         (snapshotFresh && current.locationServiceEnabled != null)
-            ? current.locationServiceEnabled!
-            : await _locationServiceEnabledProvider();
+        ? current.locationServiceEnabled!
+        : await _locationServiceEnabledProvider();
     if (!locationServiceEnabled) {
       return QrClockPreflightResult(
         status: QrClockPreflightStatus.locationServiceDisabled,
@@ -109,10 +107,7 @@ enum QrClockPreflightStatus {
 }
 
 class QrClockPreflightResult {
-  const QrClockPreflightResult({
-    required this.status,
-    required this.readiness,
-  });
+  const QrClockPreflightResult({required this.status, required this.readiness});
 
   final QrClockPreflightStatus status;
   final ClockReadinessSnapshot readiness;

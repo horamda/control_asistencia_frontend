@@ -7,6 +7,7 @@ import 'package:http/http.dart' as http;
 import '../utils/app_logger.dart';
 import 'feedback_api_models.dart';
 import 'skap_api_models.dart';
+import 'facial_policy_config.dart';
 
 class MobileApiClient {
   static final _log = AppLogger.get('MobileApiClient');
@@ -5029,6 +5030,7 @@ class AttendanceConfig {
     required this.cooldownScanSegundos,
     required this.intervaloMinimoFichadasMinutos,
     required this.metodosHabilitados,
+    this.facialPolicy = const FacialPolicyConfig(),
   });
 
   final int? empresaId;
@@ -5039,6 +5041,7 @@ class AttendanceConfig {
   final int cooldownScanSegundos;
   final int? intervaloMinimoFichadasMinutos;
   final List<String> metodosHabilitados;
+  final FacialPolicyConfig facialPolicy;
 
   factory AttendanceConfig.fromJson(Map<String, dynamic> json) {
     bool parseBool(dynamic value) {
@@ -5097,6 +5100,7 @@ class AttendanceConfig {
         json['intervalo_minimo_fichadas_minutos'],
       ),
       metodosHabilitados: parsedMethods,
+      facialPolicy: FacialPolicyConfig.fromJson(json['facial_policy']),
     );
   }
 
@@ -5110,6 +5114,7 @@ class AttendanceConfig {
       'cooldown_scan_segundos': cooldownScanSegundos,
       'intervalo_minimo_fichadas_minutos': intervaloMinimoFichadasMinutos,
       'metodos_habilitados': metodosHabilitados,
+      'facial_policy': facialPolicy.toJson(),
     };
   }
 

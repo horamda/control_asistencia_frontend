@@ -8,11 +8,7 @@ import 'package:package_info_plus/package_info_plus.dart';
 
 import '../../../src/config/app_config.dart';
 
-enum AppVersionStatus {
-  upToDate,
-  updateRecommended,
-  updateRequired,
-}
+enum AppVersionStatus { upToDate, updateRecommended, updateRequired }
 
 class AppVersionCheckResult {
   const AppVersionCheckResult({
@@ -53,9 +49,7 @@ class AppVersionService {
         '${cfg.apiBaseUrl}${cfg.mobileApiPrefix}/version?platform=$platform',
       );
 
-      final response = await http
-          .get(uri)
-          .timeout(const Duration(seconds: 8));
+      final response = await http.get(uri).timeout(const Duration(seconds: 8));
 
       if (response.statusCode != 200) return null;
 
@@ -101,10 +95,7 @@ class AppVersionService {
   }
 
   static List<int> _parseVersion(String version) {
-    return version
-        .split('.')
-        .map((s) => int.tryParse(s.trim()) ?? 0)
-        .toList();
+    return version.split('.').map((s) => int.tryParse(s.trim()) ?? 0).toList();
   }
 
   static bool _isLessThan(List<int> a, List<int> b) {

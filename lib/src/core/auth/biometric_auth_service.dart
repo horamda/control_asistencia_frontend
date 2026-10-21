@@ -42,8 +42,7 @@ class BiometricAuthService {
           AndroidAuthMessages(
             signInTitle: 'Autenticación requerida',
             biometricHint: 'Toca el sensor de huellas digitales',
-            biometricNotRecognized:
-                'Huella no reconocida. Intenta nuevamente.',
+            biometricNotRecognized: 'Huella no reconocida. Intenta nuevamente.',
             biometricRequiredTitle: 'Huella requerida',
             biometricSuccess: 'Huella validada',
             cancelButton: 'Cancelar',

@@ -299,8 +299,7 @@ class SkapPlanActionInput {
         'responsable_empleado_id': responsableEmpleadoId,
       if (fechaCompromiso != null && fechaCompromiso!.trim().isNotEmpty)
         'fecha_compromiso': fechaCompromiso!.trim(),
-      if (estado != null && estado!.trim().isNotEmpty)
-        'estado': estado!.trim(),
+      if (estado != null && estado!.trim().isNotEmpty) 'estado': estado!.trim(),
       if (comentarios != null && comentarios!.trim().isNotEmpty)
         'comentarios': comentarios!.trim(),
     };
