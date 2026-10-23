@@ -763,6 +763,15 @@ class _AttendanceHomePageState extends State<AttendanceHomePage>
     );
   }
 
+  Future<void> _openCompromiso() async {
+    if (_submitting) return;
+    await _homeCoordinator.openCompromiso(
+      context,
+      apiClient: widget.apiClient,
+      token: widget.token,
+    );
+  }
+
   Future<void> _openFeedback() async {
     if (_submitting) return;
     await _homeCoordinator.openFeedback(
@@ -1724,6 +1733,10 @@ class _AttendanceHomePageState extends State<AttendanceHomePage>
       case AttendanceHomeActionIntent.openKpisSector:
         return () {
           unawaited(_openKpisSector());
+        };
+      case AttendanceHomeActionIntent.openCompromiso:
+        return () {
+          unawaited(_openCompromiso());
         };
       case AttendanceHomeActionIntent.openFeedback:
         return () {

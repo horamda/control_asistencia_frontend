@@ -229,6 +229,12 @@ class AttendanceHomeActionPresenter {
           enabled: historyEnabled,
         ),
         AttendanceHomeActionSpec(
+          intent: AttendanceHomeActionIntent.openCompromiso,
+          label: 'Compromiso',
+          icon: Icons.favorite_rounded,
+          enabled: historyEnabled,
+        ),
+        AttendanceHomeActionSpec(
           intent: AttendanceHomeActionIntent.openSkap,
           label: 'SKAP',
           icon: Icons.psychology_rounded,
@@ -319,6 +325,7 @@ enum AttendanceHomeActionIntent {
   openLegajoEventoAdmin,
   openPedidosMercaderia,
   openKpisSector,
+  openCompromiso,
   openFeedback,
   openSkap,
   openPremios,

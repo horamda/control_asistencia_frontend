@@ -7,7 +7,10 @@ import 'package:http/http.dart' as http;
 import '../utils/app_logger.dart';
 import 'feedback_api_models.dart';
 import 'skap_api_models.dart';
+import 'compromiso_models.dart';
 import 'facial_policy_config.dart';
+
+export 'compromiso_models.dart';
 
 class MobileApiClient {
   static final _log = AppLogger.get('MobileApiClient');
@@ -2592,6 +2595,34 @@ class MobileApiClient {
       );
     }
     return PedidoMercaderiaItem.fromJson(_decodeObject(response.body));
+  }
+
+  // ─── Indice de compromiso (contrato 1.55.0) ──────────────────────────────────
+
+  Future<CompromisoResponse> getCompromiso({
+    required String token,
+    int? anio,
+  }) async {
+    final query = <String, String>{if (anio != null) 'anio': '$anio'};
+    final response = await _safeGet(
+      _uri(
+        '/me/compromiso',
+      ).replace(queryParameters: query.isEmpty ? null : query),
+      headers: _headers(token: token),
+      actionLabel: 'obtener el índice de compromiso',
+    );
+    if (response.statusCode != 200) {
+      final error = _extractApiError(
+        response,
+        fallback: 'No se pudo obtener el índice de compromiso.',
+      );
+      throw ApiException(
+        message: error.message,
+        statusCode: response.statusCode,
+        code: error.code,
+      );
+    }
+    return CompromisoResponse.fromJson(_decodeObject(response.body));
   }
 
   // ─── KPIs Sectoriales ────────────────────────────────────────────────────────

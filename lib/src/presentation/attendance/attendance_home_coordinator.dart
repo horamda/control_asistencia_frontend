@@ -23,6 +23,7 @@ import 'justificaciones_page.dart';
 import 'marks_history_page.dart';
 import 'pedidos_mercaderia_page.dart';
 import 'kpis_sector_page.dart';
+import 'compromiso_page.dart';
 import 'employee_alerts_page.dart';
 import 'gps_location_page.dart';
 import 'premios_page.dart';
@@ -302,6 +303,18 @@ class AttendanceHomeCoordinator {
     return Navigator.of(context).push(
       MaterialPageRoute(
         builder: (_) => KpisSectorPage(apiClient: apiClient, token: token),
+      ),
+    );
+  }
+
+  Future<void> openCompromiso(
+    BuildContext context, {
+    required MobileApiClient apiClient,
+    required String token,
+  }) {
+    return Navigator.of(context).push(
+      MaterialPageRoute(
+        builder: (_) => CompromisoPage(apiClient: apiClient, token: token),
       ),
     );
   }
