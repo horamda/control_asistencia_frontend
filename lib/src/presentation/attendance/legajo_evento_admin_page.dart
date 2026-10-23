@@ -7,6 +7,8 @@ import 'package:image_picker/image_picker.dart';
 
 import '../../core/network/mobile_api_client.dart';
 import '../widgets/croppable_image.dart';
+import '../widgets/app_page_layout.dart';
+import '../widgets/app_submission_bar.dart';
 
 class LegajoEventoAdminPage extends StatefulWidget {
   const LegajoEventoAdminPage({
@@ -256,221 +258,233 @@ class _LegajoEventoAdminPageState extends State<LegajoEventoAdminPage> {
           textAlign: TextAlign.center,
         ),
       ),
-      body: _loading
-          ? const Center(child: CircularProgressIndicator())
-          : _error != null && _tipos.isEmpty && _empleados.isEmpty
-          ? _ErrorState(message: _error!, onRetry: _load)
-          : ListView(
-              padding: const EdgeInsets.fromLTRB(16, 12, 16, 96),
-              children: [
-                _HeaderCard(alcance: _alcance),
-                const SizedBox(height: 12),
-                if (_error != null) _InlineError(_error!),
-                _SectionCard(
-                  title: 'Empleado',
-                  icon: Icons.person_search_outlined,
-                  child: Column(
-                    crossAxisAlignment: CrossAxisAlignment.center,
-                    children: [
-                      TextField(
-                        controller: _searchCtrl,
-                        textInputAction: TextInputAction.search,
-                        onSubmitted: (_) => _search(),
-                        decoration: InputDecoration(
-                          labelText: 'Buscar por nombre, DNI o legajo',
-                          suffixIcon: IconButton(
-                            onPressed: _searching ? null : _search,
-                            icon: _searching
-                                ? const SizedBox(
-                                    width: 18,
-                                    height: 18,
-                                    child: CircularProgressIndicator(
-                                      strokeWidth: 2,
-                                    ),
-                                  )
-                                : const Icon(Icons.search),
+      body: AppPageBody(
+        maxWidth: 840,
+        child: _loading
+            ? const Center(child: CircularProgressIndicator())
+            : _error != null && _tipos.isEmpty && _empleados.isEmpty
+            ? _ErrorState(message: _error!, onRetry: _load)
+            : ListView(
+                padding: const EdgeInsets.fromLTRB(16, 12, 16, 24),
+                children: [
+                  _HeaderCard(alcance: _alcance),
+                  const SizedBox(height: 12),
+                  if (_error != null) _InlineError(_error!),
+                  _SectionCard(
+                    title: 'Empleado',
+                    icon: Icons.person_search_outlined,
+                    child: Column(
+                      crossAxisAlignment: CrossAxisAlignment.center,
+                      children: [
+                        TextField(
+                          controller: _searchCtrl,
+                          textInputAction: TextInputAction.search,
+                          onSubmitted: (_) => _search(),
+                          decoration: InputDecoration(
+                            labelText: 'Buscar por nombre, DNI o legajo',
+                            suffixIcon: IconButton(
+                              onPressed: _searching ? null : _search,
+                              icon: _searching
+                                  ? const SizedBox(
+                                      width: 18,
+                                      height: 18,
+                                      child: CircularProgressIndicator(
+                                        strokeWidth: 2,
+                                      ),
+                                    )
+                                  : const Icon(Icons.search),
+                            ),
                           ),
                         ),
-                      ),
-                      const SizedBox(height: 10),
-                      ..._empleados.map(
-                        (e) => ListTile(
-                          contentPadding: EdgeInsets.zero,
-                          leading: Icon(
-                            _empleado?.id == e.id
-                                ? Icons.radio_button_checked
-                                : Icons.radio_button_unchecked,
-                            color: _empleado?.id == e.id
-                                ? Theme.of(context).colorScheme.primary
-                                : null,
-                          ),
-                          title: Text(e.title, textAlign: TextAlign.center),
-                          subtitle: Text(
-                            e.subtitle,
-                            textAlign: TextAlign.center,
-                          ),
-                          onTap: () => setState(() => _empleado = e),
-                        ),
-                      ),
-                      if (_empleados.isEmpty)
-                        const Padding(
-                          padding: EdgeInsets.symmetric(vertical: 18),
-                          child: Text(
-                            'No hay empleados para mostrar.',
-                            textAlign: TextAlign.center,
+                        const SizedBox(height: 10),
+                        ..._empleados.map(
+                          (e) => ListTile(
+                            contentPadding: EdgeInsets.zero,
+                            leading: Icon(
+                              _empleado?.id == e.id
+                                  ? Icons.radio_button_checked
+                                  : Icons.radio_button_unchecked,
+                              color: _empleado?.id == e.id
+                                  ? Theme.of(context).colorScheme.primary
+                                  : null,
+                            ),
+                            title: Text(e.title, textAlign: TextAlign.center),
+                            subtitle: Text(
+                              e.subtitle,
+                              textAlign: TextAlign.center,
+                            ),
+                            onTap: () => setState(() => _empleado = e),
                           ),
                         ),
-                    ],
+                        if (_empleados.isEmpty)
+                          const Padding(
+                            padding: EdgeInsets.symmetric(vertical: 18),
+                            child: Text(
+                              'No hay empleados para mostrar.',
+                              textAlign: TextAlign.center,
+                            ),
+                          ),
+                      ],
+                    ),
                   ),
-                ),
-                const SizedBox(height: 12),
-                _SectionCard(
-                  title: 'Evento',
-                  icon: Icons.assignment_outlined,
-                  child: Column(
-                    crossAxisAlignment: CrossAxisAlignment.center,
-                    children: [
-                      DropdownButtonFormField<int>(
-                        initialValue: _tipo?.id,
-                        decoration: const InputDecoration(labelText: 'Tipo'),
-                        items: _tipos
-                            .map(
-                              (t) => DropdownMenuItem<int>(
-                                value: t.id,
-                                child: Text(
-                                  t.nombre,
-                                  textAlign: TextAlign.center,
+                  const SizedBox(height: 12),
+                  _SectionCard(
+                    title: 'Evento',
+                    icon: Icons.assignment_outlined,
+                    child: Column(
+                      crossAxisAlignment: CrossAxisAlignment.center,
+                      children: [
+                        DropdownButtonFormField<int>(
+                          isExpanded: true,
+                          initialValue: _tipo?.id,
+                          decoration: const InputDecoration(labelText: 'Tipo'),
+                          items: _tipos
+                              .map(
+                                (t) => DropdownMenuItem<int>(
+                                  value: t.id,
+                                  child: Text(
+                                    t.nombre,
+                                    textAlign: TextAlign.center,
+                                  ),
                                 ),
-                              ),
-                            )
-                            .toList(),
-                        onChanged: (value) {
-                          LegajoTipoEventoItem? selected;
-                          for (final item in _tipos) {
-                            if (item.id == value) {
-                              selected = item;
-                              break;
+                              )
+                              .toList(),
+                          onChanged: (value) {
+                            LegajoTipoEventoItem? selected;
+                            for (final item in _tipos) {
+                              if (item.id == value) {
+                                selected = item;
+                                break;
+                              }
                             }
-                          }
-                          setState(() {
-                            _tipo = selected;
-                            if (selected?.permiteAdjuntos != true) {
-                              _adjuntos.clear();
+                            setState(() {
+                              _tipo = selected;
+                              if (selected?.permiteAdjuntos != true) {
+                                _adjuntos.clear();
+                              }
+                            });
+                          },
+                        ),
+                        const SizedBox(height: 10),
+                        TextField(
+                          controller: _tituloCtrl,
+                          decoration: const InputDecoration(
+                            labelText: 'Titulo opcional',
+                          ),
+                        ),
+                        const SizedBox(height: 10),
+                        DropdownButtonFormField<String>(
+                          isExpanded: true,
+                          initialValue: _severidad,
+                          decoration: const InputDecoration(
+                            labelText: 'Severidad',
+                          ),
+                          items: const [
+                            DropdownMenuItem(
+                              value: 'leve',
+                              child: Text('Leve', textAlign: TextAlign.center),
+                            ),
+                            DropdownMenuItem(
+                              value: 'media',
+                              child: Text('Media', textAlign: TextAlign.center),
+                            ),
+                            DropdownMenuItem(
+                              value: 'grave',
+                              child: Text('Grave', textAlign: TextAlign.center),
+                            ),
+                          ],
+                          onChanged: (value) {
+                            if (value != null) {
+                              setState(() => _severidad = value);
                             }
-                          });
-                        },
-                      ),
-                      const SizedBox(height: 10),
-                      TextField(
-                        controller: _tituloCtrl,
-                        decoration: const InputDecoration(
-                          labelText: 'Titulo opcional',
+                          },
                         ),
-                      ),
-                      const SizedBox(height: 10),
-                      DropdownButtonFormField<String>(
-                        initialValue: _severidad,
-                        decoration: const InputDecoration(
-                          labelText: 'Severidad',
+                        const SizedBox(height: 10),
+                        _DateTile(
+                          label: 'Fecha del evento',
+                          value: _dateLabel(_fechaEvento),
+                          onTap: () => _pickDate(
+                            initial: _fechaEvento,
+                            onSelected: (d) => setState(() => _fechaEvento = d),
+                          ),
                         ),
-                        items: const [
-                          DropdownMenuItem(
-                            value: 'leve',
-                            child: Text('Leve', textAlign: TextAlign.center),
+                        if (_tipo?.requiereRangoFechas == true) ...[
+                          const SizedBox(height: 10),
+                          _DateTile(
+                            label: 'Desde',
+                            value: _fechaDesde == null
+                                ? 'Seleccionar'
+                                : _dateLabel(_fechaDesde!),
+                            onTap: () => _pickDate(
+                              initial: _fechaDesde ?? _fechaEvento,
+                              onSelected: (d) =>
+                                  setState(() => _fechaDesde = d),
+                            ),
                           ),
-                          DropdownMenuItem(
-                            value: 'media',
-                            child: Text('Media', textAlign: TextAlign.center),
-                          ),
-                          DropdownMenuItem(
-                            value: 'grave',
-                            child: Text('Grave', textAlign: TextAlign.center),
+                          const SizedBox(height: 10),
+                          _DateTile(
+                            label: 'Hasta',
+                            value: _fechaHasta == null
+                                ? 'Seleccionar'
+                                : _dateLabel(_fechaHasta!),
+                            onTap: () => _pickDate(
+                              initial:
+                                  _fechaHasta ?? _fechaDesde ?? _fechaEvento,
+                              onSelected: (d) =>
+                                  setState(() => _fechaHasta = d),
+                            ),
                           ),
                         ],
-                        onChanged: (value) {
-                          if (value != null) setState(() => _severidad = value);
-                        },
-                      ),
-                      const SizedBox(height: 10),
-                      _DateTile(
-                        label: 'Fecha del evento',
-                        value: _dateLabel(_fechaEvento),
-                        onTap: () => _pickDate(
-                          initial: _fechaEvento,
-                          onSelected: (d) => setState(() => _fechaEvento = d),
-                        ),
-                      ),
-                      if (_tipo?.requiereRangoFechas == true) ...[
                         const SizedBox(height: 10),
-                        _DateTile(
-                          label: 'Desde',
-                          value: _fechaDesde == null
-                              ? 'Seleccionar'
-                              : _dateLabel(_fechaDesde!),
-                          onTap: () => _pickDate(
-                            initial: _fechaDesde ?? _fechaEvento,
-                            onSelected: (d) => setState(() => _fechaDesde = d),
+                        TextField(
+                          controller: _descripcionCtrl,
+                          minLines: 4,
+                          maxLines: 7,
+                          maxLength: 1200,
+                          decoration: const InputDecoration(
+                            labelText: 'Descripcion',
+                            alignLabelWithHint: true,
                           ),
                         ),
-                        const SizedBox(height: 10),
-                        _DateTile(
-                          label: 'Hasta',
-                          value: _fechaHasta == null
-                              ? 'Seleccionar'
-                              : _dateLabel(_fechaHasta!),
-                          onTap: () => _pickDate(
-                            initial: _fechaHasta ?? _fechaDesde ?? _fechaEvento,
-                            onSelected: (d) => setState(() => _fechaHasta = d),
-                          ),
+                        const SizedBox(height: 12),
+                        _AttachmentPickerBlock(
+                          enabled:
+                              _tipo?.permiteAdjuntos == true &&
+                              !_saving &&
+                              !_pickingAttachment,
+                          picking: _pickingAttachment,
+                          adjuntos: _adjuntos,
+                          onAdd: _addAttachment,
+                          onRemove: _removeAdjuntoAt,
                         ),
                       ],
-                      const SizedBox(height: 10),
-                      TextField(
-                        controller: _descripcionCtrl,
-                        minLines: 4,
-                        maxLines: 7,
-                        maxLength: 1200,
-                        decoration: const InputDecoration(
-                          labelText: 'Descripcion',
-                          alignLabelWithHint: true,
-                        ),
-                      ),
-                      const SizedBox(height: 12),
-                      _AttachmentPickerBlock(
-                        enabled:
-                            _tipo?.permiteAdjuntos == true &&
-                            !_saving &&
-                            !_pickingAttachment,
-                        picking: _pickingAttachment,
-                        adjuntos: _adjuntos,
-                        onAdd: _addAttachment,
-                        onRemove: _removeAdjuntoAt,
-                      ),
-                    ],
+                    ),
                   ),
-                ),
-              ],
+                ],
+              ),
+      ),
+      bottomNavigationBar: AppSubmissionBar(
+        summary: '',
+        actions: [
+          FilledButton.icon(
+            onPressed: _saving ? null : _save,
+            icon: _saving
+                ? const SizedBox(
+                    width: 18,
+                    height: 18,
+                    child: CircularProgressIndicator(strokeWidth: 2),
+                  )
+                : const Icon(Icons.save_outlined),
+            label: Text(
+              _saving ? 'Guardando...' : 'Guardar evento',
+              textAlign: TextAlign.center,
             ),
-      bottomNavigationBar: SafeArea(
-        minimum: const EdgeInsets.fromLTRB(16, 8, 16, 16),
-        child: FilledButton.icon(
-          onPressed: _saving ? null : _save,
-          icon: _saving
-              ? const SizedBox(
-                  width: 18,
-                  height: 18,
-                  child: CircularProgressIndicator(strokeWidth: 2),
-                )
-              : const Icon(Icons.save_outlined),
-          label: Text(
-            _saving ? 'Guardando...' : 'Guardar evento',
-            textAlign: TextAlign.center,
+            style: FilledButton.styleFrom(
+              minimumSize: const Size.fromHeight(48),
+              backgroundColor: cs.primary,
+            ),
           ),
-          style: FilledButton.styleFrom(
-            minimumSize: const Size.fromHeight(48),
-            backgroundColor: cs.primary,
-          ),
-        ),
+        ],
       ),
     );
   }
@@ -511,16 +525,23 @@ class _AttachmentPickerBlock extends StatelessWidget {
     return Column(
       crossAxisAlignment: CrossAxisAlignment.stretch,
       children: [
-        OutlinedButton.icon(
-          onPressed: enabled ? onAdd : null,
-          icon: picking
-              ? const SizedBox(
-                  width: 16,
-                  height: 16,
-                  child: CircularProgressIndicator(strokeWidth: 2),
-                )
-              : const Icon(Icons.attach_file),
-          label: const Text('Agregar foto o archivo'),
+        AppAdaptiveActions(
+          children: [
+            OutlinedButton.icon(
+              onPressed: enabled ? onAdd : null,
+              icon: picking
+                  ? const SizedBox(
+                      width: 16,
+                      height: 16,
+                      child: CircularProgressIndicator(strokeWidth: 2),
+                    )
+                  : const Icon(Icons.attach_file),
+              label: const Text(
+                'Agregar foto o archivo',
+                textAlign: TextAlign.center,
+              ),
+            ),
+          ],
         ),
         const SizedBox(height: 6),
         Text(
@@ -817,10 +838,12 @@ class _SectionCard extends StatelessWidget {
               children: [
                 Icon(icon, color: cs.primary),
                 const SizedBox(width: 8),
-                Text(
-                  title,
-                  style: Theme.of(context).textTheme.titleMedium,
-                  textAlign: TextAlign.center,
+                Flexible(
+                  child: Text(
+                    title,
+                    style: Theme.of(context).textTheme.titleMedium,
+                    textAlign: TextAlign.center,
+                  ),
                 ),
               ],
             ),

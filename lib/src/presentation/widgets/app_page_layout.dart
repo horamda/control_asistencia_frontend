@@ -22,7 +22,10 @@ class AppAdaptiveActions extends StatelessWidget {
         minWidth: minWidth,
         maxColumns: children.length,
       );
-      final width = (box.maxWidth - (columns - 1) * 12) / columns;
+      final available = (box.maxWidth - (columns - 1) * 12) / columns;
+      final width = box.maxWidth >= 600
+          ? math.min(320.0, available)
+          : available;
       return Wrap(
         alignment: WrapAlignment.center,
         spacing: 12,

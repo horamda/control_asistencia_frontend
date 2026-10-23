@@ -31,7 +31,8 @@ class AppSubmissionBar extends StatelessWidget {
               child: Column(
                 mainAxisSize: MainAxisSize.min,
                 children: [
-                  if (!AppLayout.keyboardVisible(context)) ...[
+                  if (summary.isNotEmpty &&
+                      !AppLayout.keyboardVisible(context)) ...[
                     Text(
                       summary,
                       style: AppVisual.body.copyWith(
